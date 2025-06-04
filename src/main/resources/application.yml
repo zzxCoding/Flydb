@@ -1,0 +1,7 @@
+flydb:
+  databases:
+    active-connection: test
+  scripts:
+    path: db/migration
+server:
+  port: 8080

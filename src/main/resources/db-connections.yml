@@ -1,0 +1,28 @@
+# 数据库连接配置
+
+# 全局配置
+global:
+  concurrent_execution: false  # 是否启用多数据库并发执行
+  max_concurrent_tasks: 5     # 最大并发任务数
+  timeout: 3600              # 执行超时时间（秒）
+
+# 开发环境
+development:
+  url: jdbc:mysql://localhost:3306/flydb_dev?useSSL=false&serverTimezone=UTC
+  username: root
+  password: your_password_here # 请替换为您的密码
+  concurrent: true           # 是否参与并发执行
+
+# 测试环境
+test:
+  url: jdbc:mysql://localhost:3306/flydb_prod?useSSL=false&serverTimezone=UTCallowPublicKeyRetrieval=true
+  username: root
+  password: your_password_here # 请替换为您的密码
+  concurrent: true           # 是否参与并发执行
+
+# 生产环境
+production:
+  url: jdbc:mysql://localhost:3306/flydb_prod?useSSL=false&serverTimezone=UTCallowPublicKeyRetrieval=true
+  username: root
+  password: your_password_here # 请替换为您的密码
+  concurrent: false          # 生产环境默认不参与并发执行
