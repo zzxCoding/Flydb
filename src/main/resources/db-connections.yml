@@ -15,14 +15,14 @@ development:
 
 # 测试环境
 test:
-  url: jdbc:mysql://localhost:3306/flydb_prod?useSSL=false&serverTimezone=UTCallowPublicKeyRetrieval=true
+  url: jdbc:mysql://localhost:3306/flydb_prod?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
   username: root
   password: your_password_here # 请替换为您的密码
   concurrent: true           # 是否参与并发执行
 
 # 生产环境
 production:
-  url: jdbc:mysql://localhost:3306/flydb_prod?useSSL=false&serverTimezone=UTCallowPublicKeyRetrieval=true
+  url: jdbc:mysql://localhost:3306/flydb_prod?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
   username: root
   password: your_password_here # 请替换为您的密码
   concurrent: false          # 生产环境默认不参与并发执行

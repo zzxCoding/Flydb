@@ -1,7 +1,12 @@
 package com.flydb.core;
 
+import com.flydb.core.dialect.DatabaseDialect;
+import com.flydb.core.dialect.MySQLDialect;
+import com.flydb.core.dialect.OracleDialect;
+
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -19,11 +24,43 @@ import java.util.List;
  * 包括版本号、描述、执行时间、执行状态等信息。
  */
 public class FlyDB {
+    /** 数据库连接对象 */
     private final Connection connection;
+    
+    /** 数据库方言对象，用于处理不同数据库的特定语法 */
+    private final DatabaseDialect dialect;
+    
+    /** 版本控制表名 */
     public static final String VERSION_TABLE = "flydb_schema_history";
     
-    public FlyDB(Connection connection) {
+    /**
+     * 构造函数
+     * 
+     * @param connection 数据库连接对象
+     * @throws SQLException 当无法确定数据库方言时抛出
+     */
+    public FlyDB(Connection connection) throws SQLException {
         this.connection = connection;
+        this.dialect = determineDialect(connection);
+    }
+
+    /**
+     * 根据数据库连接信息确定使用的数据库方言
+     * 
+     * @param connection 数据库连接对象
+     * @return 对应的数据库方言实现
+     * @throws SQLException 当无法获取数据库元数据时抛出
+     */
+    private DatabaseDialect determineDialect(Connection connection) throws SQLException {
+        DatabaseMetaData metaData = connection.getMetaData();
+        String databaseProductName = metaData.getDatabaseProductName().toLowerCase();
+        
+        if (databaseProductName.contains("oracle")) {
+            return new OracleDialect();
+        } else {
+            // 默认使用MySQL方言
+            return new MySQLDialect();
+        }
     }
 
     /**
@@ -43,12 +80,8 @@ public class FlyDB {
 
         String rollbackVersion = targetVersion;
         if (rollbackVersion == null) {
-            // 如果没有指定目标版本，获取上一个版本
             try (Statement stmt = connection.createStatement()) {
-                String sql = String.format(
-                    "SELECT version FROM %s WHERE version_rank < (SELECT version_rank FROM %s WHERE version = '%s') ORDER BY version_rank DESC LIMIT 1",
-                    VERSION_TABLE, VERSION_TABLE, currentVersion
-                );
+                String sql = dialect.getPreviousVersionSql(VERSION_TABLE, currentVersion);
                 ResultSet rs = stmt.executeQuery(sql);
                 if (rs.next()) {
                     rollbackVersion = rs.getString("version");
@@ -58,23 +91,17 @@ public class FlyDB {
             }
         }
 
-        // 开始事务
         connection.setAutoCommit(false);
         try {
-            // 获取需要回退的版本列表
             List<String> versionsToRollback = new ArrayList<>();
             try (Statement stmt = connection.createStatement()) {
-                String sql = String.format(
-                    "SELECT version FROM %s WHERE version > '%s' AND version <= '%s' ORDER BY version_rank DESC",
-                    VERSION_TABLE, rollbackVersion, currentVersion
-                );
+                String sql = dialect.getVersionsToRollbackSql(VERSION_TABLE, rollbackVersion, currentVersion);
                 ResultSet rs = stmt.executeQuery(sql);
                 while (rs.next()) {
                     versionsToRollback.add(rs.getString("version"));
                 }
             }
 
-            // 执行回退脚本
             Migration migration = new Migration(connection, "db/migration");
             for (String version : versionsToRollback) {
                 try {
@@ -90,7 +117,6 @@ public class FlyDB {
                 }
             }
 
-            // 删除版本记录
             try (Statement stmt = connection.createStatement()) {
                 String deleteSql = String.format(
                     "DELETE FROM %s WHERE version > '%s'",
@@ -99,14 +125,11 @@ public class FlyDB {
                 stmt.execute(deleteSql);
             }
 
-            // 提交事务
             connection.commit();
         } catch (SQLException e) {
-            // 发生错误时回滚事务
             connection.rollback();
             throw new SQLException("回退操作失败: " + e.getMessage(), e);
         } finally {
-            // 恢复自动提交
             connection.setAutoCommit(true);
         }
     }
@@ -131,22 +154,7 @@ public class FlyDB {
      */
     public void init() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
-            String createTableSql = String.format(
-                "CREATE TABLE IF NOT EXISTS %s (" +
-                "version_rank INT NOT NULL, " +
-                "installed_rank INT NOT NULL, " +
-                "version VARCHAR(50) NOT NULL, " +
-                "description VARCHAR(200) NOT NULL, " +
-                "type VARCHAR(20) NOT NULL, " +
-                "script VARCHAR(1000) NOT NULL, " +
-                "checksum INT, " +
-                "installed_by VARCHAR(100) NOT NULL, " +
-                "installed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                "execution_time INT NOT NULL, " +
-                "success BOOLEAN NOT NULL, " +
-                "PRIMARY KEY (version)" +
-                ")", VERSION_TABLE
-            );
+            String createTableSql = dialect.getCreateVersionTableSql(VERSION_TABLE);
             stmt.execute(createTableSql);
         }
     }
@@ -159,10 +167,7 @@ public class FlyDB {
      */
     public String getCurrentVersion() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
-            String sql = String.format(
-                "SELECT version FROM %s ORDER BY version_rank DESC LIMIT 1",
-                VERSION_TABLE
-            );
+            String sql = dialect.getLatestVersionSql(VERSION_TABLE);
             ResultSet rs = stmt.executeQuery(sql);
             if (rs.next()) {
                 return rs.getString("version");

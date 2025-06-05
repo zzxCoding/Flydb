@@ -4,6 +4,8 @@ import com.flydb.core.DatabaseConfig;
 import com.flydb.core.FlyDB;
 import com.flydb.core.Migration;
 import com.flydb.core.MigrationScript;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -36,6 +38,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/flydb")
 public class Application {
+
+    private static final Logger logger = LoggerFactory.getLogger(Application.class);
 
     @Autowired
     private DatabaseConfig databaseConfig;
@@ -83,6 +87,7 @@ public class Application {
                 flyDB.init();
                 return ResponseEntity.ok("数据库初始化成功");
             } catch (SQLException e) {
+                logger.error("数据库初始化失败", e);
                 return ResponseEntity.internalServerError().body("数据库初始化失败: " + e.getMessage());
             }
         }
@@ -102,6 +107,7 @@ public class Application {
                     flyDB.init();
                     return String.format("数据库 %s 初始化成功", entry.getKey());
                 } catch (SQLException e) {
+                    logger.error(String.format("数据库 %s 初始化失败", entry.getKey()), e);
                     return String.format("数据库 %s 初始化失败: %s", entry.getKey(), e.getMessage());
                 }
             }, executor);
@@ -128,6 +134,7 @@ public class Application {
             String version = flyDB.getCurrentVersion();
             return ResponseEntity.ok(version);
         } catch (SQLException e) {
+            logger.error("获取版本失败", e);
             return ResponseEntity.internalServerError().body("获取版本失败: " + e.getMessage());
         }
     }
@@ -144,6 +151,7 @@ public class Application {
             try (Connection conn = dataSource().getConnection()) {
                 return executeMigration(conn, targetVersion);
             } catch (SQLException e) {
+                logger.error("迁移失败", e);
                 return ResponseEntity.internalServerError().body("迁移失败: " + e.getMessage());
             }
         }
@@ -162,6 +170,7 @@ public class Application {
                     String result = executeMigration(connection, targetVersion).getBody();
                     return String.format("数据库 %s: %s", entry.getKey(), result);
                 } catch (SQLException e) {
+                    logger.error(String.format("数据库 %s 迁移失败", entry.getKey()), e);
                     return String.format("数据库 %s 迁移失败: %s", entry.getKey(), e.getMessage());
                 }
             }, executor);
@@ -195,6 +204,7 @@ public class Application {
 
             return ResponseEntity.ok("迁移完成，当前版本: " + flyDB.getCurrentVersion());
         } catch (SQLException | IOException e) {
+            logger.error("迁移执行失败", e);
             return ResponseEntity.internalServerError().body("迁移失败: " + e.getMessage());
         }
     }
