@@ -1,0 +1,131 @@
+package com.flydb.core.test;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * flydb-core 单测用的 JDBC 桩（基于 JDK {@link Proxy}，零第三方依赖——enforcer 仅放行 JUnit/AssertJ）。
+ *
+ * <p>核心思路：动态代理把所有 JDBC 方法路由到 {@link InvocationHandler}，未显式桩化的方法返回
+ * 类型默认值（false/0/null）。{@link #recordingConnection()} 捕获每条 {@code execute(sql)} 的 SQL 文本，
+ * 供断言；{@link #failingConnection(String, RuntimeException)} 让匹配前缀的语句抛指定异常，
+ * 用于验证错误携带脚本名/行号。
+ */
+public final class JdbcFakes {
+
+    private JdbcFakes() {
+    }
+
+    /** 一个把每条 execute(sql) 的文本记入 captured 的连接。 */
+    public static Connection recordingConnection(List<String> captured) {
+        return connectionHandler((sql, stmt) -> {
+            captured.add(sql);
+            return false;
+        }, null);
+    }
+
+    /**
+     * 一个连接：其语句 execute(sql) 时，若 sql 以 {@code failPrefix} 开头则抛 {@code failure}，否则记入 captured。
+     */
+    public static Connection failingConnection(List<String> captured, String failPrefix,
+                                               SQLException failure) {
+        return connectionHandler((sql, stmt) -> {
+            if (failPrefix != null && sql.startsWith(failPrefix)) {
+                throw failure;
+            }
+            captured.add(sql);
+            return false;
+        }, null);
+    }
+
+    private interface StatementBehavior {
+        boolean execute(String sql, Statement stmt) throws SQLException;
+    }
+
+    private static Connection connectionHandler(StatementBehavior behavior, Object self) {
+        return (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(),
+                new Class<?>[]{Connection.class},
+                new RecordingHandler(behavior));
+    }
+
+    private static class RecordingHandler implements InvocationHandler {
+        private final StatementBehavior behavior;
+        private Statement cachedStatement;
+
+        RecordingHandler(StatementBehavior behavior) {
+            this.behavior = behavior;
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            String name = method.getName();
+            if ("createStatement".equals(name) || "createStatement".equals(name)) {
+                if (cachedStatement == null) {
+                    cachedStatement = newStatement(behavior);
+                }
+                return cachedStatement;
+            }
+            if ("close".equals(name) || "isClosed".equals(name)) {
+                return "isClosed".equals(name) ? false : null;
+            }
+            return defaultValue(method.getReturnType());
+        }
+
+        private static Statement newStatement(StatementBehavior behavior) {
+            return (Statement) Proxy.newProxyInstance(
+                    Statement.class.getClassLoader(),
+                    new Class<?>[]{Statement.class},
+                    (proxy, method, args) -> {
+                        if ("execute".equals(method.getName()) && args != null && args.length > 0
+                                && args[0] instanceof String) {
+                            return behavior.execute((String) args[0], (Statement) proxy);
+                        }
+                        if ("close".equals(method.getName()) || "isClosed".equals(method.getName())) {
+                            return "isClosed".equals(method.getName()) ? false : null;
+                        }
+                        return defaultValue(method.getReturnType());
+                    });
+        }
+    }
+
+    /** 返回 JVM 默认值（boolean→false、数值→0、引用→null），用于未桩化的 JDBC 方法。 */
+    public static Object defaultValue(Class<?> type) {
+        if (type == boolean.class) {
+            return false;
+        }
+        if (type == int.class) {
+            return 0;
+        }
+        if (type == long.class) {
+            return 0L;
+        }
+        if (type == short.class) {
+            return (short) 0;
+        }
+        if (type == byte.class) {
+            return (byte) 0;
+        }
+        if (type == double.class) {
+            return 0.0d;
+        }
+        if (type == float.class) {
+            return 0.0f;
+        }
+        if (type == char.class) {
+            return '\0';
+        }
+        return null;
+    }
+
+    /** 便捷：返回一个新的可变列表（调用方常用）。 */
+    public static List<String> newCapture() {
+        return new ArrayList<String>();
+    }
+}
