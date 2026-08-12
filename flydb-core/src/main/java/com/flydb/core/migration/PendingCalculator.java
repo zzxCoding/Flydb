@@ -83,6 +83,9 @@ public final class PendingCalculator {
         // 4) 逐条裁定
         List<ResolvedMigration> pending = new ArrayList<ResolvedMigration>();
         for (ResolvedMigration migration : resolved) {
+            if (migration.type() == MigrationType.UNDO_SQL) {
+                continue;
+            }
             if (migration.version() != null) {
                 if (isVersionedPending(migration, latestByVersion, latestSuccessfulVersion,
                         baselineFilterVersion, outOfOrder)) {

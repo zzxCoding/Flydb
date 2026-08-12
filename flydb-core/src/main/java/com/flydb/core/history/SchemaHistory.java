@@ -23,8 +23,6 @@ import com.flydb.core.migration.MigrationVersion;
  */
 public final class SchemaHistory {
 
-    private static final String LOCK_TABLE_SUFFIX = "_lock";
-
     private final String table;
     private final SchemaHistoryDdl ddl;
     private final Connection connection;
@@ -43,7 +41,32 @@ public final class SchemaHistory {
      */
     public void ensureExists() {
         executeCreateTable(ddl.createTableSql(table));
-        executeCreateTable(ddl.createLockTableSql(table + LOCK_TABLE_SUFFIX));
+        executeCreateTable(ddl.createLockTableSql(lockTableName(table)));
+        ensureLockRow();
+    }
+
+    /** 历史表对应的锁表名；默认 history → lock。 */
+    public static String lockTableName(String historyTable) {
+        return historyTable.endsWith("_history")
+                ? historyTable.substring(0, historyTable.length() - "_history".length()) + "_lock"
+                : historyTable + "_lock";
+    }
+
+    private void ensureLockRow() {
+        String sql = "INSERT INTO " + lockTableName(table) + " (lock_id) VALUES (?)";
+        PreparedStatement statement = null;
+        try {
+            statement = connection.prepareStatement(sql);
+            if (statement == null) {
+                return;
+            }
+            statement.setInt(1, 1);
+            statement.executeUpdate();
+        } catch (SQLException ignored) {
+            // 固定行已存在；互斥正确性由数据库行锁保证。
+        } finally {
+            closeQuietly(statement);
+        }
     }
 
     private void executeCreateTable(String sql) {
@@ -142,6 +165,54 @@ public final class SchemaHistory {
                     "插入历史记录失败: " + e.getMessage(), e);
         } finally {
             closeQuietly(ps);
+        }
+    }
+
+    /** 删除全部失败记录并返回被清除的脚本名。 */
+    public List<String> deleteFailed(List<AppliedMigration> records) {
+        List<String> removed = new ArrayList<String>();
+        for (AppliedMigration record : records) {
+            if (!record.success()) {
+                removed.add(record.script());
+            }
+        }
+        if (removed.isEmpty()) {
+            return removed;
+        }
+        String sql = "DELETE FROM " + table + " WHERE success = ?";
+        PreparedStatement statement = null;
+        try {
+            statement = connection.prepareStatement(sql);
+            statement.setBoolean(1, false);
+            statement.executeUpdate();
+            return removed;
+        } catch (SQLException e) {
+            throw new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
+                    "清除失败历史记录失败: " + e.getMessage(), e);
+        } finally {
+            closeQuietly(statement);
+        }
+    }
+
+    /** 按脚本名对齐 checksum。 */
+    public void updateChecksum(String script, Integer checksum) {
+        String sql = "UPDATE " + table + " SET checksum = ? WHERE script = ? AND success = ?";
+        PreparedStatement statement = null;
+        try {
+            statement = connection.prepareStatement(sql);
+            if (checksum == null) {
+                statement.setNull(1, java.sql.Types.INTEGER);
+            } else {
+                statement.setInt(1, checksum);
+            }
+            statement.setString(2, script);
+            statement.setBoolean(3, true);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
+                    "对齐 checksum 失败: " + script + ": " + e.getMessage(), e);
+        } finally {
+            closeQuietly(statement);
         }
     }
 

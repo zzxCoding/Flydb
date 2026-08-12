@@ -50,7 +50,7 @@ public final class SqlMigrationResolver implements MigrationResolver {
     @Override
     public List<ResolvedMigration> resolveMigrations(ResolverContext context) {
         List<ResolvedMigration> all = new ArrayList<ResolvedMigration>();
-        Map<MigrationVersion, String> seenVersions = new HashMap<MigrationVersion, String>();
+        Map<String, String> seenVersions = new HashMap<String, String>();
 
         for (String location : context.locations()) {
             List<ScriptFile> scripts = scanLocation(location, context);
@@ -62,12 +62,13 @@ public final class SqlMigrationResolver implements MigrationResolver {
                 // 重复版本检测
                 MigrationVersion version = resolved.version();
                 if (version != null) {
-                    String existing = seenVersions.get(version);
+                    String versionKey = resolved.type().name() + ":" + version;
+                    String existing = seenVersions.get(versionKey);
                     if (existing != null) {
                         throw new FlydbException(ErrorCode.DUPLICATE_VERSION,
                                 "版本 " + version + " 冲突: " + existing + " 与 " + resolved.script());
                     }
-                    seenVersions.put(version, resolved.script());
+                    seenVersions.put(versionKey, resolved.script());
                 }
                 all.add(resolved);
             }

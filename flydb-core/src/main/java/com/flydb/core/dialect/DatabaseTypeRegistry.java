@@ -23,10 +23,23 @@ public final class DatabaseTypeRegistry {
     /** 使用 ServiceLoader 加载所有实现。 */
     public DatabaseTypeRegistry() {
         List<DatabaseType> loaded = new ArrayList<DatabaseType>();
+        loaded.add(new PostgreSQLDatabaseType());
+        loaded.add(new MySQLDatabaseType());
         for (DatabaseType type : ServiceLoader.load(DatabaseType.class)) {
-            loaded.add(type);
+            if (!containsName(loaded, type.name())) {
+                loaded.add(type);
+            }
         }
         this.types = loaded;
+    }
+
+    private static boolean containsName(List<DatabaseType> types, String name) {
+        for (DatabaseType type : types) {
+            if (type.name().equals(name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** 测试用：直接注入预定义的类型列表。 */

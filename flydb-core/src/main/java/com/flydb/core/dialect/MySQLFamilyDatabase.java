@@ -6,6 +6,13 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import com.flydb.core.executor.SqlStatementBuilderConfig;
+import com.flydb.core.api.FlydbConfiguration;
+import com.flydb.core.exception.ErrorCode;
+import com.flydb.core.exception.FlydbException;
+import com.flydb.core.history.SchemaHistory;
+import com.flydb.core.history.SchemaHistoryDdl;
+import com.flydb.core.lock.MigrationLock;
+import com.flydb.core.lock.TableRowLockMigrationLock;
 
 /**
  * MySQL 家族方言基类（设计 03 §3.2）。
@@ -65,6 +72,34 @@ public abstract class MySQLFamilyDatabase implements Database {
     @Override
     public SqlStatementBuilderConfig statementBuilderConfig() {
         return SqlStatementBuilderConfig.mysql();
+    }
+
+    @Override
+    public SchemaHistoryDdl schemaHistoryDdl() {
+        return SchemaHistoryDdl.mysql();
+    }
+
+    @Override
+    public MigrationLock createLock(FlydbConfiguration configuration) {
+        try {
+            Connection lockConnection = configuration.dataSource().getConnection();
+            return new TableRowLockMigrationLock(lockConnection,
+                    SchemaHistory.lockTableName(configuration.table()),
+                    lockOwner(), configuration.lockTimeoutSeconds());
+        } catch (SQLException e) {
+            throw new FlydbException(ErrorCode.CONNECT_FAILED,
+                    "创建锁表连接失败: " + e.getMessage(), e);
+        }
+    }
+
+    private static String lockOwner() {
+        return System.getProperty("user.name", "unknown") + "@"
+                + java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
+    }
+
+    @Override
+    public CleanStrategy cleanStrategy() {
+        return new MetadataCleanStrategy('`', false, true, false);
     }
 
     @Override

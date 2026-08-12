@@ -1,0 +1,21 @@
+package com.flydb.core.callback;
+
+/** Flydb 命令生命周期事件。 */
+public enum Event {
+    BEFORE_MIGRATE,
+    BEFORE_EACH_MIGRATE,
+    AFTER_EACH_MIGRATE,
+    AFTER_EACH_MIGRATE_ERROR,
+    AFTER_MIGRATE,
+    AFTER_MIGRATE_ERROR,
+    BEFORE_VALIDATE,
+    AFTER_VALIDATE,
+    BEFORE_CLEAN,
+    AFTER_CLEAN,
+    BEFORE_BASELINE,
+    AFTER_BASELINE,
+    BEFORE_REPAIR,
+    AFTER_REPAIR,
+    BEFORE_UNDO,
+    AFTER_UNDO
+}

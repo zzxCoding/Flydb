@@ -1,12 +1,24 @@
 package com.flydb.core.command;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.flydb.core.api.FlydbConfiguration;
 import com.flydb.core.api.MigrateResult;
+import com.flydb.core.callback.Event;
+import com.flydb.core.exception.FlydbValidationException;
+import com.flydb.core.exception.ValidationProblem;
+import com.flydb.core.lock.MigrationLock;
+import com.flydb.core.migration.AppliedMigration;
+import com.flydb.core.migration.MigrationType;
+import com.flydb.core.migration.MigrationVersion;
+import com.flydb.core.migration.PendingCalculator;
+import com.flydb.core.migration.ResolvedMigration;
 
 /**
  * migrate 命令（设计 05 §1）。
  *
- * <p>完整时序（阶段 3 骨架）：
+ * <p>完整时序：
  * <ol>
  *   <li>取得 Connection</li>
  *   <li>DatabaseTypeRegistry.detect(...) → 方言</li>
@@ -21,7 +33,6 @@ import com.flydb.core.api.MigrateResult;
  *   <li>返回 MigrateResult</li>
  * </ol>
  *
- * <p>阶段 3 先实现骨架，不含锁、无事务语义（阶段 4 补齐）。
  */
 public final class MigrateCommand {
 
@@ -32,10 +43,83 @@ public final class MigrateCommand {
     }
 
     public MigrateResult execute() {
-        // 阶段 3 骨架：解析脚本 → 计算 pending → 模拟执行
-        // 实际实现留待完整接线
-        // 先验证基础组件可调用
-        java.util.List<String> executed = new java.util.ArrayList<String>();
-        return new MigrateResult(executed, null, 0L, null);
+        long started = System.nanoTime();
+        try (CommandRuntime runtime = CommandRuntime.open(configuration, true);
+             MigrationLock lock = runtime.database().createLock(configuration)) {
+            lock.acquire();
+            List<AppliedMigration> applied = runtime.applied();
+            List<ResolvedMigration> migrations = executableMigrations(runtime.resolved());
+            if (configuration.validateOnMigrate()) {
+                validate(runtime, applied);
+            }
+            List<ResolvedMigration> pending = PendingCalculator.compute(
+                    migrations, applied, configuration.outOfOrder());
+            List<String> executed = new ArrayList<String>();
+            CommandCallbacks callbacks = CommandCallbacks.create(runtime);
+            callbacks.fire(Event.BEFORE_MIGRATE);
+            try {
+                executePending(runtime, pending, executed, callbacks);
+                callbacks.fire(Event.AFTER_MIGRATE);
+            } catch (RuntimeException e) {
+                callbacks.fire(Event.AFTER_MIGRATE_ERROR);
+                throw e;
+            }
+            return new MigrateResult(executed, targetVersion(applied, pending),
+                    elapsedMillis(started), new ArrayList<String>());
+        }
+    }
+
+    private static List<ResolvedMigration> executableMigrations(List<ResolvedMigration> resolved) {
+        List<ResolvedMigration> result = new ArrayList<ResolvedMigration>();
+        for (ResolvedMigration migration : resolved) {
+            if (migration.type() != MigrationType.UNDO_SQL) result.add(migration);
+        }
+        return result;
+    }
+
+    private static void validate(CommandRuntime runtime, List<AppliedMigration> applied) {
+        List<ValidationProblem> problems = MigrationValidator.validate(
+                MigrationInfoAssembler.assemble(runtime.resolved(), applied));
+        if (!problems.isEmpty()) throw new FlydbValidationException(problems);
+    }
+
+    private static void executePending(CommandRuntime runtime,
+                                       List<ResolvedMigration> pending,
+                                       List<String> executed,
+                                       CommandCallbacks callbacks) {
+        for (ResolvedMigration migration : pending) {
+            callbacks.fire(Event.BEFORE_EACH_MIGRATE);
+            try {
+                MigrationCommandSupport.execute(runtime, migration);
+                executed.add(migration.script());
+                callbacks.fire(Event.AFTER_EACH_MIGRATE);
+            } catch (RuntimeException e) {
+                callbacks.fire(Event.AFTER_EACH_MIGRATE_ERROR);
+                throw e;
+            }
+        }
+    }
+
+    private static MigrationVersion targetVersion(List<AppliedMigration> applied,
+                                                  List<ResolvedMigration> executed) {
+        MigrationVersion result = null;
+        for (AppliedMigration record : applied) {
+            if (record.success() && record.version() != null
+                    && record.type() != MigrationType.UNDO_SQL
+                    && (result == null || record.version().compareTo(result) > 0)) {
+                result = record.version();
+            }
+        }
+        for (ResolvedMigration migration : executed) {
+            if (migration.version() != null
+                    && (result == null || migration.version().compareTo(result) > 0)) {
+                result = migration.version();
+            }
+        }
+        return result;
+    }
+
+    private static long elapsedMillis(long started) {
+        return (System.nanoTime() - started) / 1_000_000L;
     }
 }

@@ -17,9 +17,9 @@ public final class InfoCommand {
     }
 
     public MigrationInfoService execute() {
-        // 阶段 3 骨架：解析脚本 + 读历史表 + 全外连接推导状态
-        // assert 确保可调用
-        java.util.List<com.flydb.core.migration.MigrationInfo> all = new java.util.ArrayList<com.flydb.core.migration.MigrationInfo>();
-        return new MigrationInfoService(all);
+        try (CommandRuntime runtime = CommandRuntime.open(configuration, false)) {
+            return new MigrationInfoService(MigrationInfoAssembler.assemble(
+                    runtime.resolved(), runtime.applied()));
+        }
     }
 }

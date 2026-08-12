@@ -4,7 +4,7 @@
 
 ## 1. 产品定位
 
-**Flydb 是一个面向中国信创（国产）数据库的、基于 JDBC 的数据库 Schema 版本化迁移工具。**
+**Flydb 是一个面向兼容中国信创（国产）数据库的、基于 JDBC 的数据库 Schema 版本化迁移工具。**
 
 它借鉴 Flyway 的核心思想（版本化 SQL 脚本 + schema history 表 + checksum 校验），但为信创场景做了针对性设计：
 

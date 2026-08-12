@@ -13,6 +13,8 @@ import javax.sql.DataSource;
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
 import com.flydb.core.migration.MigrationVersion;
+import com.flydb.core.callback.Callback;
+import com.flydb.core.Flydb;
 
 /**
  * Flydb 不可变配置（设计 02 §2、00 §6.1）。
@@ -21,9 +23,8 @@ import com.flydb.core.migration.MigrationVersion;
  * 由 {@link Builder} 构造，{@link Builder#load()} 时 {@code validate()} 快速失败，错误消息指明
  * 具体非法项——杜绝旧原型「配置了但没生效」（{@code max_concurrent_tasks} 之教训）。
  *
- * <p>阶段 1 范围：持有连接参数（url/user/password）或既有 {@link DataSource}，但<b>不</b>在此构造
- * {@code DriverDataSource}——动态驱动加载（设计 06 §6）属阶段 3 运行期基础设施。
- * {@code callbacks}（设计 02 §2、05 §8）随阶段 4 的 Callback SPI 一并补齐。
+ * <p>持有连接参数（url/user/password）或既有 {@link DataSource}。URL 模式的动态驱动加载由 CLI
+ * 基础设施提供；core 命令运行时直接使用 {@link DataSource}。回调列表按注册顺序保持不可变。
  */
 public final class FlydbConfiguration {
 
@@ -45,6 +46,7 @@ public final class FlydbConfiguration {
     private final int lockTimeoutSeconds;
     private final String databaseType;
     private final ClassLoader classLoader;
+    private final List<Callback> callbacks;
 
     private FlydbConfiguration(Builder b) {
         this.dataSource = b.dataSource;
@@ -65,6 +67,7 @@ public final class FlydbConfiguration {
         this.lockTimeoutSeconds = b.lockTimeoutSeconds;
         this.databaseType = b.databaseType;
         this.classLoader = b.classLoader;
+        this.callbacks = Collections.unmodifiableList(new ArrayList<Callback>(b.callbacks));
     }
 
     public static Builder builder() {
@@ -89,6 +92,7 @@ public final class FlydbConfiguration {
     public int lockTimeoutSeconds() { return lockTimeoutSeconds; }
     public String databaseType() { return databaseType; }
     public ClassLoader classLoader() { return classLoader; }
+    public List<Callback> callbacks() { return callbacks; }
 
     /**
      * 可变构建器（设计 02 §2）。每个 setter 返回 {@code this}；{@link #load()} 校验并产出不可变配置。
@@ -113,6 +117,7 @@ public final class FlydbConfiguration {
         private int lockTimeoutSeconds = 60;
         private String databaseType;
         private ClassLoader classLoader;
+        private List<Callback> callbacks = new ArrayList<Callback>();
 
         public Builder dataSource(DataSource dataSource) { this.dataSource = dataSource; return this; }
         public Builder url(String url) { this.url = url; return this; }
@@ -159,6 +164,10 @@ public final class FlydbConfiguration {
         public Builder lockTimeoutSeconds(int seconds) { this.lockTimeoutSeconds = seconds; return this; }
         public Builder databaseType(String typeName) { this.databaseType = typeName; return this; }
         public Builder classLoader(ClassLoader classLoader) { this.classLoader = classLoader; return this; }
+        public Builder callbacks(Callback... callbacks) {
+            this.callbacks = new ArrayList<Callback>(Arrays.asList(callbacks));
+            return this;
+        }
 
         /**
          * 校验并构造不可变配置。
@@ -166,7 +175,12 @@ public final class FlydbConfiguration {
          * @throws FlydbException(FLYDB-4002) url/dataSource 未二选一，或其它必填项缺失
          * @throws FlydbException(FLYDB-2001) baselineVersion 字符串非法
          */
-        public FlydbConfiguration load() {
+        public Flydb load() {
+            return new Flydb(build());
+        }
+
+        /** 构造配置对象，供命令适配器与测试注入；常规用户使用 {@link #load()}。 */
+        public FlydbConfiguration build() {
             if (classLoader == null) {
                 classLoader = Thread.currentThread().getContextClassLoader();
                 if (classLoader == null) {

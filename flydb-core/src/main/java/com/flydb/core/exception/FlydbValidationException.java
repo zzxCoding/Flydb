@@ -17,9 +17,13 @@ public final class FlydbValidationException extends FlydbException {
     private final List<ValidationProblem> problems;
 
     public FlydbValidationException(List<ValidationProblem> problems) {
-        super(ErrorCode.CHECKSUM_MISMATCH, join(problems), null);
+        super(primaryErrorCode(problems), join(problems), null);
         // 防御性拷贝 + 不可变视图
         this.problems = Collections.unmodifiableList(new ArrayList<ValidationProblem>(problems));
+    }
+
+    private static ErrorCode primaryErrorCode(List<ValidationProblem> problems) {
+        return problems.isEmpty() ? ErrorCode.CHECKSUM_MISMATCH : problems.get(0).errorCode();
     }
 
     private static String join(List<ValidationProblem> problems) {

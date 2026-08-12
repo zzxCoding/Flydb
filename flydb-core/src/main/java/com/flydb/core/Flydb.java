@@ -5,6 +5,13 @@ import com.flydb.core.api.MigrateResult;
 import com.flydb.core.api.MigrationInfoService;
 import com.flydb.core.command.InfoCommand;
 import com.flydb.core.command.MigrateCommand;
+import com.flydb.core.api.RepairResult;
+import com.flydb.core.api.UndoResult;
+import com.flydb.core.command.ValidateCommand;
+import com.flydb.core.command.BaselineCommand;
+import com.flydb.core.command.RepairCommand;
+import com.flydb.core.command.CleanCommand;
+import com.flydb.core.command.UndoCommand;
 
 /**
  * Flydb 门面（设计 02 §1）。
@@ -24,7 +31,7 @@ public final class Flydb {
 
     private final FlydbConfiguration configuration;
 
-    Flydb(FlydbConfiguration configuration) {
+    public Flydb(FlydbConfiguration configuration) {
         this.configuration = configuration;
     }
 
@@ -40,10 +47,9 @@ public final class Flydb {
         return new InfoCommand(configuration).execute();
     }
 
-    // 以下命令留待阶段 4/5/6 实现（设计 02 §1）
-    // public void validate()        { new ValidateCommand(configuration).execute(); }
-    // public void baseline()        { new BaselineCommand(configuration).execute(); }
-    // public RepairResult repair()  { return new RepairCommand(configuration).execute(); }
-    // public void clean()           { new CleanCommand(configuration).execute(); }
-    // public UndoResult undo()      { return new UndoCommand(configuration).execute(); }
+    public void validate() { new ValidateCommand(configuration).execute(); }
+    public void baseline() { new BaselineCommand(configuration).execute(); }
+    public RepairResult repair() { return new RepairCommand(configuration).execute(); }
+    public void clean() { new CleanCommand(configuration).execute(); }
+    public UndoResult undo() { return new UndoCommand(configuration).execute(); }
 }

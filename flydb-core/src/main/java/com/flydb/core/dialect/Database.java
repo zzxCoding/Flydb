@@ -5,6 +5,8 @@ import java.sql.SQLException;
 
 import com.flydb.core.api.FlydbConfiguration;
 import com.flydb.core.executor.SqlStatementBuilderConfig;
+import com.flydb.core.history.SchemaHistoryDdl;
+import com.flydb.core.lock.MigrationLock;
 
 /**
  * 数据库方言（设计 03 §2）。
@@ -37,6 +39,15 @@ public interface Database extends AutoCloseable {
      * 返回的配置应能在该方言的迁移脚本上正确切分。
      */
     SqlStatementBuilderConfig statementBuilderConfig();
+
+    /** 当前家族的历史表/锁表 DDL。 */
+    SchemaHistoryDdl schemaHistoryDdl();
+
+    /** 创建由独立连接持有的命令级迁移锁。 */
+    MigrationLock createLock(FlydbConfiguration configuration);
+
+    /** 当前家族的 clean 策略。 */
+    CleanStrategy cleanStrategy();
 
     /**
      * 获取当前会话的 schema 名称。

@@ -26,6 +26,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("DatabaseTypeRegistry")
 class DatabaseTypeRegistryTest {
 
+    @Test
+    @DisplayName("默认注册中心包含内置 PostgreSQL 与 MySQL 方言")
+    void defaultRegistryIncludesBuiltInTypes() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:postgresql://localhost/db", null, null).name())
+                .isEqualTo("postgresql");
+        assertThat(registry.detect("jdbc:mysql://localhost/db", null, "mysql").name())
+                .isEqualTo("mysql");
+    }
+
     @Nested
     @DisplayName("显式指定跳过探测")
     class ExplicitDatabaseType {

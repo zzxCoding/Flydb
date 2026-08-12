@@ -2,6 +2,7 @@ package com.flydb.core.api;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
 
 import com.flydb.core.migration.MigrationVersion;
 
@@ -19,11 +20,11 @@ public final class MigrateResult {
 
     public MigrateResult(List<String> executed, MigrationVersion targetVersionReached,
                          long totalExecutionTimeMillis, List<String> warnings) {
-        this.executed = Collections.unmodifiableList(executed);
+        this.executed = Collections.unmodifiableList(new ArrayList<String>(executed));
         this.targetVersionReached = targetVersionReached;
         this.totalExecutionTimeMillis = totalExecutionTimeMillis;
         this.warnings = warnings != null
-                ? Collections.unmodifiableList(warnings)
+                ? Collections.unmodifiableList(new ArrayList<String>(warnings))
                 : Collections.<String>emptyList();
     }
 

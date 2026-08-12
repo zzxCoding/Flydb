@@ -8,6 +8,7 @@ import com.flydb.core.api.MigrateResult;
 import com.flydb.core.api.MigrationInfoService;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Flydb 门面单测（设计 02 §1）。
@@ -23,8 +24,8 @@ class FlydbTest {
     }
 
     @Test
-    @DisplayName("migrate() 返回 MigrateResult")
-    void migrateReturnsResult() {
+    @DisplayName("migrate() 对 DataSource 返回 null Connection 快速报连接错误")
+    void migrateRejectsNullConnection() {
         FlydbConfiguration cfg = Flydb.configure()
                 .dataSource(new javax.sql.DataSource() {
                     @Override public java.sql.Connection getConnection() { return null; }
@@ -37,16 +38,16 @@ class FlydbTest {
                     @Override public <T> T unwrap(Class<T> iface) { return null; }
                     @Override public boolean isWrapperFor(Class<?> iface) { return false; }
                 })
-                .load();
+                .build();
         Flydb flydb = new Flydb(cfg);
-        MigrateResult result = flydb.migrate();
-        assertThat(result).isNotNull();
-        assertThat(result.executed()).isNotNull();
+        assertThatThrownBy(flydb::migrate)
+                .isInstanceOf(com.flydb.core.exception.FlydbException.class)
+                .hasMessageContaining("FLYDB-1001");
     }
 
     @Test
-    @DisplayName("info() 返回 MigrationInfoService")
-    void infoReturnsService() {
+    @DisplayName("info() 对 DataSource 返回 null Connection 快速报连接错误")
+    void infoRejectsNullConnection() {
         FlydbConfiguration cfg = Flydb.configure()
                 .dataSource(new javax.sql.DataSource() {
                     @Override public java.sql.Connection getConnection() { return null; }
@@ -59,10 +60,10 @@ class FlydbTest {
                     @Override public <T> T unwrap(Class<T> iface) { return null; }
                     @Override public boolean isWrapperFor(Class<?> iface) { return false; }
                 })
-                .load();
+                .build();
         Flydb flydb = new Flydb(cfg);
-        MigrationInfoService svc = flydb.info();
-        assertThat(svc).isNotNull();
-        assertThat(svc.all()).isEmpty();
+        assertThatThrownBy(flydb::info)
+                .isInstanceOf(com.flydb.core.exception.FlydbException.class)
+                .hasMessageContaining("FLYDB-1001");
     }
 }

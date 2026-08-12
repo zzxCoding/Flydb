@@ -26,7 +26,7 @@ class FlydbConfigurationTest {
 
     @Test
     void applies_documented_defaults() {
-        FlydbConfiguration c = FlydbConfiguration.builder().url("jdbc:x").load();
+        FlydbConfiguration c = FlydbConfiguration.builder().url("jdbc:x").build();
 
         assertThat(c.locations()).containsExactly("classpath:db/migration");
         assertThat(c.encoding()).isEqualTo(StandardCharsets.UTF_8);
@@ -48,7 +48,7 @@ class FlydbConfigurationTest {
     void url_path_stores_credentials_and_leaves_data_source_null() {
         // DriverDataSource 由阶段 3 在运行期构造；阶段 1 仅持有连接参数
         FlydbConfiguration c = FlydbConfiguration.builder()
-                .url("jdbc:dm://localhost:5236").user("SYSDBA").password("secret").load();
+                .url("jdbc:dm://localhost:5236").user("SYSDBA").password("secret").build();
 
         assertThat(c.url()).isEqualTo("jdbc:dm://localhost:5236");
         assertThat(c.user()).isEqualTo("SYSDBA");
@@ -60,7 +60,7 @@ class FlydbConfigurationTest {
     void data_source_path_keeps_reference_and_url_null() {
         DataSource ds = new StubDataSource();
 
-        FlydbConfiguration c = FlydbConfiguration.builder().dataSource(ds).load();
+        FlydbConfiguration c = FlydbConfiguration.builder().dataSource(ds).build();
 
         assertThat(c.dataSource()).isSameAs(ds);
         assertThat(c.url()).isNull();
@@ -68,7 +68,7 @@ class FlydbConfigurationTest {
 
     @Test
     void load_requires_either_url_or_data_source() {
-        assertThatThrownBy(() -> FlydbConfiguration.builder().load())
+        assertThatThrownBy(() -> FlydbConfiguration.builder().build())
                 .isInstanceOf(FlydbException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.MISSING_REQUIRED_CONFIG);
     }
@@ -76,7 +76,7 @@ class FlydbConfigurationTest {
     @Test
     void load_rejects_both_url_and_data_source() {
         assertThatThrownBy(() -> FlydbConfiguration.builder()
-                .url("jdbc:x").dataSource(new StubDataSource()).load())
+                .url("jdbc:x").dataSource(new StubDataSource()).build())
                 .isInstanceOf(FlydbException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.MISSING_REQUIRED_CONFIG);
     }
@@ -84,7 +84,7 @@ class FlydbConfigurationTest {
     @Test
     void baseline_version_string_is_parsed() {
         FlydbConfiguration c = FlydbConfiguration.builder()
-                .url("jdbc:x").baselineVersion("2.1").load();
+                .url("jdbc:x").baselineVersion("2.1").build();
 
         assertThat(c.baselineVersion()).isEqualTo(MigrationVersion.parse("2.1"));
     }
@@ -92,7 +92,7 @@ class FlydbConfigurationTest {
     @Test
     void locations_are_defensively_copied_and_unmodifiable() {
         FlydbConfiguration c = FlydbConfiguration.builder()
-                .url("jdbc:x").locations("filesystem:db/migration", "classpath:other").load();
+                .url("jdbc:x").locations("filesystem:db/migration", "classpath:other").build();
 
         assertThat(c.locations()).containsExactly("filesystem:db/migration", "classpath:other");
         assertThatThrownBy(() -> c.locations().add("evil"))
@@ -104,7 +104,7 @@ class FlydbConfigurationTest {
         Map<String, String> input = new HashMap<String, String>();
         input.put("k", "v");
 
-        FlydbConfiguration c = FlydbConfiguration.builder().url("jdbc:x").placeholders(input).load();
+        FlydbConfiguration c = FlydbConfiguration.builder().url("jdbc:x").placeholders(input).build();
 
         input.put("mutated", "after"); // 构造后改动入参不应影响配置
         assertThat(c.placeholders()).containsOnly(entry("k", "v"));
