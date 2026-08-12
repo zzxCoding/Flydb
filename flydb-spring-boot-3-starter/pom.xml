@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.flydb</groupId>
+        <artifactId>flydb-parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <!--
+        flydb-spring-boot-3-starter：Spring Boot 3.x / Java 17。
+        阶段 7 实现：AutoConfiguration.imports、与 starter-2 同构适配。
+        注：本模块含代码后需 maven.compiler.release=17（须在 JDK 17+ 上构建）。
+    -->
+    <artifactId>flydb-spring-boot-3-starter</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Flydb :: Spring Boot 3 Starter</name>
+</project>

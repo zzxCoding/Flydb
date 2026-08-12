@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.flydb</groupId>
+        <artifactId>flydb-parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <!--
+        flydb-spring-boot-2-starter：Spring Boot 2.7.x / Java 8。
+        阶段 7 实现：spring.factories、FlydbAutoConfiguration、FlydbMigrationInitializer、SLF4J 桥接。
+    -->
+    <artifactId>flydb-spring-boot-2-starter</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Flydb :: Spring Boot 2 Starter</name>
+</project>

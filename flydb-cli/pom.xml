@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.flydb</groupId>
+        <artifactId>flydb-parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <!--
+        flydb-cli：picocli 可执行发行包，目标 Java 8。
+        阶段 6 实现：命令树、ConfigLoader、drivers/ 动态加载、zip 打包。
+        依赖（待加）：flydb-core、info.picocli:picocli。
+    -->
+    <artifactId>flydb-cli</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Flydb :: CLI</name>
+</project>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.flydb</groupId>
+        <artifactId>flydb-parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <!--
+        flydb-integration-tests：Testcontainers 契约测试矩阵，不发布（设计 01 §1）。
+        阶段 3 起实现：DatabaseTestSupport 抽象 + 各方言实现 + MigrateContractTest 等。
+        注：本模块含代码后需 maven.compiler.release=17（须在 JDK 17+ 上构建）。
+    -->
+    <artifactId>flydb-integration-tests</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Flydb :: Integration Tests</name>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+</project>
