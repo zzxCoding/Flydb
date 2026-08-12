@@ -2,6 +2,8 @@ English | [中文](./README.md)
 
 # FlyDB Database Migration Tool
 
+> **Flydb 2.0 redesign in progress:** a JDBC schema migration tool for any database that provides a JDBC driver. It ships built-in support for mainstream databases, treats Chinese Xinchuang databases as first-class targets, and supports niche JDBC databases through a dialect SPI. See the [2.0 design overview](./docs/design/00-overview.md). The remaining content below describes the 1.x prototype and may differ from the 2.0 design.
+
 FlyDB is a simple and easy-to-use database version control and migration tool that helps you easily manage changes to your database schema.
 
 ## Project Background

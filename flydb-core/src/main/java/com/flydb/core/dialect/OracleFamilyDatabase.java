@@ -5,27 +5,22 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import com.flydb.core.executor.SqlStatementBuilderConfig;
 import com.flydb.core.api.FlydbConfiguration;
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
+import com.flydb.core.executor.SqlStatementBuilderConfig;
 import com.flydb.core.history.SchemaHistory;
 import com.flydb.core.history.SchemaHistoryDdl;
-import com.flydb.core.lock.AdvisoryLockMigrationLock;
 import com.flydb.core.lock.MigrationLock;
+import com.flydb.core.lock.TableRowLockMigrationLock;
 
-/**
- * PostgreSQL 家族方言基类（设计 03 §3.1）。
- *
- * <p>家族共性：支持 DDL 事务（failure 自愈）、双引号标识符、dollar-quoting。
- * 子类：PostgreSQL / KingbaseES / openGauss。
- */
-public abstract class PostgreSQLFamilyDatabase implements Database {
+/** Oracle 兼容家族基类（达梦 DM8 / OceanBase-Oracle）。 */
+public abstract class OracleFamilyDatabase implements Database {
 
-    private final Connection connection;
     private final String name;
+    private final Connection connection;
 
-    protected PostgreSQLFamilyDatabase(String name, Connection connection) {
+    protected OracleFamilyDatabase(String name, Connection connection) {
         this.name = name;
         this.connection = connection;
     }
@@ -41,33 +36,27 @@ public abstract class PostgreSQLFamilyDatabase implements Database {
 
     @Override
     public boolean supportsDdlTransactions() {
-        return true;
+        return false;
     }
 
     @Override
     public String quote(String identifier) {
-        // 双引号，内部 " 转义为 ""
         return "\"" + identifier.replace("\"", "\"\"") + "\"";
     }
 
     @Override
     public String currentSchema() throws SQLException {
-        Statement stmt = connection.createStatement();
+        Statement statement = connection.createStatement();
         try {
-            ResultSet rs = stmt.executeQuery("SELECT current_schema()");
-            if (rs == null) {
-                return "public";
-            }
+            ResultSet resultSet = statement.executeQuery(
+                    "SELECT SYS_CONTEXT('USERENV','CURRENT_SCHEMA') FROM dual");
             try {
-                if (rs.next()) {
-                    return rs.getString(1);
-                }
-                return "public";
+                return resultSet.next() ? resultSet.getString(1) : null;
             } finally {
-                rs.close();
+                resultSet.close();
             }
         } finally {
-            stmt.close();
+            statement.close();
         }
     }
 
@@ -78,36 +67,43 @@ public abstract class PostgreSQLFamilyDatabase implements Database {
 
     @Override
     public SqlStatementBuilderConfig statementBuilderConfig() {
-        return SqlStatementBuilderConfig.postgresql();
+        return SqlStatementBuilderConfig.oracle();
     }
 
     @Override
     public SchemaHistoryDdl schemaHistoryDdl() {
-        return SchemaHistoryDdl.postgresql();
+        return SchemaHistoryDdl.oracle();
     }
 
     @Override
     public MigrationLock createLock(FlydbConfiguration configuration) {
         try {
-            Connection lockConnection = configuration.dataSource().getConnection();
-            String schema = currentSchema();
-            String qualifiedTable = schema == null || schema.isEmpty()
-                    ? configuration.table() : schema + "." + configuration.table();
-            return new AdvisoryLockMigrationLock(lockConnection, qualifiedTable,
+            return new TableRowLockMigrationLock(configuration.dataSource().getConnection(),
+                    lockTableName(configuration), lockOwner(),
                     configuration.lockTimeoutSeconds());
         } catch (SQLException e) {
             throw new FlydbException(ErrorCode.CONNECT_FAILED,
-                    "创建 PostgreSQL 锁连接失败: " + e.getMessage(), e);
+                    "创建 Oracle 兼容锁连接失败: " + e.getMessage(), e);
         }
+    }
+
+    /** 允许大小写敏感的 Oracle 兼容方言覆写锁表标识符。 */
+    protected String lockTableName(FlydbConfiguration configuration) {
+        return SchemaHistory.lockTableName(configuration.table());
     }
 
     @Override
     public CleanStrategy cleanStrategy() {
-        return new MetadataCleanStrategy('"', true, false, true);
+        return new MetadataCleanStrategy('"', false, false, false);
     }
 
     @Override
     public void close() throws Exception {
         connection.close();
+    }
+
+    private static String lockOwner() {
+        return System.getProperty("user.name", "unknown") + "@"
+                + java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
     }
 }

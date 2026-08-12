@@ -53,7 +53,7 @@ public final class SchemaHistory {
     }
 
     private void ensureLockRow() {
-        String sql = "INSERT INTO " + lockTableName(table) + " (lock_id) VALUES (?)";
+        String sql = "INSERT INTO " + lockTable() + " (lock_id) VALUES (?)";
         PreparedStatement statement = null;
         try {
             statement = connection.prepareStatement(sql);
@@ -98,7 +98,7 @@ public final class SchemaHistory {
         List<AppliedMigration> records = new ArrayList<AppliedMigration>();
         String sql = "SELECT installed_rank, version, description, type, script, checksum, "
                 + "installed_by, installed_on, execution_time, success "
-                + "FROM " + table + " ORDER BY installed_rank";
+                + "FROM " + historyTable() + " ORDER BY installed_rank";
         Statement stmt = null;
         ResultSet rs = null;
         try {
@@ -134,7 +134,7 @@ public final class SchemaHistory {
      */
     public void insert(AppliedMigration migration) {
         int nextRank = nextInstalledRank();
-        String sql = "INSERT INTO " + table
+        String sql = "INSERT INTO " + historyTable()
                 + " (installed_rank, version, description, type, script, checksum, "
                 + "installed_by, installed_on, execution_time, success) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -179,7 +179,7 @@ public final class SchemaHistory {
         if (removed.isEmpty()) {
             return removed;
         }
-        String sql = "DELETE FROM " + table + " WHERE success = ?";
+        String sql = "DELETE FROM " + historyTable() + " WHERE success = ?";
         PreparedStatement statement = null;
         try {
             statement = connection.prepareStatement(sql);
@@ -196,7 +196,8 @@ public final class SchemaHistory {
 
     /** 按脚本名对齐 checksum。 */
     public void updateChecksum(String script, Integer checksum) {
-        String sql = "UPDATE " + table + " SET checksum = ? WHERE script = ? AND success = ?";
+        String sql = "UPDATE " + historyTable()
+                + " SET checksum = ? WHERE script = ? AND success = ?";
         PreparedStatement statement = null;
         try {
             statement = connection.prepareStatement(sql);
@@ -217,7 +218,7 @@ public final class SchemaHistory {
     }
 
     private int nextInstalledRank() {
-        String sql = "SELECT COALESCE(MAX(installed_rank), 0) + 1 FROM " + table;
+        String sql = "SELECT COALESCE(MAX(installed_rank), 0) + 1 FROM " + historyTable();
         Statement stmt = null;
         ResultSet rs = null;
         try {
@@ -243,5 +244,13 @@ public final class SchemaHistory {
                 }
             }
         }
+    }
+
+    private String historyTable() {
+        return ddl.tableName(table);
+    }
+
+    private String lockTable() {
+        return ddl.tableName(lockTableName(table));
     }
 }

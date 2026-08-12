@@ -28,7 +28,16 @@ public final class PostgreSQLDatabaseType implements DatabaseType {
     @Override
     public boolean handlesConnection(Connection connection) throws SQLException {
         String productName = connection.getMetaData().getDatabaseProductName();
-        return "PostgreSQL".equals(productName);
+        if (!"PostgreSQL".equals(productName)) {
+            return false;
+        }
+        try {
+            String version = DatabaseProbe.queryString(connection, "SELECT version()");
+            return !DatabaseProbe.containsIgnoreCase(version, "opengauss")
+                    && !DatabaseProbe.containsIgnoreCase(version, "kingbase");
+        } catch (SQLException ignored) {
+            return true;
+        }
     }
 
     @Override

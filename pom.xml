@@ -18,7 +18,7 @@
     <packaging>pom</packaging>
 
     <name>Flydb 2.0</name>
-    <description>面向信创数据库的 JDBC Schema 版本化迁移工具</description>
+    <description>面向各类 JDBC 数据库、以国产信创数据库支持为特色的 Schema 版本化迁移工具</description>
     <url>https://github.com/zhangzhenxuan/Flydb</url>
 
     <licenses>

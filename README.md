@@ -2,7 +2,7 @@
 
 # FlyDB 数据库迁移工具
 
-> **📢 Flydb 2.0 重新设计进行中**：本仓库正在按全新架构推倒重写（面向信创数据库的类 Flyway 迁移工具：flydb-core 纯 Java 8 API + 独立 CLI + Spring Boot Starter，MVP 覆盖达梦 DM8、人大金仓、openGauss、MySQL、PostgreSQL、OceanBase、TiDB）。完整设计文档见 [docs/design/](./docs/design/00-overview.md)，实施交接计划见 [docs/design/09-implementation-plan.md](./docs/design/09-implementation-plan.md)。**以下为 1.x 原型的旧文档，其描述与 2.0 设计不一致处以设计文档为准**（特别注意：2.0 中 `R` 前缀语义已变更，见设计文档 00 §4.1）。
+> **📢 Flydb 2.0 重新设计进行中**：本仓库正在按全新架构推倒重写（面向所有提供 JDBC 驱动的数据库的类 Flyway 迁移工具：内置支持主流数据库，以国产信创数据库的一等支持为特色，并可通过方言 SPI 扩展接入小众 JDBC 数据库；产品形态为 flydb-core 纯 Java 8 API + 独立 CLI + Spring Boot Starter，MVP 覆盖达梦 DM8、人大金仓、openGauss、MySQL、PostgreSQL、OceanBase、TiDB）。完整设计文档见 [docs/design/](./docs/design/00-overview.md)，实施交接计划见 [docs/design/09-implementation-plan.md](./docs/design/09-implementation-plan.md)。**以下为 1.x 原型的旧文档，其描述与 2.0 设计不一致处以设计文档为准**（特别注意：2.0 中 `R` 前缀语义已变更，见设计文档 00 §4.1）。
 
 FlyDB 是一个简单易用的数据库版本控制和迁移工具，帮助您轻松管理数据库架构的变更。
 

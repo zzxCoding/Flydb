@@ -6,7 +6,7 @@
 
 ## 1. 任务背景（30 秒版）
 
-本仓库正在从"993 行的 Spring Boot REST 原型"推倒重写为 **Flydb 2.0**：面向信创数据库（达梦/金仓/openGauss 等）的类 Flyway JDBC 迁移工具。产品形态 = flydb-core（纯 Java 8 API 库，零第三方运行时依赖）+ flydb-cli（picocli）+ 双 Spring Boot Starter。设计已评审定稿（docs/design/00~08），**不要偏离设计中标注为"契约"与"决策"的内容**；发现设计与现实冲突时，停下来在 PR/issue 中提出，不要自行改设计。
+本仓库正在从"993 行的 Spring Boot REST 原型"推倒重写为 **Flydb 2.0**：面向所有提供 JDBC 驱动的数据库的类 Flyway 迁移工具，内置支持主流数据库，以国产信创数据库（达梦/金仓/openGauss 等）的一等支持为特色，并可通过方言 SPI 扩展接入小众 JDBC 数据库。产品形态 = flydb-core（纯 Java 8 API 库，零第三方运行时依赖）+ flydb-cli（picocli）+ 双 Spring Boot Starter。设计已评审定稿（docs/design/00~08），**不要偏离设计中标注为"契约"与"决策"的内容**；发现设计与现实冲突时，停下来在 PR/issue 中提出，不要自行改设计。
 
 ## 2. 全局约束（每个阶段都适用）
 
@@ -69,14 +69,14 @@
 
 按顺序（每个方言：Type 探测 + Database 覆写 + TestSupport + 契约测试跑通）：
 
-1. **openGauss**（公共镜像可用，先做）：GenericContainer 封装（`opengauss/opengauss` 镜像、`GS_PASSWORD`）；PG 驱动误连的阶段二兜底探测。
-2. **TiDB**：`org.testcontainers:tidb`；`tidb_version()` 探测、priority 高于 MySQL。
-3. **OceanBase-MySQL**：`testcontainers-oceanbase`；`ob_compatibility_mode` 分派。
-4. **KingbaseES**（需外部实例或私有镜像）：先跑 §5 实测清单第 2/3 项，据实测结果定稿探测串与锁实现（advisory 或降级锁表）。
-5. **达梦 DM8**（需外部实例或私有镜像）：`CASE_SENSITIVE` 探测（[03 §4](03-dialects.md) 达梦行）；compatibleMode=oracle 集成回归。
+1. **openGauss**：PG 驱动误连的阶段二兜底探测；本地用 PostgreSQL 跑 PG 家族契约，真实 openGauss 放到外部实例/显式 CI。
+2. **TiDB**：`tidb_version()` 探测、priority 高于 MySQL；本地用 MySQL 跑 MySQL 家族契约，异步 DDL 等产品差异留给真实实例。
+3. **OceanBase-MySQL**：`ob_compatibility_mode` 分派；本地用探测代理 + MySQL 跑兼容族契约，真实 OB 租户放到外部实例/显式 CI。
+4. **KingbaseES**（需外部实例或私有镜像）：实现 advisory 能力探测与锁表降级；本地用 PostgreSQL 验证 PG 家族路径，§5 实测清单第 2/3 项由环境变量门禁执行。
+5. **达梦 DM8**（需外部实例或私有镜像）：`CASE_SENSITIVE` 探测（[03 §4](03-dialects.md) 达梦行）；compatibleMode=oracle 防御由单测固化，真实实例由环境变量门禁执行。
 6. **OceanBase-Oracle**：实现 + `DBMS_LOCK` 锁；无自动化环境，标注实验性，测试用例写好但默认 Disabled。
 
-**验收**：openGauss/TiDB/OB-MySQL 契约测试在本机 Docker 全绿；金仓/达梦在 `FLYDB_TEST_<DB>_URL` 指向的实例上全绿（无实例则 Disabled 且原因清晰）。
+**验收**：MySQL/PostgreSQL 两个本地容器上的四个新增兼容方言契约全绿；金仓/达梦在 `FLYDB_TEST_<DB>_URL` 指向的实例上执行只读契约（无实例则 Disabled 且原因清晰）。真实 TiDB/openGauss/OceanBase 的产品差异未验证前不得标注为“真实产品全绿”。
 
 ### 阶段 6：CLI（依赖：[06](06-config-cli.md) 全篇）
 

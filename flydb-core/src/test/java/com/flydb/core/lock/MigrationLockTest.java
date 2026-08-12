@@ -3,6 +3,7 @@ package com.flydb.core.lock;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -70,6 +71,28 @@ class MigrationLockTest {
         assertThat(jdbc.commits).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("OceanBase-Oracle DBMS_LOCK 分配、获取并释放同一 handle")
+    void dbmsLockUsesAllocatedHandle() {
+        RecordingDbmsJdbc jdbc = new RecordingDbmsJdbc();
+        MigrationLock lock = new DbmsLockMigrationLock(jdbc.connection(),
+                "flydb:flydb_schema_history", 15);
+
+        lock.acquire();
+        lock.close();
+
+        assertThat(jdbc.sql).containsExactly(
+                "BEGIN DBMS_LOCK.ALLOCATE_UNIQUE(lockname => ?, lockhandle => ?); END;",
+                "BEGIN ? := DBMS_LOCK.REQUEST(lockhandle => ?, "
+                        + "lockmode => DBMS_LOCK.X_MODE, timeout => ?, "
+                        + "release_on_commit => FALSE); END;",
+                "BEGIN ? := DBMS_LOCK.RELEASE(?); END;");
+        assertThat(jdbc.stringParameters).containsExactly(
+                "flydb:flydb_schema_history", "flydb-lock-handle", "flydb-lock-handle");
+        assertThat(jdbc.intParameters).containsExactly(15);
+        assertThat(jdbc.closed).isTrue();
+    }
+
     private static final class RecordingJdbc implements InvocationHandler {
         private final boolean failExecute;
         private final List<String> sql = new ArrayList<String>();
@@ -133,6 +156,46 @@ class MigrationLockTest {
             if (type == int.class) return 0;
             if (type == long.class) return 0L;
             return null;
+        }
+    }
+
+    private static final class RecordingDbmsJdbc implements InvocationHandler {
+        private final List<String> sql = new ArrayList<String>();
+        private final List<String> stringParameters = new ArrayList<String>();
+        private final List<Integer> intParameters = new ArrayList<Integer>();
+        private boolean closed;
+
+        Connection connection() {
+            return RecordingJdbc.proxy(Connection.class, this);
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) {
+            if ("prepareCall".equals(method.getName())) {
+                String call = (String) args[0];
+                sql.add(call);
+                return RecordingJdbc.proxy(CallableStatement.class, callable());
+            }
+            if ("close".equals(method.getName())) {
+                closed = true;
+                return null;
+            }
+            return RecordingJdbc.defaultValue(method.getReturnType());
+        }
+
+        private InvocationHandler callable() {
+            return (proxy, method, args) -> {
+                if ("setString".equals(method.getName())) {
+                    stringParameters.add((String) args[1]);
+                } else if ("setInt".equals(method.getName())) {
+                    intParameters.add((Integer) args[1]);
+                } else if ("getString".equals(method.getName())) {
+                    return "flydb-lock-handle";
+                } else if ("getInt".equals(method.getName())) {
+                    return 0;
+                }
+                return RecordingJdbc.defaultValue(method.getReturnType());
+            };
         }
     }
 }

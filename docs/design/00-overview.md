@@ -4,10 +4,11 @@
 
 ## 1. 产品定位
 
-**Flydb 是一个面向兼容中国信创（国产）数据库的、基于 JDBC 的数据库 Schema 版本化迁移工具。**
+**Flydb 是一个基于 JDBC 的数据库 Schema 版本化迁移工具，面向所有提供 JDBC 驱动的数据库。它内置支持 MySQL、PostgreSQL 等主流数据库，以国产信创数据库的一等支持为特色，并可通过方言 SPI 扩展接入小众 JDBC 数据库。**
 
-它借鉴 Flyway 的核心思想（版本化 SQL 脚本 + schema history 表 + checksum 校验），但为信创场景做了针对性设计：
+它借鉴 Flyway 的核心思想（版本化 SQL 脚本 + schema history 表 + checksum 校验），在提供通用 JDBC 迁移能力的基础上，为信创场景做了针对性设计：
 
+- **面向各类 JDBC 数据库**：MySQL、PostgreSQL 等主流数据库开箱即用；其他提供 JDBC 驱动的数据库可通过 `DatabaseType` SPI 和方言实现接入。
 - **信创数据库一等公民**：达梦 DM8、人大金仓 KingbaseES、openGauss 与 MySQL/PostgreSQL 同级支持，而不是"社区插件"待遇。
 - **Java 8 字节码基线**：信创环境（东方通/宝兰德中间件、国产化改造项目）大量停留在 JDK 8。Flyway 10+ 强制 Java 17，把这批用户挡在门外；Flydb 的核心库与 CLI 承诺 Java 8 可运行。
 - **离线友好**：CLI 通过 `drivers/` 目录动态加载 JDBC 驱动，不假设能访问公网 Maven 仓库——达梦、金仓的驱动通常经企业内部制品库分发。

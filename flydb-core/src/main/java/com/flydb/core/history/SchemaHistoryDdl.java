@@ -10,6 +10,11 @@ package com.flydb.core.history;
  */
 public interface SchemaHistoryDdl {
 
+    /** 将配置中的原始表名转换为该方言执行 SQL 时使用的标识符。 */
+    default String tableName(String rawTableName) {
+        return rawTableName;
+    }
+
     /**
      * 返回历史表建表 SQL（含家族特定的列类型与默认值）。
      *

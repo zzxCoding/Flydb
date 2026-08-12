@@ -33,24 +33,27 @@ public interface DatabaseTestSupport extends AutoCloseable {
 同一套**契约测试**（`MigrateContractTest`、`LockContractTest`、`FailureRecoveryContractTest`、`CleanContractTest`...）对每个方言跑一遍，由 JUnit 5 扩展按环境选择实现：
 
 1. 设置了 `FLYDB_TEST_<DB>_URL/_USER/_PASSWORD` 环境变量 → **外部真实实例**模式；
-2. 否则尝试拉起对应 Testcontainers 容器；
-3. 两者都不可用 → 该方言用例 **Disabled 并输出明确原因**（不让整体构建失败——外部贡献者没有达梦实例也能跑通构建）。
+2. 本地默认仅启动已有的 MySQL 8 / PostgreSQL 16 Testcontainers，以显式方言配置运行同家族兼容契约；
+3. TiDB、OceanBase、openGauss 等专用大镜像不在本地默认拉取范围，真实产品验证放到显式 CI job 或外部实例；
+4. 达梦、金仓等授权环境不可用时，真实实例用例 **Disabled 并输出明确原因**（不让整体构建失败）。
+
+兼容族契约用于验证 Flydb 的迁移、历史表、锁和 SQL 家族实现，不等价于真实产品证明。例如 TiDB 方言在 MySQL 上跑通，只能证明 MySQL 家族公共路径；TiDB 异步 DDL、产品探测返回值等差异仍需真实 TiDB 环境验证。此分层既控制本地磁盘与启动成本，也避免把兼容数据库上的结果包装成真实产品结论。
 
 ### 2.2 各方言测试方案矩阵
 
-| 数据库 | 容器方案 | 可信度 | CI 归属 |
+| 数据库 | 本地默认验证 | 真实产品验证 | CI 归属 |
 |---|---|---|---|
-| MySQL / PostgreSQL | 官方 Testcontainers 模块 + 官方镜像 | 高 | 公共 CI |
-| TiDB | 官方 `org.testcontainers:tidb` 模块 + `pingcap/tidb` 镜像 | 高（需实测确认单进程模式可用性） | 公共 CI |
-| OceanBase-MySQL | 官方 `testcontainers-oceanbase` 模块 + `oceanbase/oceanbase-ce`（测试专用镜像） | 高 | 公共 CI |
-| openGauss | `opengauss/opengauss` 官方镜像 + **自封装 GenericContainer**（健康检查、`GS_PASSWORD`、URL 拼装） | 高（镜像存在）/中（无官方模块） | 公共 CI |
-| KingbaseES | 无公开匿名镜像（官方为登录下载的 tar 包 docker load；第三方镜像常有连接数授权限制） | 中 | 自建 Runner（企业私有镜像仓库）或外部实例；公共 CI 跳过 |
-| 达梦 DM8 | 同上（官方登录下载；第三方镜像不建议用于正式 CI） | 中 | 同上 |
-| OceanBase-Oracle | **社区版无法创建 Oracle 模式租户**（企业版特性） | 中高（多方社区资料印证） | 无法自动化；企业内部环境人工/半自动验证；方言标注**实验性** |
+| MySQL / PostgreSQL | 官方 Testcontainers 模块 + 官方镜像 | 同一容器即真实产品 | 公共 CI |
+| TiDB | MySQL 8 兼容族契约 | 外部 TiDB 实例或显式专用 CI job | 专用 job 未启用前只标注“兼容验证” |
+| OceanBase-MySQL | MySQL 8 兼容族契约 + 探测代理 | 外部 OB-MySQL 租户或显式专用 CI job | 同上 |
+| openGauss | PostgreSQL 16 兼容族契约 | 外部 openGauss 实例或显式专用 CI job | 同上 |
+| KingbaseES | PostgreSQL 16 兼容族契约 | `FLYDB_TEST_KINGBASE_URL/_USER/_PASSWORD` | 自建 Runner/外部实例；公共 CI 跳过 |
+| 达梦 DM8 | Oracle 家族单元契约 | `FLYDB_TEST_DM_URL/_USER/_PASSWORD` | 自建 Runner/外部实例；公共 CI 跳过 |
+| OceanBase-Oracle | DBMS_LOCK 与 Oracle 家族单元契约 | 企业版 Oracle 租户 | 无法自动化；方言标注**实验性** |
 
 ### 2.3 CI（GitHub Actions）
 
-- 按数据库分矩阵 job：公共 Runner 跑 MySQL/PG/TiDB/OB-CE/openGauss；单测与覆盖率门禁在所有 PR 上强制。
+- 默认公共 Runner 跑 MySQL/PG；TiDB/OB-CE/openGauss 只有在显式配置专用 job 后才拉取对应镜像。单测与覆盖率门禁在所有 PR 上强制。
 - 达梦/金仓 job 打 `self-hosted, licensed-db` 标签，用 `if: vars.RUN_LICENSED_DB_TESTS == 'true'` 门禁——外部贡献者 PR 不因缺企业凭据而失败，主分支 push 才跑全量。
 - 国内自建 Runner 建议配置镜像加速并对测试镜像做 digest 锁定（信创网络环境拉公网镜像不稳定）。
 - 驱动字节码校验步骤：对 core/cli 产物跑 `jdeps`/`javap` 断言 class 版本 ≤52（Java 8），对引入的达梦/金仓/openGauss 驱动同样校验并在升级时报警（[01 §5](01-modules.md)）。
@@ -59,8 +62,9 @@ public interface DatabaseTestSupport extends AutoCloseable {
 
 | 级别 | 含义 | MVP 归属 |
 |---|---|---|
-| **稳定** | 公共 CI 每次提交自动验证 | MySQL、PostgreSQL、TiDB、OceanBase-MySQL、openGauss |
-| **验证** | 自建 Runner/外部实例门禁验证 | 达梦 DM8、KingbaseES |
+| **稳定** | 真实产品在公共 CI 每次提交自动验证 | MySQL、PostgreSQL |
+| **兼容验证** | 在同协议/同家族数据库上通过完整迁移契约，产品专有行为尚待真实实例验证 | TiDB、OceanBase-MySQL、openGauss、KingbaseES |
+| **验证** | 自建 Runner/外部实例门禁验证 | 达梦 DM8；KingbaseES 在真实实例门禁全绿后由“兼容验证”升级至此 |
 | **实验性** | 无法自动化验证，社区反馈驱动 | OceanBase-Oracle |
 
 README 的支持矩阵必须如实标注该分级——旧原型"README 宣传与代码脱节"的教训不再重演。
@@ -95,7 +99,7 @@ flydb-core（三家族 8 方言）+ flydb-cli + 双 starter + 契约测试矩阵
 ## 6. 验收标准汇总（MVP Done 的定义）
 
 1. [00 §2](00-overview.md) 六大缺陷修复对照表全部有对应测试证明；
-2. 契约测试在"稳定"级 5 个方言的公共 CI 全绿；"验证"级 2 个方言在自建环境全绿；
+2. MySQL/PostgreSQL 真实产品契约与四个新增兼容方言的家族契约全绿；其他方言只有在真实实例门禁通过后才能升级成熟度；
 3. 单测覆盖率 ≥80%（JaCoCo 门禁）；
 4. CLI 发行 zip 在纯 JDK 8 环境完成 init → migrate → info → validate 全流程（人工验收脚本见 [09 §6](09-implementation-plan.md)）；
 5. starter 在 Boot 2.7（JDK 8）与 Boot 3（JDK 17）示例工程各跑通一次启动迁移；

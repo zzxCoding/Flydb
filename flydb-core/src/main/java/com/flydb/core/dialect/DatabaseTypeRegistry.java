@@ -24,6 +24,11 @@ public final class DatabaseTypeRegistry {
     public DatabaseTypeRegistry() {
         List<DatabaseType> loaded = new ArrayList<DatabaseType>();
         loaded.add(new PostgreSQLDatabaseType());
+        loaded.add(new OpenGaussDatabaseType());
+        loaded.add(new KingbaseESDatabaseType());
+        loaded.add(new TiDBDatabaseType());
+        loaded.add(new OceanBaseDatabaseType());
+        loaded.add(new DmDatabaseType());
         loaded.add(new MySQLDatabaseType());
         for (DatabaseType type : ServiceLoader.load(DatabaseType.class)) {
             if (!containsName(loaded, type.name())) {

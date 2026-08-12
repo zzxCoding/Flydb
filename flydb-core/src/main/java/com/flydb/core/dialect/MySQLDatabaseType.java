@@ -28,7 +28,14 @@ public final class MySQLDatabaseType implements DatabaseType {
     @Override
     public boolean handlesConnection(Connection connection) throws SQLException {
         String productName = connection.getMetaData().getDatabaseProductName();
-        return "MySQL".equals(productName);
+        if (!"MySQL".equals(productName)) {
+            return false;
+        }
+        try {
+            return DatabaseProbe.queryString(connection, "SELECT tidb_version()") == null;
+        } catch (SQLException ignored) {
+            return true;
+        }
     }
 
     @Override

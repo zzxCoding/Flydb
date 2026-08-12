@@ -65,7 +65,7 @@ public final class MigrateCommand {
                 throw e;
             }
             return new MigrateResult(executed, targetVersion(applied, pending),
-                    elapsedMillis(started), new ArrayList<String>());
+                    elapsedMillis(started), lock.warnings());
         }
     }
 

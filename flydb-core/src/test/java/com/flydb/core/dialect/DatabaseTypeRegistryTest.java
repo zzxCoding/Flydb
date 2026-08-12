@@ -31,10 +31,84 @@ class DatabaseTypeRegistryTest {
     void defaultRegistryIncludesBuiltInTypes() {
         DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
 
-        assertThat(registry.detect("jdbc:postgresql://localhost/db", null, null).name())
+        assertThat(registry.detect("jdbc:postgresql://localhost/db",
+                mockQueryConnection("PostgreSQL", "SELECT version()", "PostgreSQL 16"),
+                null).name())
                 .isEqualTo("postgresql");
         assertThat(registry.detect("jdbc:mysql://localhost/db", null, "mysql").name())
                 .isEqualTo("mysql");
+    }
+
+    @Test
+    @DisplayName("默认注册中心通过专用 URL 识别 openGauss")
+    void defaultRegistryDetectsOpenGaussUrl() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:opengauss://localhost:5432/postgres", null, null).name())
+                .isEqualTo("opengauss");
+    }
+
+    @Test
+    @DisplayName("PostgreSQL 驱动连接 openGauss 时通过 version() 二阶段识别")
+    void postgresDriverConnectionDetectsOpenGaussByVersion() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+        Connection connection = mockQueryConnection(
+                "PostgreSQL", "SELECT version()", "openGauss 6.0.0 build 1234");
+
+        assertThat(registry.detect("jdbc:postgresql://localhost:5432/postgres",
+                connection, null).name()).isEqualTo("opengauss");
+    }
+
+    @Test
+    @DisplayName("MySQL 协议连接 TiDB 时通过 tidb_version() 二阶段识别")
+    void mysqlProtocolConnectionDetectsTiDb() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+        Connection connection = mockQueryConnection(
+                "MySQL", "SELECT tidb_version()", "Release Version: v8.5.0");
+
+        assertThat(registry.detect("jdbc:mysql://localhost:4000/test", connection, null).name())
+                .isEqualTo("tidb");
+    }
+
+    @Test
+    @DisplayName("默认注册中心通过专用 URL 识别 OceanBase")
+    void defaultRegistryDetectsOceanBaseUrl() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:oceanbase://localhost:2881/test", null, null).name())
+                .isEqualTo("oceanbase");
+    }
+
+    @Test
+    @DisplayName("默认注册中心通过专用 URL 识别 KingbaseES")
+    void defaultRegistryDetectsKingbaseUrl() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:kingbase8://localhost:54321/test", null, null).name())
+                .isEqualTo("kingbasees");
+    }
+
+    @Test
+    @DisplayName("默认注册中心按 jdbc:dm URL 识别达梦且不受 Oracle 产品名影响")
+    void defaultRegistryDetectsDmDespiteOracleProductName() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:dm://localhost:5236?compatibleMode=oracle",
+                mockConnection("Oracle"), null).name()).isEqualTo("dm");
+    }
+
+    @Test
+    @DisplayName("OceanBase Oracle 租户分派到 Oracle 家族方言")
+    void oceanBaseOracleModeUsesOracleFamily() throws Exception {
+        Connection connection = mockQueryConnection("OceanBase",
+                "SHOW VARIABLES LIKE 'ob_compatibility_mode'", "oracle");
+
+        Database database = new OceanBaseDatabaseType().createDatabase(connection, null);
+
+        assertThat(database.name()).isEqualTo("OceanBase-Oracle（实验性）");
+        assertThat(database.supportsDdlTransactions()).isFalse();
+        assertThat(database.statementBuilderConfig().plsqlBlockDetector()).isNotNull();
+        assertThat(database.quote("MixedCase")).isEqualTo("\"MixedCase\"");
     }
 
     @Nested
@@ -151,6 +225,51 @@ class DatabaseTypeRegistryTest {
                         if ("isClosed".equals(name) || "getAutoCommit".equals(name) || "isReadOnly".equals(name)) {
                             return false;
                         }
+                        return defaultValue(method.getReturnType());
+                    }
+                });
+    }
+
+    private static Connection mockQueryConnection(final String productName,
+                                                  final String expectedSql,
+                                                  final String value) {
+        return (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(), new Class<?>[]{Connection.class},
+                (proxy, method, args) -> {
+                    if ("getMetaData".equals(method.getName())) {
+                        return Proxy.newProxyInstance(java.sql.DatabaseMetaData.class.getClassLoader(),
+                                new Class<?>[]{java.sql.DatabaseMetaData.class},
+                                (md, mdMethod, mdArgs) -> "getDatabaseProductName".equals(mdMethod.getName())
+                                        ? productName : defaultValue(mdMethod.getReturnType()));
+                    }
+                    if ("createStatement".equals(method.getName())) {
+                        return Proxy.newProxyInstance(java.sql.Statement.class.getClassLoader(),
+                                new Class<?>[]{java.sql.Statement.class},
+                                (statement, statementMethod, statementArgs) -> {
+                                    if ("executeQuery".equals(statementMethod.getName())) {
+                                        assertThat(statementArgs[0]).isEqualTo(expectedSql);
+                                        return singleValueResultSet(value);
+                                    }
+                                    return defaultValue(statementMethod.getReturnType());
+                                });
+                    }
+                    return defaultValue(method.getReturnType());
+                });
+    }
+
+    private static Object singleValueResultSet(final String value) {
+        return Proxy.newProxyInstance(java.sql.ResultSet.class.getClassLoader(),
+                new Class<?>[]{java.sql.ResultSet.class}, new InvocationHandler() {
+                    private boolean beforeFirst = true;
+
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) {
+                        if ("next".equals(method.getName())) {
+                            boolean result = beforeFirst;
+                            beforeFirst = false;
+                            return result;
+                        }
+                        if ("getString".equals(method.getName())) return value;
                         return defaultValue(method.getReturnType());
                     }
                 });
