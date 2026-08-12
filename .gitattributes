@@ -1,0 +1,3 @@
+# SQL 解析器 fixture 必须保持精确字节：CRLF fixture 依赖 \r\n，
+# 禁止 git 做任何行尾归一化（autocrlf/eol）。其余 LF fixture 同样原样保留。
+flydb-core/src/test/resources/parser/** -text
