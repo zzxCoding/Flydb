@@ -19,7 +19,7 @@ public final class InfoCommand {
     public MigrationInfoService execute() {
         try (CommandRuntime runtime = CommandRuntime.open(configuration, false)) {
             return new MigrationInfoService(MigrationInfoAssembler.assemble(
-                    runtime.resolved(), runtime.applied()));
+                    runtime.resolved(), runtime.applied()), runtime.database().name());
         }
     }
 }

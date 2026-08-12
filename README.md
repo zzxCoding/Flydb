@@ -1,243 +1,125 @@
 [English](./README.en.md) | 中文
 
-# FlyDB 数据库迁移工具
+# Flydb
 
-> **📢 Flydb 2.0 重新设计进行中**：本仓库正在按全新架构推倒重写（面向所有提供 JDBC 驱动的数据库的类 Flyway 迁移工具：内置支持主流数据库，以国产信创数据库的一等支持为特色，并可通过方言 SPI 扩展接入小众 JDBC 数据库；产品形态为 flydb-core 纯 Java 8 API + 独立 CLI + Spring Boot Starter，MVP 覆盖达梦 DM8、人大金仓、openGauss、MySQL、PostgreSQL、OceanBase、TiDB）。完整设计文档见 [docs/design/](./docs/design/00-overview.md)，实施交接计划见 [docs/design/09-implementation-plan.md](./docs/design/09-implementation-plan.md)。**以下为 1.x 原型的旧文档，其描述与 2.0 设计不一致处以设计文档为准**（特别注意：2.0 中 `R` 前缀语义已变更，见设计文档 00 §4.1）。
+Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工具：内置主流数据库方言，以国产信创数据库支持为特色，并通过 `DatabaseType` SPI 扩展小众 JDBC 数据库。
 
-FlyDB 是一个简单易用的数据库版本控制和迁移工具，帮助您轻松管理数据库架构的变更。
+项目采用 Java 8 基线。`flydb-core` 保持零第三方运行时依赖；独立 CLI 从 `drivers/` 动态加载 JDBC 驱动，不把数据库厂商驱动捆绑进发行包。
 
-## 项目背景
+> Flydb 2.0 正在按 [实施计划](./docs/design/09-implementation-plan.md) 分阶段交付。当前代码已覆盖 core 命令、SQL 解析、历史仓储、锁与事务语义、主流与信创内置方言，以及独立 CLI。数据库兼容状态以实际测试证据为准，不把方言实现等同于生产认证。
 
-随着国产数据库的快速发展和广泛应用，企业在数据库迁移方面面临着新的挑战。现有的数据库迁移工具（如Flyway）虽然功能强大，但在以下方面存在一些局限性：
+## 能做什么
 
-1. **数据库适配**：对国产数据库的支持有限，需要额外的适配工作
-2. **部署复杂**：依赖较多，部署和维护成本较高
-3. **功能冗余**：包含许多企业不常用的功能，增加了学习成本
+- 版本化迁移 `V1__init.sql`、可重复迁移 `R__view.sql`、撤销迁移 `U1__init.sql`
+- `migrate`、`info`、`validate`、`baseline`、`repair`、`clean`、`undo`
+- advisory lock 或锁表互斥、DDL 事务差异、失败记录阻断与 repair 恢复
+- UTF-8 Properties、环境变量、命令行参数、密码文件和占位符
+- migrate/undo 的 `--dry-run`，只完成探测、校验、解析和打印，不执行 SQL
+- 外置 JDBC 驱动和方言 SPI，适配不能公开分发驱动的信创数据库
 
-基于以上问题，我们开发了FlyDB，旨在提供一个更轻量级、更灵活的数据库迁移解决方案。
+## 数据库状态
 
-## 为什么选择FlyDB？
+| 数据库家族 | 内置方言 | 当前验证层级 |
+|---|---:|---|
+| MySQL 8 | 是 | 自动化兼容测试；CLI 发行包端到端验证 |
+| PostgreSQL | 是 | 自动化兼容测试 |
+| 达梦 DM8 | 是 | 方言与驱动元数据契约测试；真实环境认证待补 |
+| 人大金仓 KingbaseES | 是 | 方言与驱动元数据契约测试；真实环境认证待补 |
+| openGauss | 是 | 方言与驱动元数据契约测试；真实环境认证待补 |
+| OceanBase / TiDB | 复用对应家族 | 轻量兼容测试；真实环境覆盖持续补充 |
+| 其他 JDBC 数据库 | 可扩展 | 需提供 JDBC 驱动及 `DatabaseType` SPI 方言实现 |
 
-相比于Flyway等传统数据库迁移工具，FlyDB具有以下优势：
+## 五分钟上手
 
-1. **更广泛的数据库支持**
-   - 基于JDBC的通用实现，易于扩展支持新的数据库
-   - 优先支持国产数据库，如达梦、人大金仓等
-   - 提供统一的API接口，降低数据库切换成本
-
-2. **更轻量级的设计**
-   - 核心功能聚焦于版本控制和迁移管理
-   - 最小化依赖，降低部署难度
-   - 提供简单直观的命令行工具
-
-3. **更灵活的版本管理**
-   - 支持版本回退功能，方便故障处理
-   - 提供清晰的迁移历史记录
-   - 支持目标版本迁移，满足不同场景需求
-
-4. **更友好的使用体验**
-   - 简单的配置方式
-   - 清晰的命名规范
-   - 详细的操作文档
-
-## 功能特点
-
-- 数据库版本控制
-- 自动化数据库迁移
-- 支持目标版本迁移
-- 迁移历史记录
-- 简单的命令行界面
-- 多数据库并发执行
-
-## 环境要求
-
-- Java 8 或更高版本
-- MySQL 数据库（支持jdbc的数据库）
-- curl（用于命令行操作）
-
-## 快速开始
-
-### 1. 配置数据库连接
-
-#### 单数据库配置
-编辑 `src/main/resources/application.properties` 文件：
-
-```properties
-
-# 迁移脚本路径配置
-flydb.scripts.path=db/migration
-
-# 服务器配置
-server.port=8080
-```
-
-#### 多数据库配置
-编辑 `src/main/resources/db-connections.yml` 文件：
-
-```yaml
-# 全局配置
-global:
-  concurrent_execution: true  # 是否启用多数据库并发执行
-  max_concurrent_tasks: 5     # 最大并发任务数
-  timeout: 3600              # 执行超时时间（秒）
-
-# 开发环境
-development:
-  url: jdbc:mysql://localhost:3306/dev_db?useSSL=false&serverTimezone=UTC
-  username: dev_user
-  password: dev_password
-  concurrent: true           # 是否参与并发执行
-
-# 生产环境
-production:
-  url: jdbc:mysql://prod-server:3306/prod_db?useSSL=false&serverTimezone=UTC
-  username: prod_user
-  password: prod_password
-  concurrent: false          # 生产环境默认不参与并发执行
-```
-
-### 2. 创建迁移脚本
-
-在 `db/migration` 目录下创建 SQL 迁移脚本，遵循以下命名规范：
-
-- 迁移脚本：`V{版本号}__{描述}.sql`
-- 回退脚本：`R{版本号}__{描述}.sql`
-
-示例：
-
-```sql
--- V1__create_users_table.sql
-CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(50) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- R1__drop_users_table.sql
-DROP TABLE IF EXISTS users;
-
--- V2__add_user_status.sql
-ALTER TABLE users
-ADD COLUMN status VARCHAR(20) DEFAULT 'active';
-
--- R2__remove_user_status.sql
-ALTER TABLE users
-DROP COLUMN status;
-```
-
-### 3. 启动服务
+前置条件：Java 8 或更高版本、一个已创建的目标数据库，以及与 Java 8 兼容的 JDBC 驱动。
 
 ```bash
-# 使用 Maven 构建并运行
-mvn spring-boot:run
+unzip flydb-cli-2.0.0.zip
+cd flydb-cli-2.0.0
+
+# 示例：把 mysql-connector-j.jar 放入 drivers/
+cp /path/to/mysql-connector-j.jar drivers/
+
+bin/flydb init \
+  --url 'jdbc:mysql://127.0.0.1:3306/demo' \
+  --user flydb_user \
+  --database-type mysql \
+  --yes
 ```
 
-### 4. API接口使用
+`init` 会生成 `flydb.conf`、`db/migration/V1__init.sql` 和本项目专用的 `drivers/README.md`，并拒绝覆盖已有文件。编辑首个迁移脚本后执行：
 
-#### 初始化数据库
 ```bash
-curl -X POST http://localhost:8080/api/flydb/init
+export FLYDB_PASSWORD='replace-me'
+
+bin/flydb --dry-run migrate
+bin/flydb migrate
+bin/flydb info
+bin/flydb validate
 ```
 
-#### 查看当前版本
+密码也可通过 `flydb.password=${env:DB_PASSWORD}` 或 `flydb.password.file=/run/secrets/db_password` 提供。不要把明文密码提交到版本库。
+
+## 脚本命名
+
+```text
+V1__create_user.sql       # 版本化迁移，只成功应用一次
+V1.1__add_status.sql      # 点分版本号
+R__refresh_user_view.sql  # checksum 变化后再次执行
+U1__create_user.sql       # 撤销最近一次已应用的 V1
+```
+
+默认位置为 `filesystem:db/migration`。SQL 支持 `${key}` 占位符；命令行用 `-Dkey=value` 传入。未定义占位符会在执行前报错并指出脚本行号。
+
+## 配置优先级
+
+```text
+CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值
+```
+
+配置文件查找顺序为 `--config` 指定文件、当前目录 `flydb.conf`、安装目录 `conf/flydb.conf`。未知的 `flydb.*` 配置键会直接报错并给出近似建议。
+
+常用命令：
+
 ```bash
-curl http://localhost:8080/api/flydb/version
+bin/flydb migrate
+bin/flydb info --color=never
+bin/flydb validate
+bin/flydb baseline --baseline-version 5
+bin/flydb repair
+bin/flydb undo
+
+# clean 默认禁用；非交互环境必须同时满足两道开关
+bin/flydb clean --clean-disabled=false --force
 ```
 
-#### 执行迁移
+退出码：`0` 成功、`1` 一般错误、`2` 校验失败、`3` 锁冲突或超时、`4` 配置错误、`5` 用户中断。
+
+完整配置、命令语义和错误码见 [配置与 CLI 设计](./docs/design/06-config-cli.md)；架构入口见 [设计总览](./docs/design/00-overview.md)。
+
+## Java API
+
+应用内使用时由调用方管理 `DataSource`，Flydb 不接管连接池生命周期：
+
+```java
+Flydb flydb = Flydb.configure()
+    .dataSource(dataSource)
+    .locations("classpath:db/migration")
+    .load();
+
+flydb.migrate();
+```
+
+`flydb-core` 不依赖特定连接池、日志框架或 JDBC 驱动。独立 CLI 才负责 URL 配置和 `drivers/` 动态加载。
+
+## 从源码验证
+
 ```bash
-# 迁移到最新版本
-curl -X POST http://localhost:8080/api/flydb/migrate
-
-# 迁移到指定版本
-curl -X POST "http://localhost:8080/api/flydb/migrate?targetVersion=2"
+mvn verify
 ```
 
-#### 版本回退
-```bash
-# 回退到指定版本
-curl -X POST http://localhost:8080/api/flydb/rollback/1
-```
-
-## 项目架构
-
-### 核心组件
-
-1. **FlyDB**：核心类，负责数据库版本控制和迁移管理
-   - 初始化版本控制表
-   - 管理数据库版本
-   - 执行版本回退
-
-2. **Migration**：迁移脚本管理类
-   - 加载迁移脚本
-   - 执行迁移操作
-   - 记录迁移历史
-
-3. **DatabaseConfig**：数据库配置管理类
-   - 支持多数据库配置
-   - 动态切换数据库连接
-
-### 版本控制表结构
-
-```sql
-CREATE TABLE flydb_schema_history (
-    version_rank INT NOT NULL,
-    installed_rank INT NOT NULL,
-    version VARCHAR(50) NOT NULL,
-    description VARCHAR(200) NOT NULL,
-    type VARCHAR(20) NOT NULL,
-    script VARCHAR(1000) NOT NULL,
-    checksum INT,
-    installed_by VARCHAR(100) NOT NULL,
-    installed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    execution_time INT NOT NULL,
-    success BOOLEAN NOT NULL,
-    PRIMARY KEY (version)
-);
-```
-
-## 常见问题
-
-### 1. 迁移失败如何处理？
-
-当迁移失败时，FlyDB会自动回滚事务，确保数据库保持一致性。您可以：
-1. 检查错误日志，了解失败原因
-2. 修复迁移脚本中的问题
-3. 重新执行迁移操作
-
-### 2. 如何处理冲突的版本号？
-
-FlyDB使用版本号作为主键，确保每个版本号都是唯一的。建议：
-1. 在团队中统一版本号分配规则
-2. 使用有意义的版本号命名（如日期+序号）
-3. 在提交前进行版本号冲突检查
-
-### 3. 并发执行失败如何处理？
-
-当并发执行失败时：
-1. 检查各个数据库的错误日志
-2. 确认是否存在资源竞争问题
-3. 考虑调整并发任务数或暂时关闭并发执行
-4. 修复问题后重新执行迁移
-
-## 贡献指南
-
-我们欢迎任何形式的贡献，包括但不限于：
-
-1. 提交问题和建议
-2. 改进文档
-3. 提交代码修复
-4. 添加新功能
-
-### 开发流程
-
-1. Fork 项目
-2. 创建特性分支
-3. 提交变更
-4. 推送到分支
-5. 创建 Pull Request
+构建产物位于 `flydb-cli/target/flydb-cli-2.0.0-SNAPSHOT.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
 
 ## 许可证
 
-本项目采用 MIT 许可证，详情请参见 LICENSE 文件。
+[MIT](./LICENSE)。JDBC 驱动由使用者自行获取，并遵守各厂商的许可证与分发条款。

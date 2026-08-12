@@ -1,6 +1,7 @@
 package com.flydb.core;
 
 import com.flydb.core.api.FlydbConfiguration;
+import com.flydb.core.api.DryRunResult;
 import com.flydb.core.api.MigrateResult;
 import com.flydb.core.api.MigrationInfoService;
 import com.flydb.core.command.InfoCommand;
@@ -12,6 +13,7 @@ import com.flydb.core.command.BaselineCommand;
 import com.flydb.core.command.RepairCommand;
 import com.flydb.core.command.CleanCommand;
 import com.flydb.core.command.UndoCommand;
+import com.flydb.core.command.DryRunCommand;
 
 /**
  * Flydb 门面（设计 02 §1）。
@@ -52,4 +54,6 @@ public final class Flydb {
     public RepairResult repair() { return new RepairCommand(configuration).execute(); }
     public void clean() { new CleanCommand(configuration).execute(); }
     public UndoResult undo() { return new UndoCommand(configuration).execute(); }
+    public DryRunResult dryRunMigrate() { return new DryRunCommand(configuration).migrate(); }
+    public DryRunResult dryRunUndo() { return new DryRunCommand(configuration).undo(); }
 }

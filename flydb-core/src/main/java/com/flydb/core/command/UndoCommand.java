@@ -36,7 +36,7 @@ public final class UndoCommand {
         }
     }
 
-    private static MigrationVersion latestAppliedVersion(List<AppliedMigration> applied) {
+    static MigrationVersion latestAppliedVersion(List<AppliedMigration> applied) {
         java.util.Map<MigrationVersion, AppliedMigration> latest =
                 new java.util.HashMap<MigrationVersion, AppliedMigration>();
         for (AppliedMigration record : applied) {
@@ -59,8 +59,8 @@ public final class UndoCommand {
         return result;
     }
 
-    private static ResolvedMigration findUndo(List<ResolvedMigration> resolved,
-                                              MigrationVersion version) {
+    static ResolvedMigration findUndo(List<ResolvedMigration> resolved,
+                                      MigrationVersion version) {
         for (ResolvedMigration migration : resolved) {
             if (migration.type() == MigrationType.UNDO_SQL
                     && version.equals(migration.version())) return migration;

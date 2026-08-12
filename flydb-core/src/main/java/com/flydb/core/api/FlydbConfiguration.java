@@ -47,6 +47,11 @@ public final class FlydbConfiguration {
     private final String databaseType;
     private final ClassLoader classLoader;
     private final List<Callback> callbacks;
+    private final String sqlMigrationPrefix;
+    private final String repeatableMigrationPrefix;
+    private final String undoMigrationPrefix;
+    private final String sqlMigrationSeparator;
+    private final String sqlMigrationSuffix;
 
     private FlydbConfiguration(Builder b) {
         this.dataSource = b.dataSource;
@@ -68,6 +73,11 @@ public final class FlydbConfiguration {
         this.databaseType = b.databaseType;
         this.classLoader = b.classLoader;
         this.callbacks = Collections.unmodifiableList(new ArrayList<Callback>(b.callbacks));
+        this.sqlMigrationPrefix = b.sqlMigrationPrefix;
+        this.repeatableMigrationPrefix = b.repeatableMigrationPrefix;
+        this.undoMigrationPrefix = b.undoMigrationPrefix;
+        this.sqlMigrationSeparator = b.sqlMigrationSeparator;
+        this.sqlMigrationSuffix = b.sqlMigrationSuffix;
     }
 
     public static Builder builder() {
@@ -93,6 +103,11 @@ public final class FlydbConfiguration {
     public String databaseType() { return databaseType; }
     public ClassLoader classLoader() { return classLoader; }
     public List<Callback> callbacks() { return callbacks; }
+    public String sqlMigrationPrefix() { return sqlMigrationPrefix; }
+    public String repeatableMigrationPrefix() { return repeatableMigrationPrefix; }
+    public String undoMigrationPrefix() { return undoMigrationPrefix; }
+    public String sqlMigrationSeparator() { return sqlMigrationSeparator; }
+    public String sqlMigrationSuffix() { return sqlMigrationSuffix; }
 
     /**
      * 可变构建器（设计 02 §2）。每个 setter 返回 {@code this}；{@link #load()} 校验并产出不可变配置。
@@ -118,6 +133,11 @@ public final class FlydbConfiguration {
         private String databaseType;
         private ClassLoader classLoader;
         private List<Callback> callbacks = new ArrayList<Callback>();
+        private String sqlMigrationPrefix = "V";
+        private String repeatableMigrationPrefix = "R";
+        private String undoMigrationPrefix = "U";
+        private String sqlMigrationSeparator = "__";
+        private String sqlMigrationSuffix = ".sql";
 
         public Builder dataSource(DataSource dataSource) { this.dataSource = dataSource; return this; }
         public Builder url(String url) { this.url = url; return this; }
@@ -168,6 +188,11 @@ public final class FlydbConfiguration {
             this.callbacks = new ArrayList<Callback>(Arrays.asList(callbacks));
             return this;
         }
+        public Builder sqlMigrationPrefix(String value) { this.sqlMigrationPrefix = value; return this; }
+        public Builder repeatableMigrationPrefix(String value) { this.repeatableMigrationPrefix = value; return this; }
+        public Builder undoMigrationPrefix(String value) { this.undoMigrationPrefix = value; return this; }
+        public Builder sqlMigrationSeparator(String value) { this.sqlMigrationSeparator = value; return this; }
+        public Builder sqlMigrationSuffix(String value) { this.sqlMigrationSuffix = value; return this; }
 
         /**
          * 校验并构造不可变配置。
@@ -204,6 +229,11 @@ public final class FlydbConfiguration {
             requireNonEmpty(table, "flydb.table");
             requireNonEmpty(placeholderPrefix, "flydb.placeholder-prefix");
             requireNonEmpty(placeholderSuffix, "flydb.placeholder-suffix");
+            requireNonEmpty(sqlMigrationPrefix, "flydb.sql-migration-prefix");
+            requireNonEmpty(repeatableMigrationPrefix, "flydb.repeatable-migration-prefix");
+            requireNonEmpty(undoMigrationPrefix, "flydb.undo-migration-prefix");
+            requireNonEmpty(sqlMigrationSeparator, "flydb.sql-migration-separator");
+            requireNonEmpty(sqlMigrationSuffix, "flydb.sql-migration-suffix");
             if (lockTimeoutSeconds < 0) {
                 throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
                         "flydb.lock-timeout-seconds 不可为负数: " + lockTimeoutSeconds);

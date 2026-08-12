@@ -44,13 +44,7 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
 
     @Override
     public void execute(Connection connection) throws SQLException {
-        // 1) 占位符替换
-        String resolved = PlaceholderReplacer.replace(sql, scriptName,
-                placeholderPrefix, placeholderSuffix, placeholders, builtIns);
-
-        // 2) 词法解析
-        SqlScriptParser parser = new SqlScriptParser(parserConfig);
-        List<SqlStatement> statements = parser.parse(resolved);
+        List<SqlStatement> statements = statements();
 
         // 3) 逐条执行
         Statement stmt = connection.createStatement();
@@ -74,5 +68,16 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
                 // 关闭 Statement 异常不吞噬主异常
             }
         }
+    }
+
+    /** 完成与真实执行一致的占位符替换和词法解析，但不触碰 JDBC。 */
+    public List<SqlStatement> statements() {
+        // 1) 占位符替换
+        String resolved = PlaceholderReplacer.replace(sql, scriptName,
+                placeholderPrefix, placeholderSuffix, placeholders, builtIns);
+
+        // 2) 词法解析
+        SqlScriptParser parser = new SqlScriptParser(parserConfig);
+        return parser.parse(resolved);
     }
 }

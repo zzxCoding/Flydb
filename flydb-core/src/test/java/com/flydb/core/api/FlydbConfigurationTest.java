@@ -42,6 +42,11 @@ class FlydbConfigurationTest {
         assertThat(c.placeholders()).isEmpty();
         assertThat(c.databaseType()).isNull();
         assertThat(c.classLoader()).isNotNull();
+        assertThat(c.sqlMigrationPrefix()).isEqualTo("V");
+        assertThat(c.repeatableMigrationPrefix()).isEqualTo("R");
+        assertThat(c.undoMigrationPrefix()).isEqualTo("U");
+        assertThat(c.sqlMigrationSeparator()).isEqualTo("__");
+        assertThat(c.sqlMigrationSuffix()).isEqualTo(".sql");
     }
 
     @Test
@@ -110,6 +115,20 @@ class FlydbConfigurationTest {
         assertThat(c.placeholders()).containsOnly(entry("k", "v"));
         assertThatThrownBy(() -> c.placeholders().put("x", "y"))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void migration_naming_convention_is_configurable() {
+        FlydbConfiguration c = FlydbConfiguration.builder().url("jdbc:x")
+                .sqlMigrationPrefix("M").repeatableMigrationPrefix("Q")
+                .undoMigrationPrefix("D").sqlMigrationSeparator("--")
+                .sqlMigrationSuffix(".ddl").build();
+
+        assertThat(c.sqlMigrationPrefix()).isEqualTo("M");
+        assertThat(c.repeatableMigrationPrefix()).isEqualTo("Q");
+        assertThat(c.undoMigrationPrefix()).isEqualTo("D");
+        assertThat(c.sqlMigrationSeparator()).isEqualTo("--");
+        assertThat(c.sqlMigrationSuffix()).isEqualTo(".ddl");
     }
 
     /** DataSource 测试桩：仅用于按引用比对，不实现真实连接语义。 */

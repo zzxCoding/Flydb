@@ -88,6 +88,8 @@
 
 **验收**：在**纯 JDK 8** 环境（如 `docker run eclipse-temurin:8`）解压 zip，对 MySQL 容器完成 `init → migrate → info → validate → repair` 全流程；`echo $?` 各场景退出码符合 [06 §5](06-config-cli.md) 约定。
 
+> **阶段 6 验收记录（2026-08-12）**：`flydb-cli-2.0.0-SNAPSHOT.zip` 在本机 JDK 8u431 下解压运行，使用 MySQL 8.0.46 + Connector/J 8.0.33 完成 `init → migrate --dry-run → migrate → info → validate → repair`，并补验 `undo --dry-run`；成功路径均退出 0。退出码 1/2/3/4 的异常分类由 CLI 单测固化，SIGINT 关闭活动连接并退出 5 由中断协调器单测固化。未为本阶段额外部署其他数据库。
+
 ### 阶段 7：Spring Boot Starter（依赖：[07](07-spring-boot-starter.md) 全篇）
 
 1. starter-2（spring.factories，JDK 8）：`FlydbProperties` + `FlydbAutoConfiguration` + `FlydbMigrationInitializer` + DataSource 依赖后处理器 + SLF4J 日志桥接。

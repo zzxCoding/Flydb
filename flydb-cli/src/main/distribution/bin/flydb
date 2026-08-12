@@ -1,0 +1,35 @@
+#!/bin/sh
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+FLYDB_INSTALL_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+
+if [ -n "${JAVA_HOME:-}" ]; then
+    JAVA_CMD="$JAVA_HOME/bin/java"
+else
+    JAVA_CMD=$(command -v java 2>/dev/null)
+fi
+
+if [ -z "${JAVA_CMD:-}" ] || [ ! -x "$JAVA_CMD" ]; then
+    echo "错误：未找到 Java。请安装 Java 8 或更高版本，或正确设置 JAVA_HOME。" >&2
+    exit 4
+fi
+
+JAVA_VERSION=$($JAVA_CMD -version 2>&1 | awk -F '"' 'NR == 1 { print $2 }')
+case "$JAVA_VERSION" in
+    1.*) JAVA_MAJOR=$(printf '%s' "$JAVA_VERSION" | cut -d. -f2) ;;
+    *) JAVA_MAJOR=$(printf '%s' "$JAVA_VERSION" | cut -d. -f1) ;;
+esac
+case "$JAVA_MAJOR" in
+    ''|*[!0-9]*)
+        echo "错误：无法识别 Java 版本：$JAVA_VERSION" >&2
+        exit 4
+        ;;
+esac
+if [ "$JAVA_MAJOR" -lt 8 ]; then
+    echo "错误：Flydb 要求 Java 8 或更高版本，当前为 $JAVA_VERSION。" >&2
+    exit 4
+fi
+
+# FLYDB_JAVA_OPTS 由操作者控制，按 JVM 参数进行词拆分。
+# shellcheck disable=SC2086
+exec "$JAVA_CMD" ${FLYDB_JAVA_OPTS:-} -cp "$FLYDB_INSTALL_DIR/lib/*" com.flydb.cli.FlydbCli "$@"

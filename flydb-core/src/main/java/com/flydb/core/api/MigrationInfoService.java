@@ -20,15 +20,24 @@ import com.flydb.core.migration.ResolvedMigration;
 public final class MigrationInfoService {
 
     private final List<MigrationInfo> all;
+    private final String databaseName;
 
     public MigrationInfoService(List<MigrationInfo> all) {
+        this(all, null);
+    }
+
+    public MigrationInfoService(List<MigrationInfo> all, String databaseName) {
         this.all = Collections.unmodifiableList(new ArrayList<MigrationInfo>(all));
+        this.databaseName = databaseName;
     }
 
     /** 全部迁移的完整视图（已排序）。 */
     public List<MigrationInfo> all() {
         return all;
     }
+
+    /** 本次 info 实际探测到的数据库方言展示名。 */
+    public String databaseName() { return databaseName; }
 
     /** 待执行迁移（PENDING + OUT_OF_ORDER + OUTDATED）。 */
     public List<MigrationInfo> pending() {

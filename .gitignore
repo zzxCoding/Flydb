@@ -29,6 +29,8 @@ logs/
 .project
 .settings/
 bin/
+!flydb-cli/src/main/distribution/bin/
+!flydb-cli/src/main/distribution/bin/**
 
 # ---- IDE：VS Code ----
 .vscode/

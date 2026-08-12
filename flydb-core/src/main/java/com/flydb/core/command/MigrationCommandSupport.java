@@ -7,6 +7,7 @@ import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
 import com.flydb.core.executor.MigrationExecutor;
 import com.flydb.core.executor.SqlMigrationExecutor;
+import com.flydb.core.executor.SqlStatement;
 import com.flydb.core.migration.AppliedMigration;
 import com.flydb.core.migration.ResolvedMigration;
 
@@ -17,12 +18,7 @@ final class MigrationCommandSupport {
     }
 
     static void execute(final CommandRuntime runtime, final ResolvedMigration migration) {
-        String sql = ScriptLoader.load(runtime.configuration(), migration.script());
-        MigrationExecutor executor = new SqlMigrationExecutor(migration.script(), sql,
-                runtime.database().statementBuilderConfig(),
-                runtime.configuration().placeholderPrefix(),
-                runtime.configuration().placeholderSuffix(),
-                runtime.configuration().placeholders(), runtime.builtIns());
+        MigrationExecutor executor = executor(runtime, migration);
         try {
             MigrationExecutionTemplate.execute(runtime.connection(),
                     runtime.database().supportsDdlTransactions(), executor,
@@ -32,6 +28,21 @@ final class MigrationCommandSupport {
             throw new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
                     "脚本 " + migration.script() + " 执行失败: " + e.getMessage(), e);
         }
+    }
+
+    static java.util.List<SqlStatement> preview(CommandRuntime runtime,
+                                                ResolvedMigration migration) {
+        return executor(runtime, migration).statements();
+    }
+
+    private static SqlMigrationExecutor executor(CommandRuntime runtime,
+                                                 ResolvedMigration migration) {
+        String sql = ScriptLoader.load(runtime.configuration(), migration.script());
+        return new SqlMigrationExecutor(migration.script(), sql,
+                runtime.database().statementBuilderConfig(),
+                runtime.configuration().placeholderPrefix(),
+                runtime.configuration().placeholderSuffix(),
+                runtime.configuration().placeholders(), runtime.builtIns());
     }
 
     private static AppliedMigration record(CommandRuntime runtime,

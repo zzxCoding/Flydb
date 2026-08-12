@@ -69,7 +69,7 @@ public final class MigrateCommand {
         }
     }
 
-    private static List<ResolvedMigration> executableMigrations(List<ResolvedMigration> resolved) {
+    static List<ResolvedMigration> executableMigrations(List<ResolvedMigration> resolved) {
         List<ResolvedMigration> result = new ArrayList<ResolvedMigration>();
         for (ResolvedMigration migration : resolved) {
             if (migration.type() != MigrationType.UNDO_SQL) result.add(migration);
@@ -77,7 +77,7 @@ public final class MigrateCommand {
         return result;
     }
 
-    private static void validate(CommandRuntime runtime, List<AppliedMigration> applied) {
+    static void validate(CommandRuntime runtime, List<AppliedMigration> applied) {
         List<ValidationProblem> problems = MigrationValidator.validate(
                 MigrationInfoAssembler.assemble(runtime.resolved(), applied));
         if (!problems.isEmpty()) throw new FlydbValidationException(problems);

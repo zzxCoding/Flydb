@@ -116,11 +116,11 @@ final class CommandRuntime implements AutoCloseable {
 
         @Override public List<String> locations() { return configuration.locations(); }
         @Override public Charset encoding() { return configuration.encoding(); }
-        @Override public String sqlMigrationPrefix() { return "V"; }
-        @Override public String repeatableMigrationPrefix() { return "R"; }
-        @Override public String undoMigrationPrefix() { return "U"; }
-        @Override public String sqlMigrationSeparator() { return "__"; }
-        @Override public String sqlMigrationSuffix() { return ".sql"; }
+        @Override public String sqlMigrationPrefix() { return configuration.sqlMigrationPrefix(); }
+        @Override public String repeatableMigrationPrefix() { return configuration.repeatableMigrationPrefix(); }
+        @Override public String undoMigrationPrefix() { return configuration.undoMigrationPrefix(); }
+        @Override public String sqlMigrationSeparator() { return configuration.sqlMigrationSeparator(); }
+        @Override public String sqlMigrationSuffix() { return configuration.sqlMigrationSuffix(); }
         @Override public ClassLoader classLoader() { return configuration.classLoader(); }
     }
 }
