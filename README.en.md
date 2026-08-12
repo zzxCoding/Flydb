@@ -6,7 +6,7 @@ Flydb is a versioned schema migration tool for databases with JDBC drivers. It p
 
 Flydb targets Java 8. `flydb-core` has no third-party runtime dependencies, while the standalone CLI loads JDBC drivers dynamically from `drivers/` instead of bundling vendor drivers.
 
-> Flydb 2.0 is being delivered in stages. Database support is reported by verification level; an implemented dialect is not presented as production certification.
+> Flydb 2.0 is being delivered in stages. The current codebase includes the core engine, CLI, built-in mainstream and Xinchuang dialects, and Spring Boot 2/3 starters. Database support is reported by verification level; an implemented dialect is not presented as production certification.
 
 ## Quick start
 
@@ -59,13 +59,44 @@ Flydb flydb = Flydb.configure()
 flydb.migrate();
 ```
 
+## Spring Boot
+
+Choose one starter for the application's runtime. It runs `migrate` while the Spring context is being initialized and aborts startup if migration fails.
+
+```xml
+<!-- Spring Boot 3.x / Java 17+ -->
+<dependency>
+  <groupId>com.flydb</groupId>
+  <artifactId>flydb-spring-boot-3-starter</artifactId>
+  <version>2.0.0-SNAPSHOT</version>
+</dependency>
+```
+
+Java 8 applications use `flydb-spring-boot-2-starter`, built for Spring Boot 2.7.18. [Spring Boot 2.7.18 ended open-source support](https://spring.io/blog/2023/11/23/spring-boot-2-7-18-available-now/) for the Boot 2.x line, so the Boot 2 starter is intended for legacy systems that cannot upgrade yet; new applications should prefer the Boot 3 starter.
+
+Flydb reuses the application's primary `DataSource` by default:
+
+```properties
+spring.datasource.url=jdbc:mysql://127.0.0.1:3306/demo
+spring.datasource.username=app_user
+spring.datasource.password=${DB_PASSWORD}
+
+flydb.locations=classpath:db/migration
+flydb.database-type=mysql
+```
+
+Set `flydb.url`, `flydb.user`, and `flydb.password` to migrate with a separate DDL account while the application keeps its lower-privilege `DataSource`. Set `flydb.enabled=false` to disable auto-configuration completely. See the runnable [Boot 2](./examples/boot2-demo) and [Boot 3](./examples/boot3-demo) examples.
+
 ## Build
 
+The full reactor, including the Boot 3 modules, is built with Java 17:
+
 ```bash
+jdk17
 mvn verify
 ```
 
-The CLI distribution is generated at `flydb-cli/target/flydb-cli-2.0.0-SNAPSHOT.zip`.
+The Boot 2 starter, Boot 2 example, core, and CLI retain Java 8 bytecode. The CLI distribution is generated at `flydb-cli/target/flydb-cli-2.0.0-SNAPSHOT.zip`.
 
 ## License
 

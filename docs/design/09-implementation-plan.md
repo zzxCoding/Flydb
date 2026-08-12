@@ -99,6 +99,8 @@
 
 **验收**：两个示例工程 `./mvnw spring-boot:run` 启动即完成迁移并正常提供服务；`flydb.enabled=false` 时完全不装配。
 
+> **阶段 7 验收记录（2026-08-12）**：实现 Boot 2.7.18 / Java 8 的 `spring.factories` 自动装配与 Boot 3.5.16 / Java 17 的 `AutoConfiguration.imports` 自动装配；两者均通过 Spring Boot 官方数据库初始化依赖编排保证 schema 依赖 bean 后置，并提供主 DataSource 复用、独立迁移 DataSource、SLF4J 桥接与 `flydb.*` IDE 元数据。`ApplicationContextRunner` 各 5 个场景全绿；为可执行 jar 补齐 `classpath:` 归档扫描回归。全 reactor 在 Java 17.0.13 下 292 个有效测试通过、8 个外部数据库测试按环境跳过，core JaCoCo 门禁通过；Boot 2 子集另在 Java 8u431 下通过。使用单个临时 MySQL 8.0 容器实测两个可执行 jar：Boot 2 复用应用 DataSource，Boot 3 由 root 迁移且应用账号仅获 `SELECT` 权限，HTTP 端点分别返回 `FLYDB_BOOT2_DEMO_OK:migration-applied` 与 `FLYDB_BOOT3_DEMO_OK:migration-applied`；未部署其他数据库，临时容器验收后已移除。
+
 ### 阶段 8：CI + 文档 + 发布准备（依赖：[08](08-testing-roadmap.md)、[06 §8](06-config-cli.md)）
 
 1. GitHub Actions：单测+覆盖率（所有 PR）→ 稳定级 5 方言矩阵 job → licensed-db 门禁 job（达梦/金仓占位）→ 字节码版本校验步骤（jdeps 断言 ≤52）。

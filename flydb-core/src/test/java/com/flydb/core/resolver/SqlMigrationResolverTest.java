@@ -17,9 +17,13 @@ import com.flydb.core.migration.ResolvedMigration;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -38,6 +42,10 @@ class SqlMigrationResolverTest {
     private static final String SUFFIX = ".sql";
 
     private static ResolverContext context(String... locations) {
+        return context(Thread.currentThread().getContextClassLoader(), locations);
+    }
+
+    private static ResolverContext context(final ClassLoader classLoader, String... locations) {
         return new ResolverContext() {
             @Override
             public List<String> locations() {
@@ -69,7 +77,7 @@ class SqlMigrationResolverTest {
             }
             @Override
             public ClassLoader classLoader() {
-                return Thread.currentThread().getContextClassLoader();
+                return classLoader;
             }
         };
     }
@@ -247,6 +255,28 @@ class SqlMigrationResolverTest {
             assertThat(result).isNotEmpty();
             assertThat(result).extracting(ResolvedMigration::script)
                     .anyMatch(s -> s.contains("V1__init.sql"));
+        }
+
+        @Test
+        @DisplayName("扫描 jar 内 classpath 目录下的迁移脚本")
+        void scansClasspathDirectoryInsideJar(@TempDir Path tempDir) throws IOException {
+            Path jar = tempDir.resolve("migrations.jar");
+            try (OutputStream output = Files.newOutputStream(jar);
+                 JarOutputStream jarOutput = new JarOutputStream(output)) {
+                jarOutput.putNextEntry(new JarEntry("jar_migrations/"));
+                jarOutput.closeEntry();
+                jarOutput.putNextEntry(new JarEntry("jar_migrations/V1__from_jar.sql"));
+                jarOutput.write("CREATE TABLE jar_probe(id INT);".getBytes(StandardCharsets.UTF_8));
+                jarOutput.closeEntry();
+            }
+
+            try (URLClassLoader classLoader = new URLClassLoader(
+                    new java.net.URL[]{jar.toUri().toURL()}, null)) {
+                List<ResolvedMigration> result = new SqlMigrationResolver().resolveMigrations(
+                        context(classLoader, "classpath:jar_migrations"));
+                assertThat(result).extracting(ResolvedMigration::script)
+                        .containsExactly("V1__from_jar.sql");
+            }
         }
 
         @Test

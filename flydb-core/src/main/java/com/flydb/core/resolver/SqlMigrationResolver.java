@@ -1,10 +1,12 @@
 package com.flydb.core.resolver;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -15,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
@@ -129,8 +133,7 @@ public final class SqlMigrationResolver implements MigrationResolver {
                         scanDirectory(dir, entries);
                     }
                 } else {
-                    throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
-                            "classpath 资源 " + path + " 不在文件系统上（jar 内 classpath 扫描为二期增强）");
+                    scanJar(url, normalizedPath, entries);
                 }
             }
             if (!found) {
@@ -145,6 +148,80 @@ public final class SqlMigrationResolver implements MigrationResolver {
                     "扫描 classpath 失败: " + path, e);
         }
         return entries;
+    }
+
+    private static void scanJar(URL resource, String normalizedPath,
+                                List<ScriptFile> entries) throws IOException {
+        java.net.URLConnection connection = resource.openConnection();
+        if (!(connection instanceof JarURLConnection)) {
+            throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                    "不支持的 classpath 资源协议: " + resource.getProtocol()
+                            + "（" + resource + "）");
+        }
+
+        JarURLConnection jarConnection = (JarURLConnection) connection;
+        JarFile jarFile = jarConnection.getJarFile();
+        String entryPrefix = jarConnection.getEntryName();
+        if (entryPrefix == null || entryPrefix.isEmpty()) {
+            entryPrefix = normalizedPath;
+        }
+        entryPrefix = withoutTrailingSlash(entryPrefix) + "/";
+
+        int before = entries.size();
+        scanJarEntries(jarFile, entryPrefix, entries);
+        if (entries.size() == before && !entryPrefix.equals(normalizedPath + "/")) {
+            scanJarEntries(jarFile, withoutTrailingSlash(normalizedPath) + "/", entries);
+        }
+        if (entries.size() == before) {
+            scanJarEntriesBySuffix(jarFile,
+                    "/" + withoutTrailingSlash(normalizedPath) + "/", entries);
+        }
+    }
+
+    private static void scanJarEntries(JarFile jarFile, String prefix,
+                                       List<ScriptFile> entries) throws IOException {
+        Enumeration<JarEntry> jarEntries = jarFile.entries();
+        while (jarEntries.hasMoreElements()) {
+            JarEntry entry = jarEntries.nextElement();
+            if (entry.isDirectory() || !entry.getName().startsWith(prefix)) continue;
+            String relative = entry.getName().substring(prefix.length());
+            if (relative.indexOf('/') >= 0 || !relative.endsWith(".sql")) continue;
+            entries.add(new ScriptFile(relative, readJarEntry(jarFile, entry)));
+        }
+    }
+
+    private static void scanJarEntriesBySuffix(JarFile jarFile, String suffixPrefix,
+                                               List<ScriptFile> entries) throws IOException {
+        Enumeration<JarEntry> jarEntries = jarFile.entries();
+        while (jarEntries.hasMoreElements()) {
+            JarEntry entry = jarEntries.nextElement();
+            if (entry.isDirectory()) continue;
+            int location = entry.getName().lastIndexOf(suffixPrefix);
+            if (location < 0) continue;
+            String relative = entry.getName().substring(location + suffixPrefix.length());
+            if (relative.indexOf('/') >= 0 || !relative.endsWith(".sql")) continue;
+            entries.add(new ScriptFile(relative, readJarEntry(jarFile, entry)));
+        }
+    }
+
+    private static byte[] readJarEntry(JarFile jarFile, JarEntry entry) throws IOException {
+        try (InputStream input = jarFile.getInputStream(entry);
+             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[4096];
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                output.write(buffer, 0, read);
+            }
+            return output.toByteArray();
+        }
+    }
+
+    private static String withoutTrailingSlash(String value) {
+        String result = value;
+        while (result.endsWith("/")) {
+            result = result.substring(0, result.length() - 1);
+        }
+        return result;
     }
 
     private static List<ScriptFile> scanFilesystem(String path, ResolverContext context) {
@@ -193,7 +270,7 @@ public final class SqlMigrationResolver implements MigrationResolver {
         Matcher repeatableMatcher = REPEATABLE_PATTERN.matcher(name);
         if (repeatableMatcher.matches()) {
             String description = repeatableMatcher.group(1);
-            byte[] content = readContent(entry.path, context.encoding());
+            byte[] content = readContent(entry);
             int checksum = ChecksumCalculator.checksum(content);
             return ResolvedMigration.of(null, description, name, checksum, MigrationType.SQL);
         }
@@ -210,7 +287,7 @@ public final class SqlMigrationResolver implements MigrationResolver {
             MigrationVersion version = MigrationVersion.parse(versionStr);
             String description = versionedMatcher.group(3);
             boolean isUndo = "U".equals(prefix);
-            byte[] content = readContent(entry.path, context.encoding());
+            byte[] content = readContent(entry);
             int checksum = ChecksumCalculator.checksum(content);
             return ResolvedMigration.of(version, description, name, checksum,
                     isUndo ? MigrationType.UNDO_SQL : MigrationType.SQL);
@@ -219,12 +296,15 @@ public final class SqlMigrationResolver implements MigrationResolver {
         return null;
     }
 
-    private static byte[] readContent(Path path, Charset encoding) {
+    private static byte[] readContent(ScriptFile entry) {
+        if (entry.content != null) {
+            return entry.content;
+        }
         try {
-            return Files.readAllBytes(path);
+            return Files.readAllBytes(entry.path);
         } catch (IOException e) {
             throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
-                    "读取迁移文件失败: " + path, e);
+                    "读取迁移文件失败: " + entry.path, e);
         }
     }
 
@@ -232,10 +312,18 @@ public final class SqlMigrationResolver implements MigrationResolver {
     private static final class ScriptFile {
         final String filename;
         final Path path;
+        final byte[] content;
 
         ScriptFile(String filename, Path path) {
             this.filename = filename;
             this.path = path;
+            this.content = null;
+        }
+
+        ScriptFile(String filename, byte[] content) {
+            this.filename = filename;
+            this.path = null;
+            this.content = content;
         }
     }
 }

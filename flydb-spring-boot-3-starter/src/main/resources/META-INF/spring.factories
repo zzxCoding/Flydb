@@ -1,0 +1,2 @@
+org.springframework.boot.sql.init.dependency.DatabaseInitializerDetector=\
+com.flydb.boot3.autoconfigure.FlydbMigrationInitializerDatabaseInitializerDetector

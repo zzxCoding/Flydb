@@ -6,7 +6,7 @@ Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工
 
 项目采用 Java 8 基线。`flydb-core` 保持零第三方运行时依赖；独立 CLI 从 `drivers/` 动态加载 JDBC 驱动，不把数据库厂商驱动捆绑进发行包。
 
-> Flydb 2.0 正在按 [实施计划](./docs/design/09-implementation-plan.md) 分阶段交付。当前代码已覆盖 core 命令、SQL 解析、历史仓储、锁与事务语义、主流与信创内置方言，以及独立 CLI。数据库兼容状态以实际测试证据为准，不把方言实现等同于生产认证。
+> Flydb 2.0 正在按 [实施计划](./docs/design/09-implementation-plan.md) 分阶段交付。当前代码已覆盖 core 命令、SQL 解析、历史仓储、锁与事务语义、主流与信创内置方言、独立 CLI，以及 Spring Boot 2/3 starter。数据库兼容状态以实际测试证据为准，不把方言实现等同于生产认证。
 
 ## 能做什么
 
@@ -112,13 +112,46 @@ flydb.migrate();
 
 `flydb-core` 不依赖特定连接池、日志框架或 JDBC 驱动。独立 CLI 才负责 URL 配置和 `drivers/` 动态加载。
 
+## Spring Boot
+
+按应用技术栈选择一个 starter；引入后默认在 Spring 容器初始化期间执行 `migrate`，失败会中止应用启动：
+
+```xml
+<!-- Spring Boot 3.x / Java 17+ -->
+<dependency>
+  <groupId>com.flydb</groupId>
+  <artifactId>flydb-spring-boot-3-starter</artifactId>
+  <version>2.0.0-SNAPSHOT</version>
+</dependency>
+```
+
+Java 8 存量应用改用 `flydb-spring-boot-2-starter`，对应 Spring Boot 2.7.18。[Spring 官方已说明](https://spring.io/blog/2023/11/23/spring-boot-2-7-18-available-now/) 2.7.18 是 Boot 2.x 的最后一个开源支持版本，因此新项目应优先选择 Boot 3 starter；Boot 2 starter 的定位是服务暂时无法升级的存量系统。
+
+默认复用应用主 `DataSource`：
+
+```properties
+spring.datasource.url=jdbc:mysql://127.0.0.1:3306/demo
+spring.datasource.username=app_user
+spring.datasource.password=${DB_PASSWORD}
+
+flydb.locations=classpath:db/migration
+flydb.database-type=mysql
+```
+
+需要权限隔离时，额外设置 `flydb.url/user/password`：Flydb 使用独立的 DDL 账号迁移，应用仍使用低权限主 `DataSource`。设置 `flydb.enabled=false` 可完全关闭自动装配。两个 starter 均生成 `flydb.*` IDE 配置元数据，并将 core 日志桥接到 SLF4J。
+
+可运行工程见 [Boot 2 示例](./examples/boot2-demo) 和 [Boot 3 示例](./examples/boot3-demo)。自动装配与版本边界见 [Spring Boot Starter 设计](./docs/design/07-spring-boot-starter.md)。
+
 ## 从源码验证
 
+完整 reactor（含 Boot 3）使用 Java 17 构建；如果终端已配置本仓库开发环境，可先执行 `jdk17`：
+
 ```bash
+jdk17
 mvn verify
 ```
 
-构建产物位于 `flydb-cli/target/flydb-cli-2.0.0-SNAPSHOT.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
+Boot 2 starter、Boot 2 示例、core 与 CLI 仍保持 Java 8 字节码。CLI 构建产物位于 `flydb-cli/target/flydb-cli-2.0.0-SNAPSHOT.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
 
 ## 许可证
 

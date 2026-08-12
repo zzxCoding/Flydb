@@ -1,0 +1,5 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.flydb.boot2.autoconfigure.FlydbAutoConfiguration
+
+org.springframework.boot.sql.init.dependency.DatabaseInitializerDetector=\
+com.flydb.boot2.autoconfigure.FlydbMigrationInitializerDatabaseInitializerDetector
