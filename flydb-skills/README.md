@@ -8,6 +8,24 @@ Flydb 的 Agent Skills 集合。Skill 负责把重复的操作流程交给 Agent
 |---|---|---|
 | `flydb-cli` | 使用和排查 Flydb CLI，覆盖初始化、驱动接入、迁移、校验、状态、修复和撤销 | [`skills/flydb-cli/SKILL.md`](skills/flydb-cli/SKILL.md) |
 
+## 多 Agent 兼容
+
+`flydb-cli` 使用开放的 Agent Skills 目录格式：一个技能目录包含 `SKILL.md`，可选 `references/`、`scripts/` 和 `assets/`。因此同一份 Skill 面向以下主流 Agent 提供跨工具复用：
+
+| Agent | 兼容方式 | 常见发现/安装位置 |
+|---|---|---|
+| Claude Code | 读取 `SKILL.md` | `.claude/skills/` 或用户级 skills 目录 |
+| OpenAI Codex | 读取 `SKILL.md`，支持显式 `$skill-name` 或自动匹配 | `.agents/skills/` 或 Codex 用户 skills 目录 |
+| Gemini CLI | Agent Skills / `SKILL.md` | `.agents/skills/`、`.gemini/skills/` 或 `gemini skills install` |
+| Kimi Code | Agent Skills / `SKILL.md` | `~/.config/agents/skills/`、`--skills-dir` 或项目 skills 目录 |
+| ZCode | Skill / `SKILL.md` | `~/.zcode/skills/`，也支持从其他 Agent 导入 |
+| Hermes Agent | Skills / `SKILL.md` | `~/.hermes/skills/` 或 Hermes Skills Hub |
+| Pi | Agent Skills standard / `SKILL.md` | `.pi/skills/`、`.agents/skills/` 或 `~/.pi/agent/skills/` |
+
+这里的“兼容”指 Skill 文件格式和渐进式加载模型兼容；各 Agent 的安装命令、权限确认、刷新方式和版本能力仍以其官方文档为准。Flydb 不声称替各 Agent 提供运行时、模型或插件认证。
+
+官方能力说明：[Claude Code](https://code.claude.com/docs/en/agent-sdk/skills)、[Codex](https://developers.openai.com/codex/skills)、[Gemini CLI](https://geminicli.com/docs/cli/using-agent-skills/)、[Kimi Code](https://moonshotai.github.io/kimi-cli/en/customization/skills.html)、[ZCode](https://zcode.z.ai/en/docs/skill)、[Hermes Agent](https://hermes-agent.noasresearch.com/docs/getting-started/quickstart)、[Pi](https://pi.dev/docs/latest/skills)。
+
 ## 使用方式
 
 将 [`skills/flydb-cli`](skills/flydb-cli) 复制到支持 Agent Skills 的技能目录，或在当前 Flydb 工作区直接使用。触发该 Skill 后，Agent 会先定位 Flydb 仓库并读取对应文档，再决定 CLI 命令；不会把密码写进命令行、日志或迁移脚本。
