@@ -2,6 +2,10 @@
 
 Flydb 的 Agent Skills 集合。Skill 负责把重复的操作流程交给 Agent，项目文档仍然是命令、配置和数据库接入行为的唯一事实来源，避免 Skill 内复制一份会过期的 CLI 手册。
 
+## Agent 首次接入
+
+请先阅读仓库根目录的 [`AGENTS.md`](../AGENTS.md)。它会引导你安装或启用 `flydb-cli`、读取 CLI/JDBC 文档，并从 `version`、`validate`、`--dry-run migrate` 开始；如果当前环境不能自动发现 Skill，直接读取下面的 `SKILL.md` 即可。
+
 ## 当前技能
 
 | Skill | 用途 | 入口 |

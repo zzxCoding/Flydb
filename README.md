@@ -36,6 +36,10 @@ Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工
 
 ## Agent Skills
 
+### 给 Agent 的首屏入口
+
+如果你是 Agent，请先阅读仓库根目录的 [`AGENTS.md`](./AGENTS.md)。涉及 Flydb CLI、JDBC 迁移或 Schema 变更时，按该文件安装/启用 `flydb-cli` 后再执行命令；文档-only 任务只需阅读相关文档即可。文件内还包含各主流 Agent 的发现目录、首次安全执行流程和 JDBC 接入边界。
+
 仓库同时提供 [`flydb-skills`](./flydb-skills/README.md)，当前先包含 [`flydb-cli`](./flydb-skills/skills/flydb-cli/SKILL.md)。它使用开放的 `SKILL.md` 格式，面向 Claude Code、OpenAI Codex、Gemini CLI、Kimi Code、ZCode、Hermes Agent、Pi 等主流 Agent 复用；同时引用 CLI 命令、配置、错误码和 JDBC 接入文档，帮助 Agent 安全地执行 `init`、`validate`、`info`、`migrate`、`baseline`、`repair`、`undo` 和 `clean`。Skill 不复制 CLI 手册；修改 CLI 行为时以 `docs/` 为准并同步检查 Skill。
 
 ## 五分钟上手

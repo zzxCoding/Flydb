@@ -12,6 +12,10 @@ See the [database getting-started guides](./docs/getting-started/README.md) for 
 
 ## Agent Skills
 
+### Agent onboarding
+
+If you are an agent, read the repository-root [`AGENTS.md`](./AGENTS.md) first. For Flydb CLI, JDBC migration, or schema-change tasks, install or enable `flydb-cli` from that guide before running commands; documentation-only tasks only need the relevant source docs. The guide also lists mainstream agent discovery directories, first safe checks, and JDBC integration boundaries.
+
 The repository also contains [`flydb-skills`](./flydb-skills/README.md). Its first skill, [`flydb-cli`](./flydb-skills/skills/flydb-cli/SKILL.md), uses the open `SKILL.md` format and is designed for reuse across Claude Code, OpenAI Codex, Gemini CLI, Kimi Code, ZCode, Hermes Agent, Pi, and other compatible agents. It references the CLI command, configuration, error-code, and JDBC integration docs so an agent can operate `init`, `validate`, `info`, `migrate`, `baseline`, `repair`, `undo`, and `clean` with the documented safety boundaries. The skill does not duplicate the CLI manual; update `docs/` first when CLI behavior changes.
 
 The built-in mainstream dialects include MySQL, PostgreSQL, and Oracle. Oracle's vendor driver is supplied separately and its real-instance contract runs only on an explicitly provisioned licensed runner.
