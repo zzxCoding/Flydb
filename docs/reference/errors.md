@@ -23,6 +23,7 @@
 | `FLYDB-4001` | 未知配置键 | 拼写错误或使用了未支持的键 | 删除或修正配置键 |
 | `FLYDB-4002` | 缺少必填配置项 | CLI 没有 URL，或 Spring Boot 没有 DataSource/`flydb.url` | 提供 JDBC URL 或应用 DataSource |
 | `FLYDB-4003` | clean 被禁用 | `clean-disabled=true` | 明确设置 false 并完成二次确认 |
+| `FLYDB-4004` | init 目标文件已存在 | `flydb.conf` 或首个迁移脚本已存在，Flydb 拒绝覆盖 | 选择空目录，或备份并移走冲突文件后重试 |
 
 典型消息格式：
 

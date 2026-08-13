@@ -265,7 +265,8 @@ public final class FlydbCli {
         abstract void run(ConfiguredFlydb configured);
     }
 
-    @Command(name = "migrate", description = "执行待应用的迁移")
+    @Command(name = "migrate", mixinStandardHelpOptions = true,
+            description = "执行待应用的迁移")
     static final class MigrateCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             if (root.dryRun) {
@@ -279,7 +280,8 @@ public final class FlydbCli {
         }
     }
 
-    @Command(name = "info", description = "查看迁移状态总表")
+    @Command(name = "info", mixinStandardHelpOptions = true,
+            description = "查看迁移状态总表")
     static final class InfoCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             com.flydb.core.api.MigrationInfoService information = configured.flydb.info();
@@ -291,7 +293,8 @@ public final class FlydbCli {
         }
     }
 
-    @Command(name = "validate", description = "校验本地脚本与历史记录一致性")
+    @Command(name = "validate", mixinStandardHelpOptions = true,
+            description = "校验本地脚本与历史记录一致性")
     static final class ValidateCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             configured.flydb.validate();
@@ -299,7 +302,8 @@ public final class FlydbCli {
         }
     }
 
-    @Command(name = "baseline", description = "为存量库设置基准版本")
+    @Command(name = "baseline", mixinStandardHelpOptions = true,
+            description = "为存量库设置基准版本")
     static final class BaselineCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             configured.flydb.baseline();
@@ -307,7 +311,8 @@ public final class FlydbCli {
         }
     }
 
-    @Command(name = "repair", description = "清除失败记录并对齐校验和")
+    @Command(name = "repair", mixinStandardHelpOptions = true,
+            description = "清除失败记录并对齐校验和")
     static final class RepairCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             RepairResult result = configured.flydb.repair();
@@ -317,7 +322,8 @@ public final class FlydbCli {
         }
     }
 
-    @Command(name = "clean", description = "清空目标 schema（默认禁用）")
+    @Command(name = "clean", mixinStandardHelpOptions = true,
+            description = "清空目标 schema（默认禁用）")
     static final class CleanCommand extends DatabaseCommand {
         @Option(names = "--force", description = "非交互环境确认清空") boolean force;
 
@@ -341,7 +347,8 @@ public final class FlydbCli {
         }
     }
 
-    @Command(name = "undo", description = "撤销最近一次版本化迁移")
+    @Command(name = "undo", mixinStandardHelpOptions = true,
+            description = "撤销最近一次版本化迁移")
     static final class UndoCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             if (root.dryRun) {
@@ -354,7 +361,8 @@ public final class FlydbCli {
         }
     }
 
-    @Command(name = "init", description = "初始化配置、迁移目录与驱动说明")
+    @Command(name = "init", mixinStandardHelpOptions = true,
+            description = "初始化配置、迁移目录与驱动说明")
     static final class InitCommand implements Callable<Integer> {
         @ParentCommand RootCommand root;
         @Option(names = "--yes", description = "非交互确认") boolean yes;
@@ -404,7 +412,8 @@ public final class FlydbCli {
         }
     }
 
-    @Command(name = "version", description = "输出 flydb 自身版本")
+    @Command(name = "version", mixinStandardHelpOptions = true,
+            description = "输出 flydb 自身版本")
     static final class VersionCommand implements Runnable {
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
         @Override public void run() { spec.commandLine().getOut().println("flydb " + version()); }

@@ -2,8 +2,10 @@ package com.flydb.cli.init;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,31 +34,40 @@ public final class InitScaffolder {
         Path driverReadme = directory.resolve("drivers/README.md");
         for (Path file : Arrays.asList(configuration, migration)) {
             if (Files.exists(file)) {
-                throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                throw new FlydbException(ErrorCode.INIT_TARGET_EXISTS,
                         "目标文件已存在，拒绝覆盖: " + file);
             }
         }
         try {
             Files.createDirectories(migration.getParent());
             Files.createDirectories(driverReadme.getParent());
-            write(configuration, configuration(url, user, driver, databaseType));
-            write(migration, migration());
+            writeNew(configuration, configuration(url, user, driver, databaseType));
+            writeNew(migration, migration());
             List<Path> files = new ArrayList<Path>();
             files.add(configuration);
             files.add(migration);
             if (!Files.exists(driverReadme)) {
-                write(driverReadme, driverReadme());
-                files.add(driverReadme);
+                try {
+                    writeNew(driverReadme, driverReadme());
+                    files.add(driverReadme);
+                } catch (FileAlreadyExistsException ignored) {
+                    // A concurrent init won the race; preserve its driver guide.
+                }
             }
             return Collections.unmodifiableList(files);
+        } catch (FileAlreadyExistsException e) {
+            String file = e.getFile() == null ? "目标文件" : e.getFile();
+            throw new FlydbException(ErrorCode.INIT_TARGET_EXISTS,
+                    "目标文件已存在，拒绝覆盖: " + file, e);
         } catch (IOException e) {
             throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
                     "生成 init 脚手架失败: " + e.getMessage(), e);
         }
     }
 
-    private static void write(Path file, String content) throws IOException {
-        Files.write(file, content.getBytes(StandardCharsets.UTF_8));
+    private static void writeNew(Path file, String content) throws IOException {
+        Files.write(file, content.getBytes(StandardCharsets.UTF_8),
+                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
     }
 
     private static String configuration(String url, String user, String driver,

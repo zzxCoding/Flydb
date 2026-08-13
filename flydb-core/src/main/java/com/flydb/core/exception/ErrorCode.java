@@ -69,7 +69,10 @@ public enum ErrorCode {
             "在 flydb.conf、命令行或环境变量 FLYDB_URL 中提供 JDBC URL（详情列出缺失项）。"),
     CLEAN_DISABLED("FLYDB-4003", "clean 被禁用", "Clean disabled",
             "flydb.clean-disabled=true（默认防呆），clean 命令被拒绝执行。",
-            "确认要清空目标 schema 后，设置 flydb.clean-disabled=false，并在交互终端或加 --force 二次确认。");
+            "确认要清空目标 schema 后，设置 flydb.clean-disabled=false，并在交互终端或加 --force 二次确认。"),
+    INIT_TARGET_EXISTS("FLYDB-4004", "目标文件已存在，拒绝覆盖", "Init target already exists",
+            "init 生成的 flydb.conf 或首个迁移脚本已存在；Flydb 不会覆盖已有文件。",
+            "选择空目录执行 init，或先备份并移走冲突文件后重试。");
 
     private final String code;
     private final String zhSummary;

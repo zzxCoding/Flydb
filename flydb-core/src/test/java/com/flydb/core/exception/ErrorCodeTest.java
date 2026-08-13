@@ -34,6 +34,7 @@ class ErrorCodeTest {
         assertThat(ErrorCode.UNKNOWN_CONFIG_KEY.code()).isEqualTo("FLYDB-4001");
         assertThat(ErrorCode.MISSING_REQUIRED_CONFIG.code()).isEqualTo("FLYDB-4002");
         assertThat(ErrorCode.CLEAN_DISABLED.code()).isEqualTo("FLYDB-4003");
+        assertThat(ErrorCode.INIT_TARGET_EXISTS.code()).isEqualTo("FLYDB-4004");
     }
 
     @Test

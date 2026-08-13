@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collections;
 
 import org.junit.jupiter.api.DisplayName;
@@ -81,6 +82,26 @@ class FlydbCliTest {
                 StandardCharsets.UTF_8)).contains(
                 "flydb.url=jdbc:mysql://localhost:3306/app", "flydb.user=app_user",
                 "flydb.driver=com.mysql.cj.jdbc.Driver");
+    }
+
+    @Test
+    @DisplayName("所有子命令都支持 --help 且不触发数据库连接")
+    void subcommandsExposeStandardHelp() {
+        for (String command : Arrays.asList("migrate", "info", "validate", "baseline",
+                "repair", "clean", "undo", "init", "version")) {
+            StringWriter standardOutput = new StringWriter();
+            StringWriter errorOutput = new StringWriter();
+            Path workingDirectory = Paths.get(".").toAbsolutePath().normalize();
+            FlydbCli cli = new FlydbCli(new PrintWriter(standardOutput, true),
+                    new PrintWriter(errorOutput, true), Collections.<String, String>emptyMap(),
+                    workingDirectory, workingDirectory);
+
+            int exitCode = cli.execute(command, "--help");
+
+            assertThat(exitCode).as(command).isZero();
+            assertThat(standardOutput.toString()).as(command).contains("Usage: flydb " + command);
+            assertThat(errorOutput.toString()).as(command).isEmpty();
+        }
     }
 
     @Test

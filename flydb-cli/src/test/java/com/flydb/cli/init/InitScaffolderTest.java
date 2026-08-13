@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +41,8 @@ class InitScaffolderTest {
         assertThatThrownBy(() -> new InitScaffolder().create(temporaryDirectory,
                 "jdbc:mysql://other/db", "other", "mysql"))
                 .isInstanceOf(FlydbException.class)
+                .satisfies(ex -> assertThat(((FlydbException) ex).errorCode())
+                        .isEqualTo(ErrorCode.INIT_TARGET_EXISTS))
                 .hasMessageContaining("拒绝覆盖");
     }
 

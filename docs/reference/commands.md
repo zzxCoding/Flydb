@@ -60,4 +60,6 @@ FLYDB_PASSWORD='...' bin/flydb validate
 bin/flydb clean --clean-disabled=false --force
 ```
 
+`init` 只会创建不存在的 `flydb.conf`、`db/migration/V1__init.sql` 和缺失的驱动说明；不会覆盖已有配置或迁移文件，冲突时返回 `FLYDB-4004`。所有子命令均支持 `--help`，例如 `bin/flydb init --help`。
+
 退出码和错误码见[错误码参考](errors.md)，配置键见[配置项参考](configuration.md)。

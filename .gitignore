@@ -48,6 +48,9 @@ Thumbs.db
 *.bak
 *.swp
 
+# ---- Agent 本地状态 ----
+.goals/
+
 # ---- 环境变量文件（密钥不入库）----
 .env
 .env.*
