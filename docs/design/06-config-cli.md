@@ -128,7 +128,7 @@ flydb 2.0.0 · 达梦 DM8 · jdbc:dm://10.0.0.1:5236 · 历史表: flydb_schema_
 
 ## 6. drivers/ 目录动态驱动加载
 
-- CLI fat jar **不内置任何 JDBC 驱动**：① 许可证隔离（MySQL Connector/J 为 GPL+FOSS 例外、OceanBase 客户端为 LGPL，与 flydb 的 MIT 分发解耦）；② 信创现实（达梦/金仓驱动经企业内网制品库分发，不能假设可访问公网）。
+- CLI fat jar **不内置任何 JDBC 驱动**：① 许可证隔离（MySQL Connector/J 为 GPL+FOSS 例外、OceanBase 客户端为 LGPL，与 flydb 的 Apache-2.0 分发解耦）；② 信创现实（达梦/金仓驱动经企业内网制品库分发，不能假设可访问公网）。
 - 启动时扫描 `<安装目录>/drivers/*.jar` 构建子 URLClassLoader；**不走 `DriverManager`**（对非系统类加载器加载的驱动有可见性限制），而是反射实例化 `java.sql.Driver` 后由内置 `DriverDataSource` 直接持有调用 `driver.connect(url, props)`——DBeaver 等工具的标准做法。
 - 驱动类名按 URL 前缀内置映射（`jdbc:dm://` → `dm.jdbc.driver.DmDriver` 等），`--driver` 可覆盖；映射表维护在 `DatabaseType` 各实现内。
 - 二期外部方言 jar（[01 §2.1](01-modules.md)）同样放 `drivers/` 目录，一并进入 SPI 扫描路径。
@@ -142,6 +142,7 @@ flydb-cli-2.0.0/
 ├── drivers/README.md                 # 驱动放置说明 + 坐标速查（01 §5）
 ├── conf/flydb.conf.sample
 ├── LICENSE
+├── NOTICE
 └── README.md                         # 五分钟上手
 ```
 

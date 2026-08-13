@@ -192,4 +192,4 @@ Boot 2 starter、Boot 2 示例、core 与 CLI 仍保持 Java 8 字节码。CLI �
 
 ## 许可证
 
-[MIT](./LICENSE)。JDBC 驱动由使用者自行获取，并遵守各厂商的许可证与分发条款。
+[Apache-2.0](./LICENSE)。Flydb 自身按 Apache License 2.0 发布；JDBC 驱动由使用者自行获取，并遵守各厂商的许可证与分发条款。发行包同时附带 [`NOTICE`](./NOTICE)。

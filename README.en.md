@@ -123,4 +123,4 @@ The local integration contract defaults to MySQL 8. The CI workflow selects one 
 
 ## License
 
-[MIT](./LICENSE). Users obtain JDBC drivers separately and must comply with vendor licensing and distribution terms.
+[Apache-2.0](./LICENSE). Flydb is distributed under the Apache License 2.0; users obtain JDBC drivers separately and must comply with vendor licensing and distribution terms. Release packages include [`NOTICE`](./NOTICE).

@@ -22,7 +22,7 @@
 
 ### 阶段 1：工程骨架 + 领域模型（依赖：[01](01-modules.md)、[02](02-domain-api.md)）
 
-1. **清理旧代码**：删除 `src/`、`flydb.sh`、`logs/`、`target/`；保留 `LICENSE`、`mvnw*`；`README.md` 暂留（阶段 8 重写）。
+1. **清理旧代码**：删除 `src/`、`flydb.sh`、`logs/`、`target/`；保留 `LICENSE`（Apache-2.0）、`NOTICE`、`mvnw*`；`README.md` 暂留（阶段 8 重写）。
 2. **搭多模块骨架**：根 POM（`revision` 统一版本 2.0.0-SNAPSHOT、compiler release 8、enforcer 零依赖规则、JaCoCo 门禁）+ 5 个子模块空壳（[01 §1](01-modules.md) 表）。
 3. **领域模型（TDD）**，全部在 `flydb-core`：
    - `MigrationVersion`（[02 §3](02-domain-api.md)）→ 测试：`MigrationVersionTest`（[08 §1](08-testing-roadmap.md) 用例清单）

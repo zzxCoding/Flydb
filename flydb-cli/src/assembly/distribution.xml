@@ -33,6 +33,7 @@
             <outputDirectory>/</outputDirectory>
             <includes>
                 <include>LICENSE</include>
+                <include>NOTICE</include>
                 <include>README.md</include>
             </includes>
         </fileSet>

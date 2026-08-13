@@ -64,4 +64,4 @@ python3 /Users/xuan/.agents/skills/skill-creator/scripts/quick_validate.py \
 
 测试提示词草案位于 [`skills/flydb-cli/evals/evals.json`](skills/flydb-cli/evals/evals.json)。它们用于后续评估 Skill 是否正确触发和遵守 CLI 安全边界。
 
-项目复用仓库根目录的 [MIT 许可证](../LICENSE)。
+项目复用仓库根目录的 [Apache-2.0 许可证](../LICENSE)。

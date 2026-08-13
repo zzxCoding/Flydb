@@ -97,7 +97,7 @@ public interface Log {
 
 | 事项 | 决策 |
 |---|---|
-| flydb 自身许可证 | 保留 MIT（沿用现有 LICENSE） |
+| flydb 自身许可证 | Apache-2.0（沿用根目录 LICENSE，并在发行包附带 NOTICE） |
 | JDBC 驱动 | **一律不作为任何模块的运行时/optional/provided 依赖**。CLI 靠 `drivers/` 目录动态加载（[06 §6](06-config-cli.md)）；库用户自行引入驱动；integration-tests 以 test scope 引入用于测试 |
 | picocli | 仅 flydb-cli 依赖；Apache 2.0，最低支持 Java 5（可信度：高，picocli 官方 GitHub） |
 | YAML | 不引入。配置文件用 Properties（JDK 内置解析），理由见 [06 §1](06-config-cli.md) |
@@ -118,5 +118,5 @@ public interface Log {
 新布局与旧代码不共存。实施阶段第一步（见 [09 §3 阶段 1](09-implementation-plan.md)）：
 
 - 删除：`src/`（整个旧代码树）、`flydb.sh`、旧 `application.yml`/`db-connections.yml`/`logback.xml`、旧单模块 `pom.xml`（替换为根 POM）、`target/`、`logs/`。
-- 保留：`LICENSE`（MIT）、`mvnw`/`mvnw.cmd`（升级 wrapper 版本）、`README.md`（重写，见 [06 §8](06-config-cli.md) 文档规划）。
+- 保留：`LICENSE`（Apache-2.0）、`NOTICE`、`mvnw`/`mvnw.cmd`（升级 wrapper 版本）、`README.md`（重写，见 [06 §8](06-config-cli.md) 文档规划）。
 - 旧 README 中值得继承的内容（命名规范说明、FAQ 结构）在重写时吸收，但所有"已支持数据库"的表述必须与实际实现一致——旧 README 宣传与代码脱节是本次重写要根治的问题之一。
