@@ -28,6 +28,7 @@ public final class DatabaseTypeRegistry {
         loaded.add(new KingbaseESDatabaseType());
         loaded.add(new TiDBDatabaseType());
         loaded.add(new OceanBaseDatabaseType());
+        loaded.add(new OracleDatabaseType());
         loaded.add(new DmDatabaseType());
         loaded.add(new MySQLDatabaseType());
         for (DatabaseType type : ServiceLoader.load(DatabaseType.class)) {

@@ -32,10 +32,10 @@ public interface DatabaseTestSupport extends AutoCloseable {
 
 同一套**契约测试**（`MigrateContractTest`、`LockContractTest`、`FailureRecoveryContractTest`、`CleanContractTest`...）对每个方言跑一遍，由 JUnit 5 扩展按环境选择实现：
 
-1. 设置了 `FLYDB_TEST_<DB>_URL/_USER/_PASSWORD` 环境变量 → **外部真实实例**模式；
+1. 设置了 `FLYDB_TEST_<DB>_URL/_USER/_PASSWORD` 环境变量 → **外部真实实例**模式（包括原生 Oracle）；
 2. 本地默认只启动已有的 MySQL 8 Testcontainers，以显式方言配置运行 MySQL 家族兼容契约；设置 `-Dflydb.integration.database=postgresql` 时才启动 PostgreSQL 16，避免普通开发环境拉取两套镜像；
 3. TiDB、OceanBase、openGauss 等专用大镜像不在本地默认拉取范围，真实产品验证放到显式 CI job 或外部实例；
-4. 达梦、金仓等授权环境不可用时，真实实例用例 **Disabled 并输出明确原因**（不让整体构建失败）。
+4. 达梦、金仓、Oracle 等授权环境不可用时，真实实例用例 **Disabled 并输出明确原因**（不让整体构建失败）。
 
 兼容族契约用于验证 Flydb 的迁移、历史表、锁和 SQL 家族实现，不等价于真实产品证明。例如 TiDB 方言在 MySQL 上跑通，只能证明 MySQL 家族公共路径；TiDB 异步 DDL、产品探测返回值等差异仍需真实 TiDB 环境验证。此分层既控制本地磁盘与启动成本，也避免把兼容数据库上的结果包装成真实产品结论。
 
@@ -44,6 +44,7 @@ public interface DatabaseTestSupport extends AutoCloseable {
 | 数据库 | 本地默认验证 | 真实产品验证 | CI 归属 |
 |---|---|---|---|
 | MySQL / PostgreSQL | 官方 Testcontainers 模块 + 官方镜像 | 同一容器即真实产品 | 公共 CI |
+| Oracle | Oracle 家族单元契约 | `FLYDB_TEST_ORACLE_URL/_USER/_PASSWORD` | 自建 Runner/外部实例；公共 CI 跳过 |
 | TiDB | MySQL 8 兼容族契约 | 外部 TiDB 实例或显式专用 CI job | 专用 job 未启用前只标注“兼容验证” |
 | OceanBase-MySQL | MySQL 8 兼容族契约 + 探测代理 | 外部 OB-MySQL 租户或显式专用 CI job | 同上 |
 | openGauss | PostgreSQL 16 兼容族契约 | 外部 openGauss 实例或显式专用 CI job | 同上 |
@@ -54,11 +55,11 @@ public interface DatabaseTestSupport extends AutoCloseable {
 ### 2.3 CI（GitHub Actions）
 
 - 默认公共 Runner 跑 MySQL/PG；TiDB/OB-CE/openGauss 只有在显式配置专用 job 后才拉取对应镜像。单测与覆盖率门禁在所有 PR 上强制。
-- 达梦/金仓 job 打 `self-hosted, licensed-db` 标签，用 `if: vars.RUN_LICENSED_DB_TESTS == 'true'` 门禁——外部贡献者 PR 不因缺企业凭据而失败，主分支 push 才跑全量。
+- 达梦/金仓/Oracle job 打 `self-hosted, licensed-db` 标签，用 `if: vars.RUN_LICENSED_DB_TESTS == 'true'` 门禁——外部贡献者 PR 不因缺企业凭据而失败，主分支 push 才跑全量。
 - 国内自建 Runner 建议配置镜像加速并对测试镜像做 digest 锁定（信创网络环境拉公网镜像不稳定）。
 - 驱动字节码校验步骤：对 core/cli 产物跑 `jdeps`/`javap` 断言 class 版本 ≤52（Java 8），对引入的达梦/金仓/openGauss 驱动同样校验并在升级时报警（[01 §5](01-modules.md)）。
 
-当前工作流落在 `.github/workflows/ci.yml`：单元/覆盖率/发布演练、Java 8 兼容性、MySQL/PostgreSQL/TiDB/OceanBase-MySQL/openGauss 五项矩阵，以及按 `RUN_LICENSED_DB_TESTS` 开关启用的授权数据库 self-hosted gate。集成测试通过 `flydb.integration.database` 选择器做到一项只启动一套数据库家族；默认本地值为 `mysql`。
+当前工作流落在 `.github/workflows/ci.yml`：单元/覆盖率/发布演练、Java 8 兼容性、MySQL/PostgreSQL/TiDB/OceanBase-MySQL/openGauss 五项矩阵，以及按 `RUN_LICENSED_DB_TESTS` 开关启用的达梦/金仓/Oracle 授权数据库 self-hosted gate。集成测试通过 `flydb.integration.database` 选择器做到一项只启动一套数据库家族；默认本地值为 `mysql`。
 
 ## 3. 方言成熟度分级（对外承诺口径）
 
@@ -66,7 +67,7 @@ public interface DatabaseTestSupport extends AutoCloseable {
 |---|---|---|
 | **稳定** | 真实产品在公共 CI 每次提交自动验证 | MySQL、PostgreSQL |
 | **兼容验证** | 在同协议/同家族数据库上通过完整迁移契约，产品专有行为尚待真实实例验证 | TiDB、OceanBase-MySQL、openGauss、KingbaseES |
-| **验证** | 自建 Runner/外部实例门禁验证 | 达梦 DM8；KingbaseES 在真实实例门禁全绿后由“兼容验证”升级至此 |
+| **验证** | 自建 Runner/外部实例门禁验证 | Oracle、达梦 DM8；KingbaseES 在真实实例门禁全绿后由“兼容验证”升级至此 |
 | **实验性** | 无法自动化验证，社区反馈驱动 | OceanBase-Oracle |
 
 README 的支持矩阵必须如实标注该分级——旧原型"README 宣传与代码脱节"的教训不再重演。
@@ -74,10 +75,10 @@ README 的支持矩阵必须如实标注该分级——旧原型"README 宣传�
 ## 4. 版本路线图
 
 ### MVP（本设计范围）
-flydb-core（三家族 8 方言）+ flydb-cli + 双 starter + 契约测试矩阵。`clean` 限定表/视图/序列；`undo` 仅撤销最近一次。
+flydb-core（三家族内置方言）+ flydb-cli + 双 starter + 契约测试矩阵。`clean` 限定表/视图/序列；`undo` 仅撤销最近一次。
 
 ### 二期
-- Oracle 官方方言（OracleFamily 补子类）；神通 Oscar、GBase、瀚高以**独立方言 jar** 接入（验证 SPI 真解耦，成本模型见 [03 §6](03-dialects.md)）。
+- 神通 Oscar、GBase、瀚高以**独立方言 jar** 接入（验证 SPI 真解耦，成本模型见 [03 §6](03-dialects.md)）。
 - 原生命名锁优化（MySQL `GET_LOCK`、达梦锁方案调研）替换锁表方案（带运行时能力探测）。
 - `flydb-maven-plugin`（Mojo 包装各命令，"迁移即构建步骤"）。
 - `clean` 补齐存储过程/触发器/自定义类型；`validate` 增加 `ignoreMissingMigrations` 等宽松开关；YAML 配置可选模块。

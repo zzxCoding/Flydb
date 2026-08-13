@@ -73,6 +73,7 @@ public final class DriverLoader {
         }
         if (url.startsWith("jdbc:mysql:")) return "com.mysql.cj.jdbc.Driver";
         if (url.startsWith("jdbc:postgresql:")) return "org.postgresql.Driver";
+        if (url.startsWith("jdbc:oracle:")) return "oracle.jdbc.OracleDriver";
         if (url.startsWith("jdbc:opengauss:")) return "org.opengauss.Driver";
         if (url.startsWith("jdbc:kingbase8:")) return "com.kingbase8.Driver";
         if (url.startsWith("jdbc:dm:")) return "dm.jdbc.driver.DmDriver";

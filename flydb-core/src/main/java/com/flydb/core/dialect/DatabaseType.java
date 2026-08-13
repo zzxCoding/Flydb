@@ -9,7 +9,7 @@ import com.flydb.core.api.FlydbConfiguration;
  * 数据库类型 SPI（设计 03 §1）：两阶段探测 + 显式覆盖。
  *
  * <p>实现经 {@link java.util.ServiceLoader} 发现（{@code META-INF/services/com.flydb.core.dialect.DatabaseType}）。
- * 内置 8 个 MVP 方言实现，第三方也可通过 SPI 注册。
+ * 内置 8 个 MVP 方言实现（含 Oracle 官方方言），第三方也可通过 SPI 注册。
  *
  * <p>探测流程：
  * <ol>

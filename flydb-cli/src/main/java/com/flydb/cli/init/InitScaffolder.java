@@ -79,6 +79,7 @@ public final class InitScaffolder {
                 + "| 数据库 | 驱动类 / 获取线索 |\n|---|---|\n"
                 + "| MySQL / TiDB | `com.mysql.cj.jdbc.Driver`，Maven `com.mysql:mysql-connector-j` |\n"
                 + "| PostgreSQL | `org.postgresql.Driver`，Maven `org.postgresql:postgresql` |\n"
+                + "| Oracle | `oracle.jdbc.OracleDriver`，从 Oracle 制品库获取 `ojdbc` |\n"
                 + "| openGauss | `org.opengauss.Driver`，Maven `org.opengauss:opengauss-jdbc` |\n"
                 + "| KingbaseES | `com.kingbase8.Driver`，从人大金仓交付介质或内部制品库获取 |\n"
                 + "| 达梦 DM8 | `dm.jdbc.driver.DmDriver`，从达梦安装目录或内部制品库获取 |\n"

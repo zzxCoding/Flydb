@@ -14,7 +14,7 @@ import com.flydb.core.history.SchemaHistoryDdl;
 import com.flydb.core.lock.MigrationLock;
 import com.flydb.core.lock.TableRowLockMigrationLock;
 
-/** Oracle 兼容家族基类（达梦 DM8 / OceanBase-Oracle）。 */
+/** Oracle 家族基类（Oracle 官方 / 达梦 DM8 / OceanBase-Oracle）。 */
 public abstract class OracleFamilyDatabase implements Database {
 
     private final String name;

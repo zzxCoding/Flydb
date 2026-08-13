@@ -10,6 +10,8 @@ Flydb targets Java 8. `flydb-core` has no third-party runtime dependencies, whil
 
 See the [database getting-started guides](./docs/getting-started/README.md) for driver, URL, permission, and limitation details. Verification level is evidence, not vendor certification.
 
+The built-in mainstream dialects include MySQL, PostgreSQL, and Oracle. Oracle's vendor driver is supplied separately and its real-instance contract runs only on an explicitly provisioned licensed runner.
+
 ## Quick start
 
 Prerequisites: Java 8 or newer, an existing target database, and a Java 8-compatible JDBC driver.

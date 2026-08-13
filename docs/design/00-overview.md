@@ -8,7 +8,7 @@
 
 它借鉴 Flyway 的核心思想（版本化 SQL 脚本 + schema history 表 + checksum 校验），在提供通用 JDBC 迁移能力的基础上，为信创场景做了针对性设计：
 
-- **面向各类 JDBC 数据库**：MySQL、PostgreSQL 等主流数据库开箱即用；其他提供 JDBC 驱动的数据库可通过 `DatabaseType` SPI 和方言实现接入。
+- **面向各类 JDBC 数据库**：MySQL、PostgreSQL、Oracle 等主流数据库开箱即用；其他提供 JDBC 驱动的数据库可通过 `DatabaseType` SPI 和方言实现接入。
 - **信创数据库一等公民**：达梦 DM8、人大金仓 KingbaseES、openGauss 与 MySQL/PostgreSQL 同级支持，而不是"社区插件"待遇。
 - **Java 8 字节码基线**：信创环境（东方通/宝兰德中间件、国产化改造项目）大量停留在 JDK 8。Flyway 10+ 强制 Java 17，把这批用户挡在门外；Flydb 的核心库与 CLI 承诺 Java 8 可运行。
 - **离线友好**：CLI 通过 `drivers/` 目录动态加载 JDBC 驱动，不假设能访问公网 Maven 仓库——达梦、金仓的驱动通常经企业内部制品库分发。
@@ -62,7 +62,7 @@ Flyway Community 采用 Apache 2.0 许可，且其官方支持矩阵**已包含 
                                 │ ServiceLoader SPI
                        ┌────────▼──────────┐
                        │  数据库方言（内置） │  PG 系 / MySQL 系 / Oracle 系
-                       │  + 二期外部方言 jar │  三家族继承，8 个具体方言
+                       │  + 二期外部方言 jar │  三家族继承，内置方言
                        └───────────────────┘
 ```
 

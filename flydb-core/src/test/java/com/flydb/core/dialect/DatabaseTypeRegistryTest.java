@@ -40,6 +40,31 @@ class DatabaseTypeRegistryTest {
     }
 
     @Test
+    @DisplayName("默认注册中心通过 Oracle JDBC URL 识别官方 Oracle 方言")
+    void defaultRegistryDetectsOracleUrl() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:oracle:thin:@//localhost:1521/XEPDB1", null, null).name())
+                .isEqualTo("oracle");
+    }
+
+    @Test
+    @DisplayName("Oracle 官方方言使用 Oracle 家族的 PL/SQL 与非事务 DDL 语义")
+    void oracleTypeUsesOracleFamily() throws Exception {
+        OracleDatabaseType type = new OracleDatabaseType();
+        Connection connection = mockConnection("Oracle Database 19c");
+
+        assertThat(type.handlesUrl("jdbc:oracle:thin:@//localhost:1521/XEPDB1")).isTrue();
+        assertThat(type.handlesConnection(connection)).isTrue();
+        try (Database database = type.createDatabase(connection, null)) {
+            assertThat(database.name()).isEqualTo("Oracle");
+            assertThat(database.supportsDdlTransactions()).isFalse();
+            assertThat(database.statementBuilderConfig().plsqlBlockDetector()).isNotNull();
+            assertThat(database.quote("MixedCase")).isEqualTo("\"MixedCase\"");
+        }
+    }
+
+    @Test
     @DisplayName("默认注册中心通过专用 URL 识别 openGauss")
     void defaultRegistryDetectsOpenGaussUrl() {
         DatabaseTypeRegistry registry = new DatabaseTypeRegistry();

@@ -2,7 +2,7 @@
 
 > [← 02 领域模型](02-domain-api.md) | [返回总览](00-overview.md) | 下一篇：[04 解析器/锁/事务](04-parser-lock-tx.md)
 
-方言层是 Flydb 的核心价值所在。设计目标：8 个 MVP 方言按三家族继承实现；二期新增方言（神通/GBase/瀚高）零改动 core。
+方言层是 Flydb 的核心价值所在。内置方言按三家族继承实现；二期新增方言（神通/GBase/瀚高）零改动 core。
 
 ## 1. `DatabaseType` SPI：两阶段探测 + 显式覆盖
 
@@ -34,6 +34,7 @@ public interface DatabaseType {
 | 方言 | URL 前缀 | 阶段二线索 | 已知风险 |
 |---|---|---|---|
 | PostgreSQL | `jdbc:postgresql://` | `SELECT version()` 不含 openGauss/Kingbase 特征 | 该前缀可能实际连着 openGauss（见下行） |
+| Oracle | `jdbc:oracle:` | 产品名包含 `Oracle` | 官方驱动与真实实例由外部环境提供；URL 前缀唯一 |
 | openGauss | `jdbc:opengauss://`（专用驱动）；兼容 `jdbc:postgresql://` | `SELECT version()` 返回串含 `openGauss` | **高**：用户用 PG 驱动 + PG 前缀连 openGauss 时，仅靠阶段二版本串兜底识别；文档强烈建议使用专用驱动与 URL |
 | KingbaseES | `jdbc:kingbase8://` | `getDatabaseProductName()` 实际返回值**待实测**（可信度：低）；备选 `SELECT version()` 含 `KingbaseES` | 前缀唯一，风险低；阶段二逻辑实施时补实测 |
 | MySQL | `jdbc:mysql://` | 产品名 `MySQL` 且非 TiDB | 与 TiDB 共用前缀 |
@@ -83,7 +84,7 @@ public interface Database extends AutoCloseable {
 | 历史表 DDL | `CREATE TABLE IF NOT EXISTS`；`success` 用 `TINYINT(1)`；引擎默认 InnoDB |
 | currentSchema | `SELECT DATABASE()` |
 
-### 3.3 `OracleFamilyDatabase` ← 达梦 DM8 / OceanBase-Oracle
+### 3.3 `OracleFamilyDatabase` ← Oracle / 达梦 DM8 / OceanBase-Oracle
 
 | 特性 | 家族默认值 |
 |---|---|
@@ -94,15 +95,16 @@ public interface Database extends AutoCloseable {
 | 历史表 DDL | 无 `IF NOT EXISTS` → "先查系统目录后建 + 建表异常兜底"的幂等策略；`success` 用 `NUMBER(1)`；`installed_on TIMESTAMP DEFAULT SYSTIMESTAMP` |
 | currentSchema | 查询会话当前 schema（达梦：`SELECT SYS_CONTEXT('USERENV','CURRENT_SCHEMA') FROM dual`，实施时确认） |
 
-> MVP 不包含 Oracle 官方数据库的具体实现，但家族基类的能力边界按"Oracle 兼容语义"设计，二期加入 Oracle 方言时只补一个子类。
+> Oracle 官方方言、达梦 DM8 和 OceanBase-Oracle 共用 Oracle 家族的 SQL/DDL 基线；产品专有差异仍由各自 `DatabaseType` 或 `Database` 子类承担。
 
-## 4. 8 个具体方言的覆写点清单
+## 4. 具体方言的覆写点清单
 
 评审此清单 = 确认差异覆盖完整性。实施时每个覆写点都应有对应集成测试用例。
 
 | 方言 | 相对家族基类必须覆写/确认的点 |
 |---|---|
 | **PostgreSQL** | 基准实现，无覆写 |
+| **Oracle** | 基准 Oracle 家族实现；官方 JDBC URL 为唯一阶段一线索，真实实例需授权 Runner 契约验证 |
 | **KingbaseES** | ① `pg_advisory_lock` 可用性**待实测**（可信度：低）——若不可用，`createLock()` 降级为通用锁表并在结果 warnings 中提示；② 阶段二探测串实测；③ 系统目录兼容性（金仓有 `sys_` 前缀系统表习惯，确认 `information_schema` 查询路径可用）；④ 驱动多变体（`.jre6/.jre7/无后缀`）不影响本层，但写入 drivers/README 选型提示 |
 | **openGauss** | ① `pg_advisory_lock` 已确认保留（可信度：高，openGauss 官方文档 advisory-lock-functions）；② 用户误用 PG 驱动连接时的阶段二兜底识别；③ 默认加密认证方式与旧 PG 驱动不兼容的场景写入文档（驱动选型提示） |
 | **MySQL** | 基准实现，无覆写 |

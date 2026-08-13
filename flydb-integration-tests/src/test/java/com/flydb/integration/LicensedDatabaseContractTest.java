@@ -13,6 +13,7 @@ import com.flydb.core.dialect.Database;
 import com.flydb.core.dialect.DmDatabase;
 import com.flydb.core.dialect.DmDatabaseType;
 import com.flydb.core.dialect.KingbaseESDatabaseType;
+import com.flydb.core.dialect.OracleDatabaseType;
 import com.flydb.core.lock.MigrationLock;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,6 +65,30 @@ class LicensedDatabaseContractTest {
                         .createTableSql("flydb_schema_history");
                 assertThat(historyDdl.startsWith("CREATE TABLE \"flydb_schema_history\""))
                         .isEqualTo(database.caseSensitive());
+                try (MigrationLock lock = database.createLock(configuration)) {
+                    assertThat(lock).isNotNull();
+                }
+            }
+        }
+    }
+
+    @Test
+    @EnabledIfEnvironmentVariable(named = "FLYDB_TEST_ORACLE_URL", matches = ".+")
+    @DisplayName("真实 Oracle 实例可探测官方方言、Schema 与锁能力")
+    void oracleRealInstanceContract() throws Exception {
+        String url = environment("FLYDB_TEST_ORACLE_URL");
+        DataSource dataSource = dataSource("ORACLE", url);
+        FlydbConfiguration configuration = FlydbConfiguration.builder()
+                .dataSource(dataSource).databaseType("oracle").build();
+        OracleDatabaseType type = new OracleDatabaseType();
+
+        try (Connection connection = dataSource.getConnection()) {
+            assertThat(type.handlesUrl(url)).isTrue();
+            assertThat(type.handlesConnection(connection)).isTrue();
+            try (Database database = type.createDatabase(connection, configuration)) {
+                assertThat(database.currentSchema()).isNotBlank();
+                assertThat(database.currentUser()).isNotBlank();
+                assertThat(database.supportsDdlTransactions()).isFalse();
                 try (MigrationLock lock = database.createLock(configuration)) {
                     assertThat(lock).isNotNull();
                 }

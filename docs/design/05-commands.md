@@ -75,7 +75,7 @@
 ## 6. `clean`（加锁，默认禁用）
 
 - `cleanDisabled=true`（默认）→ `FLYDB-4003` 直接拒绝。必须显式配置 `cleanDisabled=false` 才可用（CLI 上还需 `--i-know-what-i-am-doing` 式二次确认，见 [06 §4](06-config-cli.md)）。
-- **MVP 范围（明确缩减）**：删除当前 schema 中的表（含历史表/锁表）、视图、序列——按外键依赖拓扑排序删除（或按方言使用 CASCADE）。存储过程/触发器/自定义类型的清理列为二期增强。8 个方言全对等 Flyway clean 的工作量不应隐性打包进 MVP。
+- **MVP 范围（明确缩减）**：删除当前 schema 中的表（含历史表/锁表）、视图、序列——按外键依赖拓扑排序删除（或按方言使用 CASCADE）。存储过程/触发器/自定义类型的清理列为二期增强。各内置方言全对等 Flyway clean 的工作量不应隐性打包进 MVP。
 - `CleanStrategy` 由各家族提供实现（[03 §2](03-dialects.md)）。
 
 ## 7. `undo`（加锁，"尽力而为"定位）

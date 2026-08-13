@@ -118,6 +118,9 @@ jobs:
       FLYDB_TEST_KINGBASE_URL: ${{ secrets.FLYDB_TEST_KINGBASE_URL }}
       FLYDB_TEST_KINGBASE_USER: ${{ secrets.FLYDB_TEST_KINGBASE_USER }}
       FLYDB_TEST_KINGBASE_PASSWORD: ${{ secrets.FLYDB_TEST_KINGBASE_PASSWORD }}
+      FLYDB_TEST_ORACLE_URL: ${{ secrets.FLYDB_TEST_ORACLE_URL }}
+      FLYDB_TEST_ORACLE_USER: ${{ secrets.FLYDB_TEST_ORACLE_USER }}
+      FLYDB_TEST_ORACLE_PASSWORD: ${{ secrets.FLYDB_TEST_ORACLE_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -128,7 +131,7 @@ jobs:
           java-version: '17'
           cache: maven
       - name: Run licensed contracts
-        # 自建 Runner 需按厂商许可提供 DM/Kingbase JDBC 驱动；公共仓库不捆绑专有驱动。
+        # 自建 Runner 需按厂商许可提供 DM/Kingbase/Oracle JDBC 驱动；公共仓库不捆绑专有驱动。
         run: >-
           ./mvnw -B test
           -pl flydb-integration-tests -am

@@ -10,6 +10,8 @@ CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值
 
 配置文件按以下顺序查找：`--config` 指定文件、当前目录 `flydb.conf`、CLI 安装目录 `conf/flydb.conf`。未知键会报 `FLYDB-4001`，不会静默忽略。
 
+内置方言标识包括 `mysql`、`postgresql`、`oracle`、`dm`、`kingbasees`、`opengauss`、`oceanbase` 和 `tidb`；小众 JDBC 数据库通过 `DatabaseType` SPI 扩展。
+
 ## CLI / 配置文件
 
 | 配置键 | 环境变量 | CLI 选项 | 默认值 | 说明 |

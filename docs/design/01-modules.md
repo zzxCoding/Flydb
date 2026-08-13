@@ -29,7 +29,7 @@ flydb/                                   根 POM（packaging=pom，统一版本�
 
 ## 2. 是否按数据库拆模块？——结论：MVP 不拆，靠 SPI 保留拆分能力
 
-**决策：MVP 阶段 8 个方言全部放在 `flydb-core` 内部，但强制通过 ServiceLoader SPI 边界解耦。**
+**决策：内置方言全部放在 `flydb-core` 内部，但强制通过 ServiceLoader SPI 边界解耦。**
 
 理由：
 
@@ -43,7 +43,7 @@ flydb/                                   根 POM（packaging=pom，统一版本�
 
 ```
 flydb-core/src/main/resources/META-INF/services/
-└── com.flydb.core.database.DatabaseType     # 内置 8 个方言的实现类清单
+└── com.flydb.core.database.DatabaseType     # 内置方言的实现类清单
 ```
 
 二期新增数据库（神通、GBase、瀚高）的接入方式：**新建独立 jar（如 `flydb-dialect-shentong`），仅依赖 flydb-core 的 SPI 接口，自带 `META-INF/services` 注册文件**。用户将该 jar 与对应驱动放入 CLI 的 `drivers/` 目录（或加入应用 classpath）即可生效——这是"YAGNI 现在、可扩展未来"的具体落点，也是验证 SPI 设计是否真正解耦的验收方式。
@@ -73,7 +73,7 @@ com.flydb.core
 │   ├── tidb/       TiDBDatabase(+Type)
 │   ├── oceanbase/  OceanBaseDatabaseType（探测租户模式）、
 │   │               OceanBaseMySQLDatabase、OceanBaseOracleDatabase
-│   ├── oracle/     OracleFamilyDatabase（家族基类，MVP 无 Oracle 官方实现）
+│   ├── oracle/     OracleDatabaseType、OracleFamilyDatabase
 │   └── dm/         DmDatabase(+Type)
 ├── callback/       Callback SPI、Event 枚举、SqlCallbackResolver
 ├── config/         ConfigLoader（Properties/env/显式值合并）、PlaceholderReplacer

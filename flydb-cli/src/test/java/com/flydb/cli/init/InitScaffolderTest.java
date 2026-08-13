@@ -36,7 +36,7 @@ class InitScaffolderTest {
                         "flydb.locations=filesystem:db/migration")
                 .doesNotContain("flydb.password=");
         assertThat(read(temporaryDirectory.resolve("drivers/README.md")))
-                .contains("MySQL", "PostgreSQL", "达梦 DM8", "KingbaseES", "openGauss");
+                .contains("MySQL", "PostgreSQL", "Oracle", "达梦 DM8", "KingbaseES", "openGauss");
         assertThatThrownBy(() -> new InitScaffolder().create(temporaryDirectory,
                 "jdbc:mysql://other/db", "other", "mysql"))
                 .isInstanceOf(FlydbException.class)
