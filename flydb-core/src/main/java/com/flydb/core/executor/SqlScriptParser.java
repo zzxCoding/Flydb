@@ -4,6 +4,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import com.flydb.core.resolver.SqlMigrationResolver;
+
 /**
  * SQL 脚本解析器：把整份脚本切分为有序的 {@link SqlStatement} 列表。
  *

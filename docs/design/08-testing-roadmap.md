@@ -33,7 +33,7 @@ public interface DatabaseTestSupport extends AutoCloseable {
 同一套**契约测试**（`MigrateContractTest`、`LockContractTest`、`FailureRecoveryContractTest`、`CleanContractTest`...）对每个方言跑一遍，由 JUnit 5 扩展按环境选择实现：
 
 1. 设置了 `FLYDB_TEST_<DB>_URL/_USER/_PASSWORD` 环境变量 → **外部真实实例**模式；
-2. 本地默认仅启动已有的 MySQL 8 / PostgreSQL 16 Testcontainers，以显式方言配置运行同家族兼容契约；
+2. 本地默认只启动已有的 MySQL 8 Testcontainers，以显式方言配置运行 MySQL 家族兼容契约；设置 `-Dflydb.integration.database=postgresql` 时才启动 PostgreSQL 16，避免普通开发环境拉取两套镜像；
 3. TiDB、OceanBase、openGauss 等专用大镜像不在本地默认拉取范围，真实产品验证放到显式 CI job 或外部实例；
 4. 达梦、金仓等授权环境不可用时，真实实例用例 **Disabled 并输出明确原因**（不让整体构建失败）。
 
@@ -57,6 +57,8 @@ public interface DatabaseTestSupport extends AutoCloseable {
 - 达梦/金仓 job 打 `self-hosted, licensed-db` 标签，用 `if: vars.RUN_LICENSED_DB_TESTS == 'true'` 门禁——外部贡献者 PR 不因缺企业凭据而失败，主分支 push 才跑全量。
 - 国内自建 Runner 建议配置镜像加速并对测试镜像做 digest 锁定（信创网络环境拉公网镜像不稳定）。
 - 驱动字节码校验步骤：对 core/cli 产物跑 `jdeps`/`javap` 断言 class 版本 ≤52（Java 8），对引入的达梦/金仓/openGauss 驱动同样校验并在升级时报警（[01 §5](01-modules.md)）。
+
+当前工作流落在 `.github/workflows/ci.yml`：单元/覆盖率/发布演练、Java 8 兼容性、MySQL/PostgreSQL/TiDB/OceanBase-MySQL/openGauss 五项矩阵，以及按 `RUN_LICENSED_DB_TESTS` 开关启用的授权数据库 self-hosted gate。集成测试通过 `flydb.integration.database` 选择器做到一项只启动一套数据库家族；默认本地值为 `mysql`。
 
 ## 3. 方言成熟度分级（对外承诺口径）
 
@@ -104,3 +106,5 @@ flydb-core（三家族 8 方言）+ flydb-cli + 双 starter + 契约测试矩阵
 4. CLI 发行 zip 在纯 JDK 8 环境完成 init → migrate → info → validate 全流程（人工验收脚本见 [09 §6](09-implementation-plan.md)）；
 5. starter 在 Boot 2.7（JDK 8）与 Boot 3（JDK 17）示例工程各跑通一次启动迁移；
 6. README 支持矩阵与实际实现/CI 状态一致。
+
+阶段 8 实施时，所有发布检查脚本都必须在仓库内可直接运行；不得把“兼容家族契约”描述成真实产品认证。

@@ -49,11 +49,7 @@ public interface Database extends AutoCloseable {
     /** 当前家族的 clean 策略。 */
     CleanStrategy cleanStrategy();
 
-    /**
-     * 获取当前会话的 schema 名称。
-     *
-     * @return 当前 schema 名
-     */
+    /** 关闭绑定的数据库会话。 */
     @Override
     void close() throws Exception;
 }

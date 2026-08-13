@@ -13,7 +13,7 @@ import com.flydb.core.exception.FlydbException;
  * 前后缀可配置；未定义占位符抛 {@link ErrorCode#UNDEFINED_PLACEHOLDER}（FLYDB-2009，含脚本名与行号），
  * 绝不静默保留原文——静默是配置错误的温床。
  *
- * <p>转义：{@code $}${@code 前缀}（默认 {@code $${}）→ 字面量前缀，不参与替换。
+ * <p>转义：在前缀前再写一个美元符号（默认写作 `$${`）→ 字面量前缀，不参与替换。
  * {@code flydb:} 命名空间内置变量优先于用户占位符，避免与用户键冲突。
  *
  * <p>本类为纯函数，无状态、无副作用，线程安全。

@@ -109,6 +109,8 @@
 
 **验收**：[08 §6](08-testing-roadmap.md) MVP Done 六条全部满足。
 
+> **阶段 8 验收记录（2026-08-13）**：新增 `.github/workflows/ci.yml`，覆盖 Java 17 单测/JaCoCo/Enforcer、Java 8 兼容构建、MySQL/PostgreSQL/TiDB/OceanBase-MySQL/openGauss 五项家族矩阵，以及由 `RUN_LICENSED_DB_TESTS` 控制的达梦/金仓 self-hosted gate；新增 `check-bytecode.sh`（major version 52/61）和 `check-release-artifacts.sh`。集成测试增加 `flydb.integration.database` 选择器，本地默认只拉 MySQL 8，当前本机 MySQL 契约通过且 PostgreSQL 容器未启动。Maven 发布演练 `-DskipTests deploy -DaltDeploymentRepository=local::file:./target/staging` 通过，staging 中包含 JAR、sources、javadoc，CLI ZIP 同时通过产物门禁。新增 `docs/getting-started/` 各数据库上手页及 `docs/reference/` 配置/错误码参考；README 明确 `R<version>__` 在 2.0 中报 FLYDB-2005。授权数据库和专用兼容产品仍未在本机部署，不把家族契约当作真实产品认证。
+
 ## 4. 阶段依赖图
 
 ```

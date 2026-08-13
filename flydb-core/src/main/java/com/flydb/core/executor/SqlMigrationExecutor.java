@@ -13,7 +13,7 @@ import com.flydb.core.placeholder.PlaceholderReplacer;
 /**
  * SQL 迁移执行器（设计 04 §1.4）。
  *
- * <p>流程：占位符替换（对原始全文，在词法解析<b>之前</b>，见 05 §9）→ {@link SqlScriptParser#parse()} →
+ * <p>流程：占位符替换（对原始全文，在词法解析<b>之前</b>，见 05 §9）→ {@link SqlScriptParser#parse(String)} →
  * 逐条 {@link Statement#execute(String)}。失败时异常携带：脚本名、语句序号、起始行号、驱动原始错误。
  *
  * <p>执行器只负责 SQL 路径，不管理事务边界——事务由命令层控制。

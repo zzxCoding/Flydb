@@ -29,6 +29,8 @@ Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工
 | OceanBase / TiDB | 复用对应家族 | 轻量兼容测试；真实环境覆盖持续补充 |
 | 其他 JDBC 数据库 | 可扩展 | 需提供 JDBC 驱动及 `DatabaseType` SPI 方言实现 |
 
+每个数据库的驱动、连接、权限和已知限制见[数据库上手指南](./docs/getting-started/README.md)。状态只代表当前验证证据，不代表厂商认证。
+
 ## 五分钟上手
 
 前置条件：Java 8 或更高版本、一个已创建的目标数据库，以及与 Java 8 兼容的 JDBC 驱动。
@@ -69,6 +71,8 @@ R__refresh_user_view.sql  # checksum 变化后再次执行
 U1__create_user.sql       # 撤销最近一次已应用的 V1
 ```
 
+> **2.0 命名变更：** `R<版本>__...sql` 已被禁止并报 `FLYDB-2005`。回退脚本请使用 `U<版本>__...sql`；可重复迁移统一使用不带版本号的 `R__...sql`，不能通过配置关闭这项检查。
+
 默认位置为 `filesystem:db/migration`。SQL 支持 `${key}` 占位符；命令行用 `-Dkey=value` 传入。未定义占位符会在执行前报错并指出脚本行号。
 
 ## 配置优先级
@@ -95,7 +99,7 @@ bin/flydb clean --clean-disabled=false --force
 
 退出码：`0` 成功、`1` 一般错误、`2` 校验失败、`3` 锁冲突或超时、`4` 配置错误、`5` 用户中断。
 
-完整配置、命令语义和错误码见 [配置与 CLI 设计](./docs/design/06-config-cli.md)；架构入口见 [设计总览](./docs/design/00-overview.md)。
+完整配置、命令语义和错误码见 [配置与 CLI 设计](./docs/design/06-config-cli.md)；也可直接查阅[配置项参考](./docs/reference/configuration.md)和[错误码参考](./docs/reference/errors.md)；架构入口见 [设计总览](./docs/design/00-overview.md)。
 
 ## Java API
 
@@ -152,6 +156,21 @@ mvn verify
 ```
 
 Boot 2 starter、Boot 2 示例、core 与 CLI 仍保持 Java 8 字节码。CLI 构建产物位于 `flydb-cli/target/flydb-cli-2.0.0-SNAPSHOT.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
+
+阶段 8 发布前检查：
+
+```bash
+./scripts/check-bytecode.sh 52 \
+  flydb-core/target/classes flydb-cli/target/classes \
+  flydb-spring-boot-2-starter/target/classes examples/boot2-demo/target/classes
+./scripts/check-bytecode.sh 61 \
+  flydb-spring-boot-3-starter/target/classes examples/boot3-demo/target/classes
+./mvnw -DskipTests deploy \
+  -DaltDeploymentRepository=local::file:./target/staging
+./scripts/check-release-artifacts.sh target/staging flydb-cli/target
+```
+
+本地集成契约默认只启动 MySQL 8；需要显式运行某个 CI 方言项时设置 `-Pmysql`/`-Ppostgresql` 与 `-Dflydb.integration.database=<dialect>`。完整矩阵由 `.github/workflows/ci.yml` 执行。
 
 ## 许可证
 

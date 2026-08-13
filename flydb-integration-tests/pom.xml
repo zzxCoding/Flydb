@@ -28,6 +28,8 @@
         <!-- 父级 surefire 使用 JaCoCo 的 @{argLine} 延迟占位；本模块不挂 JaCoCo，显式置空。 -->
         <argLine></argLine>
         <flydb.integration.enabled>false</flydb.integration.enabled>
+        <!-- 本地默认只启动 MySQL；CI 矩阵通过 -Dflydb.integration.database 选择具体方言。 -->
+        <flydb.integration.database>mysql</flydb.integration.database>
         <docker.api.version>1.44</docker.api.version>
     </properties>
 
@@ -95,6 +97,7 @@
                 <configuration>
                     <systemPropertyVariables>
                         <flydb.integration.enabled>${flydb.integration.enabled}</flydb.integration.enabled>
+                        <flydb.integration.database>${flydb.integration.database}</flydb.integration.database>
                         <api.version>${docker.api.version}</api.version>
                     </systemPropertyVariables>
                 </configuration>

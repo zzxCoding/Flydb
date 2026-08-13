@@ -8,6 +8,8 @@ Flydb targets Java 8. `flydb-core` has no third-party runtime dependencies, whil
 
 > Flydb 2.0 is being delivered in stages. The current codebase includes the core engine, CLI, built-in mainstream and Xinchuang dialects, and Spring Boot 2/3 starters. Database support is reported by verification level; an implemented dialect is not presented as production certification.
 
+See the [database getting-started guides](./docs/getting-started/README.md) for driver, URL, permission, and limitation details. Verification level is evidence, not vendor certification.
+
 ## Quick start
 
 Prerequisites: Java 8 or newer, an existing target database, and a Java 8-compatible JDBC driver.
@@ -41,13 +43,15 @@ R__refresh_user_view.sql  repeatable when its checksum changes
 U1__create_user.sql       undo for V1
 ```
 
+> **2.0 naming change:** `R<version>__...sql` is rejected with `FLYDB-2005`. Use `U<version>__...sql` for undo scripts and versionless `R__...sql` for repeatable migrations; the check cannot be disabled.
+
 Configuration precedence is `CLI > FLYDB_* environment > flydb.conf > defaults`. Passwords can be supplied through `FLYDB_PASSWORD`, `${env:DB_PASSWORD}`, or `flydb.password.file`.
 
 Commands: `migrate`, `info`, `validate`, `baseline`, `repair`, `clean`, `undo`, `init`, and `version`. `--dry-run` is supported by migrate and undo.
 
 Exit codes: `0` success, `1` general error, `2` validation failure, `3` lock failure, `4` configuration error, and `5` user interruption.
 
-See the [design overview](./docs/design/00-overview.md), [CLI and configuration reference](./docs/design/06-config-cli.md), and [implementation plan](./docs/design/09-implementation-plan.md).
+See the [design overview](./docs/design/00-overview.md), [CLI and configuration reference](./docs/design/06-config-cli.md), [configuration reference](./docs/reference/configuration.md), [error-code reference](./docs/reference/errors.md), and [implementation plan](./docs/design/09-implementation-plan.md).
 
 ## Java API
 
@@ -97,6 +101,8 @@ mvn verify
 ```
 
 The Boot 2 starter, Boot 2 example, core, and CLI retain Java 8 bytecode. The CLI distribution is generated at `flydb-cli/target/flydb-cli-2.0.0-SNAPSHOT.zip`.
+
+The local integration contract defaults to MySQL 8. The CI workflow selects one family at a time with `-Dflydb.integration.database=<dialect>`; PostgreSQL is opt-in locally.
 
 ## License
 

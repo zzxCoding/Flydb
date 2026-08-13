@@ -17,13 +17,13 @@ import java.util.logging.Logger;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.flydb.core.api.FlydbConfiguration;
 import com.flydb.core.api.MigrateResult;
@@ -39,22 +39,36 @@ import com.flydb.core.migration.MigrationState;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Testcontainers
 @EnabledIfSystemProperty(named = "flydb.integration.enabled", matches = "true")
 @DisplayName("阶段 4 PostgreSQL/MySQL 数据库契约")
 class Stage4DatabaseContractTest {
 
-    @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("flydb")
-            .withUsername("flydb")
-            .withPassword("flydb");
+    private static PostgreSQLContainer<?> POSTGRES;
+    private static MySQLContainer<?> MYSQL;
 
-    @Container
-    static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
-            .withDatabaseName("flydb")
-            .withUsername("flydb")
-            .withPassword("flydb");
+    @BeforeAll
+    static void startSelectedContainers() {
+        if (IntegrationDatabaseSelector.mysqlFamilySelected()) {
+            MYSQL = new MySQLContainer<>("mysql:8.0")
+                    .withDatabaseName("flydb")
+                    .withUsername("flydb")
+                    .withPassword("flydb");
+            MYSQL.start();
+        }
+        if (IntegrationDatabaseSelector.postgresFamilySelected()) {
+            POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
+                    .withDatabaseName("flydb")
+                    .withUsername("flydb")
+                    .withPassword("flydb");
+            POSTGRES.start();
+        }
+    }
+
+    @AfterAll
+    static void stopSelectedContainers() {
+        if (MYSQL != null) MYSQL.stop();
+        if (POSTGRES != null) POSTGRES.stop();
+    }
 
     @TempDir
     Path tempDirectory;
@@ -62,6 +76,7 @@ class Stage4DatabaseContractTest {
     @Test
     @DisplayName("PostgreSQL 失败无痕自愈且 advisory lock 串行化并发 migrate")
     void postgresRollbackAndAdvisoryLockContract() throws Exception {
+        IntegrationDatabaseSelector.assumePostgresFamily();
         Path migrations = Files.createDirectory(tempDirectory.resolve("pg"));
         write(migrations, "V1__init.sql", "CREATE TABLE pg_ok(id INT PRIMARY KEY);");
         FlydbConfiguration cfg = configuration(POSTGRES, migrations, true);
@@ -93,6 +108,7 @@ class Stage4DatabaseContractTest {
     @Test
     @DisplayName("MySQL 失败记 FAILED、阻断 migrate、repair 后恢复并可 clean")
     void mysqlFailureRepairAndCleanContract() throws Exception {
+        IntegrationDatabaseSelector.assumeMysqlFamily();
         Path migrations = Files.createDirectory(tempDirectory.resolve("mysql"));
         write(migrations, "V1__init.sql", "CREATE TABLE mysql_ok(id INT PRIMARY KEY);");
         FlydbConfiguration cfg = configuration(MYSQL, migrations, false);

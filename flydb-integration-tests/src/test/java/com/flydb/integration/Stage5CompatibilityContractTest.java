@@ -13,14 +13,13 @@ import java.sql.Statement;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.flydb.core.api.FlydbConfiguration;
 import com.flydb.core.api.MigrateResult;
@@ -30,34 +29,45 @@ import com.flydb.core.migration.MigrationState;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Testcontainers
 @EnabledIfSystemProperty(named = "flydb.integration.enabled", matches = "true")
 @DisplayName("阶段 5 兼容家族数据库契约")
 class Stage5CompatibilityContractTest {
 
-    @Container
-    static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
-            .withDatabaseName("flydb").withUsername("flydb").withPassword("flydb");
-
-    @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("flydb").withUsername("flydb").withPassword("flydb");
+    private static MySQLContainer<?> MYSQL;
+    private static PostgreSQLContainer<?> POSTGRES;
 
     private static DatabaseTestSupport mysql;
     private static DatabaseTestSupport postgres;
 
+    @BeforeAll
+    static void startSelectedContainers() {
+        if (IntegrationDatabaseSelector.mysqlFamilySelected()) {
+            MYSQL = new MySQLContainer<>("mysql:8.0")
+                    .withDatabaseName("flydb").withUsername("flydb").withPassword("flydb");
+            MYSQL.start();
+            mysql = new JdbcContainerTestSupport(MYSQL);
+        }
+        if (IntegrationDatabaseSelector.postgresFamilySelected()) {
+            POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
+                    .withDatabaseName("flydb").withUsername("flydb").withPassword("flydb");
+            POSTGRES.start();
+            postgres = new JdbcContainerTestSupport(POSTGRES);
+        }
+    }
+
+    @AfterAll
+    static void stopSelectedContainers() {
+        if (MYSQL != null) MYSQL.stop();
+        if (POSTGRES != null) POSTGRES.stop();
+    }
+
     @TempDir
     Path temporaryDirectory;
-
-    @BeforeAll
-    static void createSupports() {
-        mysql = new JdbcContainerTestSupport(MYSQL);
-        postgres = new JdbcContainerTestSupport(POSTGRES);
-    }
 
     @Test
     @DisplayName("TiDB 方言在 MySQL 8 上跑通 MySQL 家族完整迁移契约")
     void tidbUsesMySqlFamilyContract() throws Exception {
+        IntegrationDatabaseSelector.assume("tidb");
         MigrateResult result = migrate(mysql.dataSource(), "tidb", "flydb_tidb_history",
                 "V1__tidb.sql", "CREATE TABLE tidb_contract(id BIGINT PRIMARY KEY)");
 
@@ -67,6 +77,7 @@ class Stage5CompatibilityContractTest {
     @Test
     @DisplayName("OceanBase-MySQL 方言在 MySQL 8 上跑通完整迁移契约")
     void oceanBaseMySqlUsesMySqlFamilyContract() throws Exception {
+        IntegrationDatabaseSelector.assume("oceanbase-mysql");
         DataSource dataSource = new OceanBaseMySqlDataSource(mysql.dataSource());
         MigrateResult result = migrate(dataSource, null, "flydb_ob_history",
                 "V1__oceanbase.sql", "CREATE TABLE ob_contract(id BIGINT PRIMARY KEY)");
@@ -77,6 +88,7 @@ class Stage5CompatibilityContractTest {
     @Test
     @DisplayName("openGauss 方言在 PostgreSQL 16 上跑通 PG 家族完整迁移契约")
     void openGaussUsesPostgresFamilyContract() throws Exception {
+        IntegrationDatabaseSelector.assume("opengauss");
         MigrateResult result = migrate(postgres.dataSource(), "opengauss", "flydb_og_history",
                 "V1__opengauss.sql", "CREATE TABLE opengauss_contract(id BIGINT PRIMARY KEY)");
 
@@ -86,6 +98,7 @@ class Stage5CompatibilityContractTest {
     @Test
     @DisplayName("KingbaseES 方言在 PostgreSQL 16 上跑通 PG 家族和 advisory lock 契约")
     void kingbaseUsesPostgresFamilyContract() throws Exception {
+        IntegrationDatabaseSelector.assume("kingbasees");
         MigrateResult result = migrate(postgres.dataSource(), "kingbasees", "flydb_kb_history",
                 "V1__kingbase.sql", "CREATE TABLE kingbase_contract(id BIGINT PRIMARY KEY)");
 
