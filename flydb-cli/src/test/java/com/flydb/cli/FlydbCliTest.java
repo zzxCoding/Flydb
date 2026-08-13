@@ -71,14 +71,16 @@ class FlydbCliTest {
 
         int exitCode = cli.execute("init", "--yes",
                 "--url", "jdbc:mysql://localhost:3306/app",
-                "--user", "app_user", "--database-type", "mysql");
+                "--user", "app_user", "--driver", "com.mysql.cj.jdbc.Driver",
+                "--database-type", "mysql");
 
         assertThat(exitCode).isZero();
         assertThat(errorOutput.toString()).isEmpty();
         assertThat(standardOutput.toString()).contains("flydb.conf", "V1__init.sql");
         assertThat(new String(Files.readAllBytes(temporaryDirectory.resolve("flydb.conf")),
                 StandardCharsets.UTF_8)).contains(
-                "flydb.url=jdbc:mysql://localhost:3306/app", "flydb.user=app_user");
+                "flydb.url=jdbc:mysql://localhost:3306/app", "flydb.user=app_user",
+                "flydb.driver=com.mysql.cj.jdbc.Driver");
     }
 
     @Test

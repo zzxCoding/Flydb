@@ -71,7 +71,7 @@ flydb [全局选项] <命令> [命令选项]
 
 ### 4.1 `flydb init` 脚手架
 
-交互模式（TTY）依次询问 URL/用户名/数据库类型，生成：
+交互模式（TTY）依次询问 URL/用户名/驱动类名/数据库类型，生成：
 
 ```
 ./flydb.conf                          # 含中文注释与全部常用项示例
@@ -79,7 +79,8 @@ flydb [全局选项] <命令> [命令选项]
 ./drivers/README.md                   # 各数据库驱动获取指引（Maven 坐标 + 官网下载页）
 ```
 
-非交互：`flydb init --url jdbc:dm://localhost:5236 --yes`。
+非交互：`flydb init --url jdbc:dm://localhost:5236 --driver dm.jdbc.driver.DmDriver --database-type dm --yes`。
+其中 `--driver` 和 `--database-type` 会写入生成的 `flydb.conf`；标准 URL 的驱动类可留空自动推断，厂商 URL 应显式提供。
 
 ### 4.2 `info` 表格输出（中文友好）
 

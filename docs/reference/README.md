@@ -7,6 +7,8 @@
 - [CLI 命令参考](commands.md)：全局选项、命令、锁范围和常用流程。
 - [命令与 CLI 设计](../design/06-config-cli.md)：命令语义、驱动加载和发行包布局。
 
+接入新数据库的操作流程见[JDBC 数据库快速接入](../getting-started/jdbc-integration.md)；方言扩展接口见[数据库方言层设计](../design/03-dialects.md)。
+
 配置优先级统一为：
 
 ```text

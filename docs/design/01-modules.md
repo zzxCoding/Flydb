@@ -43,7 +43,7 @@ flydb/                                   根 POM（packaging=pom，统一版本�
 
 ```
 flydb-core/src/main/resources/META-INF/services/
-└── com.flydb.core.database.DatabaseType     # 内置方言的实现类清单
+└── com.flydb.core.dialect.DatabaseType      # 外部方言的实现类清单
 ```
 
 二期新增数据库（神通、GBase、瀚高）的接入方式：**新建独立 jar（如 `flydb-dialect-shentong`），仅依赖 flydb-core 的 SPI 接口，自带 `META-INF/services` 注册文件**。用户将该 jar 与对应驱动放入 CLI 的 `drivers/` 目录（或加入应用 classpath）即可生效——这是"YAGNI 现在、可扩展未来"的具体落点，也是验证 SPI 设计是否真正解耦的验收方式。
@@ -64,17 +64,10 @@ com.flydb.core
 ├── executor/       SqlScriptParser、SqlScriptLexer、SqlStatement、
 │                   SqlStatementBuilderConfig、MigrationExecutor
 ├── history/        SchemaHistory（历史表仓储：ensureExists/findAll/insert/repair）
-├── database/       DatabaseType SPI、DatabaseTypeRegistry、Database、
-│                   MigrationLock、DriverDataSource
-│   ├── postgresql/ PostgreSQLFamilyDatabase、PostgreSQLDatabase(+Type)
-│   ├── kingbase/   KingbaseDatabase(+Type)
-│   ├── opengauss/  OpenGaussDatabase(+Type)
-│   ├── mysql/      MySQLFamilyDatabase、MySQLDatabase(+Type)
-│   ├── tidb/       TiDBDatabase(+Type)
-│   ├── oceanbase/  OceanBaseDatabaseType（探测租户模式）、
-│   │               OceanBaseMySQLDatabase、OceanBaseOracleDatabase
-│   ├── oracle/     OracleDatabaseType、OracleFamilyDatabase
-│   └── dm/         DmDatabase(+Type)
+├── dialect/        DatabaseType SPI、DatabaseTypeRegistry、Database、三家族实现
+│                   PostgreSQLFamilyDatabase、MySQLFamilyDatabase、OracleFamilyDatabase
+│                   及各产品 Database(+Type)
+├── lock/           MigrationLock、advisory/table lock 实现
 ├── callback/       Callback SPI、Event 枚举、SqlCallbackResolver
 ├── config/         ConfigLoader（Properties/env/显式值合并）、PlaceholderReplacer
 ├── exception/      FlydbException、FlydbValidationException、ErrorCode（错误码枚举）

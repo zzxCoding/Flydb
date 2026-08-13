@@ -8,7 +8,7 @@ Flydb targets Java 8. `flydb-core` has no third-party runtime dependencies, whil
 
 > Flydb 2.0 is being delivered in stages. The current codebase includes the core engine, CLI, built-in mainstream and Xinchuang dialects, and Spring Boot 2/3 starters. Database support is reported by verification level; an implemented dialect is not presented as production certification.
 
-See the [database getting-started guides](./docs/getting-started/README.md) for driver, URL, permission, and limitation details. Verification level is evidence, not vendor certification.
+See the [database getting-started guides](./docs/getting-started/README.md) for driver, URL, permission, and limitation details. For a vendor or Xinchuang JDBC database, follow the [JDBC integration guide](./docs/getting-started/jdbc-integration.md) for driver placement, family reuse, and `DatabaseType` SPI registration. Verification level is evidence, not vendor certification.
 
 The built-in mainstream dialects include MySQL, PostgreSQL, and Oracle. Oracle's vendor driver is supplied separately and its real-instance contract runs only on an explicitly provisioned licensed runner.
 
@@ -60,6 +60,7 @@ See the [design overview](./docs/design/00-overview.md), [CLI and configuration 
 ```java
 Flydb flydb = Flydb.configure()
     .dataSource(dataSource)
+    .databaseType("mysql")
     .locations("classpath:db/migration")
     .load();
 flydb.migrate();

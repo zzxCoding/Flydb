@@ -16,6 +16,17 @@ import com.flydb.core.exception.FlydbException;
 public final class InitScaffolder {
 
     public List<Path> create(Path directory, String url, String user, String databaseType) {
+        return create(directory, url, user, null, databaseType);
+    }
+
+    /**
+     * 生成脚手架并持久化显式驱动类名。
+     *
+     * <p>旧重载保留给已有调用方；CLI 的 {@code init --driver} 使用此重载，
+     * 避免厂商 URL 无法自动推断时初始化完成后还要手工补配置。
+     */
+    public List<Path> create(Path directory, String url, String user,
+                             String driver, String databaseType) {
         Path configuration = directory.resolve("flydb.conf");
         Path migration = directory.resolve("db/migration/V1__init.sql");
         Path driverReadme = directory.resolve("drivers/README.md");
@@ -28,7 +39,7 @@ public final class InitScaffolder {
         try {
             Files.createDirectories(migration.getParent());
             Files.createDirectories(driverReadme.getParent());
-            write(configuration, configuration(url, user, databaseType));
+            write(configuration, configuration(url, user, driver, databaseType));
             write(migration, migration());
             List<Path> files = new ArrayList<Path>();
             files.add(configuration);
@@ -48,13 +59,17 @@ public final class InitScaffolder {
         Files.write(file, content.getBytes(StandardCharsets.UTF_8));
     }
 
-    private static String configuration(String url, String user, String databaseType) {
+    private static String configuration(String url, String user, String driver,
+                                        String databaseType) {
         StringBuilder value = new StringBuilder()
                 .append("# Flydb 2.0 配置（UTF-8 Properties）\n")
                 .append("# 密码请通过 FLYDB_PASSWORD、${env:VAR} 或 flydb.password.file 提供，避免明文入库。\n")
                 .append("flydb.url=").append(propertyValue(url)).append('\n');
         if (user != null && !user.isEmpty()) {
             value.append("flydb.user=").append(propertyValue(user)).append('\n');
+        }
+        if (driver != null && !driver.isEmpty()) {
+            value.append("flydb.driver=").append(propertyValue(driver)).append('\n');
         }
         if (databaseType != null && !databaseType.isEmpty()) {
             value.append("flydb.database-type=").append(propertyValue(databaseType)).append('\n');
@@ -84,7 +99,8 @@ public final class InitScaffolder {
                 + "| KingbaseES | `com.kingbase8.Driver`，从人大金仓交付介质或内部制品库获取 |\n"
                 + "| 达梦 DM8 | `dm.jdbc.driver.DmDriver`，从达梦安装目录或内部制品库获取 |\n"
                 + "| OceanBase | `com.oceanbase.jdbc.Driver`，Maven `com.oceanbase:oceanbase-client` |\n\n"
-                + "小众 JDBC 数据库请同时提供方言 SPI jar，并用 `--driver` 与 `--database-type` 显式指定。\n";
+                + "厂商 URL 未被内置映射识别，或需要复用 MySQL/Oracle 家族时，请用 `--driver <驱动类>` "
+                + "与 `--database-type <方言名>` 显式指定；小众数据库还需把实现 `DatabaseType` SPI 的方言 jar 放在本目录。\n";
     }
 
     private static String propertyValue(String value) {

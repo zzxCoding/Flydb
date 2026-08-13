@@ -44,6 +44,18 @@ class InitScaffolderTest {
     }
 
     @Test
+    @DisplayName("init 持久化显式驱动类名")
+    void persistsExplicitDriver() throws Exception {
+        new InitScaffolder().create(temporaryDirectory,
+                "jdbc:vendorx://localhost:1234/app", "app_user",
+                "com.vendorx.Driver", "vendorx");
+
+        assertThat(read(temporaryDirectory.resolve("flydb.conf")))
+                .contains("flydb.driver=com.vendorx.Driver",
+                        "flydb.database-type=vendorx");
+    }
+
+    @Test
     @DisplayName("发行包已有驱动说明时保留原文件并继续初始化")
     void preservesDistributionDriverGuide() throws Exception {
         Files.createDirectories(temporaryDirectory.resolve("drivers"));

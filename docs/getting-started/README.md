@@ -2,6 +2,8 @@
 
 每页只记录该 JDBC 家族的连接入口、驱动边界、权限和已知限制。Flydb 不捆绑任何厂商驱动；请按厂商许可和内部制品库规定获取驱动。
 
+首次接入信创、行业或新型 JDBC 数据库，请先阅读[JDBC 数据库快速接入](jdbc-integration.md)，再按下表选择具体家族页面。该指南明确了驱动 JAR、`--driver`、`--database-type`、Spring Boot 和自定义 `DatabaseType` SPI 的最短路径。
+
 | 数据库 | 方言标识 | 当前证据 |
 |---|---|---|
 | [MySQL 8](mysql.md) | `mysql` | 本地 MySQL 8 容器契约、CLI 与 Spring Boot 端到端 |

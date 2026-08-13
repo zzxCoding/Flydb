@@ -32,6 +32,8 @@ Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工
 
 每个数据库的驱动、连接、权限和已知限制见[数据库上手指南](./docs/getting-started/README.md)。状态只代表当前验证证据，不代表厂商认证。
 
+信创或新型 JDBC 数据库需要快速接入时，先看[JDBC 数据库快速接入](./docs/getting-started/jdbc-integration.md)：驱动 JAR 放置、`--driver`/`--database-type` 选择、MySQL/Oracle 家族复用，以及自定义 `DatabaseType` SPI 都有可复制示例。
+
 ## 五分钟上手
 
 前置条件：Java 8 或更高版本、一个已创建的目标数据库，以及与 Java 8 兼容的 JDBC 驱动。
@@ -109,6 +111,7 @@ bin/flydb clean --clean-disabled=false --force
 ```java
 Flydb flydb = Flydb.configure()
     .dataSource(dataSource)
+    .databaseType("mysql") // 兼容家族或自定义方言建议显式指定
     .locations("classpath:db/migration")
     .load();
 

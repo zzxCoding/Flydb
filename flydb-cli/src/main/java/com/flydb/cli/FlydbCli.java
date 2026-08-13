@@ -362,6 +362,7 @@ public final class FlydbCli {
         @Override public Integer call() {
             String initUrl = root.url;
             String initUser = root.user;
+            String initDriver = root.driver;
             String initDatabaseType = root.databaseType;
             if (!yes) {
                 Console console = System.console();
@@ -371,6 +372,7 @@ public final class FlydbCli {
                 }
                 initUrl = prompt(console, "JDBC URL", initUrl);
                 initUser = prompt(console, "数据库用户", initUser);
+                initDriver = prompt(console, "JDBC 驱动类名（可留空自动推断）", initDriver);
                 initDatabaseType = prompt(console, "数据库类型（可留空自动探测）",
                         initDatabaseType);
                 String confirmation = console.readLine("在当前目录创建 Flydb 文件？[y/N] ");
@@ -385,7 +387,7 @@ public final class FlydbCli {
                         "init 必须提供 JDBC URL");
             }
             List<Path> created = new InitScaffolder().create(root.workingDirectory(),
-                    initUrl, initUser, initDatabaseType);
+                    initUrl, initUser, initDriver, initDatabaseType);
             if (!root.quiet) {
                 root.out().println("已生成 Flydb 工程骨架:");
                 for (Path file : created) {
