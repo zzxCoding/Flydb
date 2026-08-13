@@ -107,12 +107,15 @@
 1. GitHub Actions：单测+覆盖率（所有 PR）→ 稳定级 5 方言矩阵 job → licensed-db 门禁 job（达梦/金仓/Oracle 占位）→ 字节码版本校验步骤（jdeps 断言 ≤52）。
 2. README 重写（支持矩阵含成熟度分级、五分钟上手、R 前缀破坏性变更醒目告知）；`docs/getting-started/` 每库一页；错误码/配置项参考页。
 3. 发布演练：`mvnw -DskipTests deploy -DaltDeploymentRepository=local::file:./target/staging` 校验产物完整性（jar/sources/javadoc/zip）。
+4. Agent 自动化入口：新增 `flydb-skills` 项目，先提供引用 CLI 文档的 `flydb-cli` Skill；Skill 不复制命令参数，真实行为以 `docs/reference/` 和 `docs/getting-started/` 为准。
 
 **验收**：[08 §6](08-testing-roadmap.md) MVP Done 六条全部满足。
 
 > **阶段 8 验收记录（2026-08-13）**：新增 `.github/workflows/ci.yml`，覆盖 Java 17 单测/JaCoCo/Enforcer、Java 8 兼容构建、MySQL/PostgreSQL/TiDB/OceanBase-MySQL/openGauss 五项家族矩阵，以及由 `RUN_LICENSED_DB_TESTS` 控制的达梦/金仓/Oracle self-hosted gate；新增 `check-bytecode.sh`（major version 52/61）和 `check-release-artifacts.sh`。集成测试增加 `flydb.integration.database` 选择器，本地默认只拉 MySQL 8，当前本机 MySQL 契约通过且 PostgreSQL 容器未启动。Maven 发布演练 `-DskipTests deploy -DaltDeploymentRepository=local::file:./target/staging` 通过，staging 中包含 JAR、sources、javadoc，CLI ZIP 同时通过产物门禁。新增 `docs/getting-started/` 各数据库上手页及 `docs/reference/` 配置/错误码参考；README 明确 `R<version>__` 在 2.0 中报 FLYDB-2005。授权数据库和专用兼容产品仍未在本机部署，不把家族契约当作真实产品认证。
 
 > **Oracle 补充记录（2026-08-13）**：按支持矩阵复核补齐原生 `OracleDatabaseType`，注册 `jdbc:oracle:` URL 探测并复用 `OracleFamilyDatabase`；新增 Oracle Registry/PL/SQL/非事务 DDL 单元契约、`FLYDB_TEST_ORACLE_*` 授权实例契约入口，以及 Oracle 上手指南。当前仅完成代码级验证，未在本机部署 Oracle 或捆绑 `ojdbc`，不宣称真实版本认证。
+
+> **Agent Skills 增补记录（2026-08-13）**：新增 [`flydb-skills`](../../flydb-skills/README.md)，首个 [`flydb-cli`](../../flydb-skills/skills/flydb-cli/SKILL.md) Skill 覆盖 CLI 定位、文档引用、dry-run 优先、驱动/方言选择、错误处理和安全汇报；Skill 通过源文档路径避免命令表漂移。
 
 ## 4. 阶段依赖图
 

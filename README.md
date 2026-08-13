@@ -34,6 +34,10 @@ Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工
 
 信创或新型 JDBC 数据库需要快速接入时，先看[JDBC 数据库快速接入](./docs/getting-started/jdbc-integration.md)：驱动 JAR 放置、`--driver`/`--database-type` 选择、MySQL/Oracle 家族复用，以及自定义 `DatabaseType` SPI 都有可复制示例。
 
+## Agent Skills
+
+仓库同时提供 [`flydb-skills`](./flydb-skills/README.md)，当前先包含 [`flydb-cli`](./flydb-skills/skills/flydb-cli/SKILL.md)：它引用 CLI 命令、配置、错误码和 JDBC 接入文档，帮助 Agent 安全地执行 `init`、`validate`、`info`、`migrate`、`baseline`、`repair`、`undo` 和 `clean`。Skill 不复制 CLI 手册；修改 CLI 行为时以 `docs/` 为准并同步检查 Skill。
+
 ## 五分钟上手
 
 前置条件：Java 8 或更高版本、一个已创建的目标数据库，以及与 Java 8 兼容的 JDBC 驱动。

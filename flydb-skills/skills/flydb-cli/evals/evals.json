@@ -1,0 +1,23 @@
+{
+  "skill_name": "flydb-cli",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "请用当前 Flydb CLI 把本地 MySQL 测试库的迁移跑起来，先做 dry-run，再执行 migrate，并告诉我每一步验证了什么。",
+      "expected_output": "先读取 CLI 命令/配置文档；使用安全的密码来源；执行 validate 和 --dry-run migrate；在实际 migrate 前确认写入范围；最后报告退出码和 info/validate 结果。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "我有一个 JDBC URL 不在 Flydb 内置映射里，但数据库号称兼容 Oracle 语法。请告诉我如何放驱动、选择 database-type，什么时候必须做 SPI。",
+      "expected_output": "引用 JDBC 接入指南；区分驱动与方言；不会只凭语法兼容就选择 oracle；给出 --driver、--database-type 和 SPI 注册路径。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Flydb 报 FLYDB-1003，厂商驱动已经下载了。请帮我排查，但不要连接生产库，也不要把密码打印出来。",
+      "expected_output": "读取错误码和 CLI 驱动说明；检查实际 drivers/、驱动类名、Java 兼容性和配置来源；只做只读诊断，不执行迁移或泄露密码。",
+      "files": []
+    }
+  ]
+}

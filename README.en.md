@@ -10,6 +10,10 @@ Flydb targets Java 8. `flydb-core` has no third-party runtime dependencies, whil
 
 See the [database getting-started guides](./docs/getting-started/README.md) for driver, URL, permission, and limitation details. For a vendor or Xinchuang JDBC database, follow the [JDBC integration guide](./docs/getting-started/jdbc-integration.md) for driver placement, family reuse, and `DatabaseType` SPI registration. Verification level is evidence, not vendor certification.
 
+## Agent Skills
+
+The repository also contains [`flydb-skills`](./flydb-skills/README.md). Its first skill, [`flydb-cli`](./flydb-skills/skills/flydb-cli/SKILL.md), references the CLI command, configuration, error-code, and JDBC integration docs so an agent can operate `init`, `validate`, `info`, `migrate`, `baseline`, `repair`, `undo`, and `clean` with the documented safety boundaries. The skill does not duplicate the CLI manual; update `docs/` first when CLI behavior changes.
+
 The built-in mainstream dialects include MySQL, PostgreSQL, and Oracle. Oracle's vendor driver is supplied separately and its real-instance contract runs only on an explicitly provisioned licensed runner.
 
 ## Quick start
