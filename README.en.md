@@ -1,5 +1,9 @@
 English | [中文](./README.md)
 
+<p align="center">
+  <img src="./docs/assets/flydb-mascot-banner.png" alt="Flydb Data Courier mascot" width="100%">
+</p>
+
 # Flydb
 
 [![CI](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml/badge.svg)](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml)
@@ -47,7 +51,7 @@ bin/flydb validate
 
 | Database family | Built-in dialect | Current verification level |
 |---|---:|---|
-| MySQL 8 | Yes | Automated contract tests; CLI distribution end-to-end verification |
+| MySQL  | Yes | Automated contract tests; CLI distribution end-to-end verification |
 | PostgreSQL | Yes | Automated contract tests |
 | Oracle | Yes | Native dialect unit tests and licensed-instance contract entry; real-environment validation pending |
 | DM8 (Dameng) | Yes | Dialect and driver-metadata contract tests; real-environment certification pending |
@@ -145,7 +149,7 @@ The full reactor, including the Boot 3 modules, is built with Java 17; the Boot 
 ./mvnw verify
 ```
 
-The CLI distribution is generated at `flydb-cli/target/flydb-cli-2.0.0-SNAPSHOT.zip`. The core module enforces an 80% JaCoCo line-coverage gate and zero non-test runtime dependencies via Maven Enforcer.
+The CLI distribution is generated at `flydb-cli/target/flydb-cli-0.2.0-SNAPSHOT.zip`. The core module enforces an 80% JaCoCo line-coverage gate and zero non-test runtime dependencies via Maven Enforcer.
 
 Local integration contracts default to MySQL 8 only; to run a specific CI dialect, set `-Pmysql`/`-Ppostgresql` and `-Dflydb.integration.database=<dialect>`. The full matrix runs in `.github/workflows/ci.yml`.
 

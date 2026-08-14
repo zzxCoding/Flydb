@@ -1,5 +1,9 @@
 [English](./README.en.md) | 中文
 
+<p align="center">
+  <img src="./docs/assets/flydb-mascot-banner.png" alt="Flydb 数据飞行兽吉祥物" width="100%">
+</p>
+
 # Flydb
 
 [![CI](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml/badge.svg)](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml)
@@ -47,7 +51,7 @@ bin/flydb validate
 
 | 数据库家族 | 内置方言 | 当前验证层级 |
 |---|---:|---|
-| MySQL 8 | 是 | 自动化兼容测试；CLI 发行包端到端验证 |
+| MySQL  | 是 | 自动化兼容测试；CLI 发行包端到端验证 |
 | PostgreSQL | 是 | 自动化兼容测试 |
 | Oracle | 是 | 原生 Oracle 方言单测与授权实例契约入口；真实环境待补 |
 | 达梦 DM8 | 是 | 方言与驱动元数据契约测试；真实环境认证待补 |
@@ -145,7 +149,7 @@ bin/flydb clean --clean-disabled=false --force   # clean 默认禁用；非交�
 ./mvnw verify
 ```
 
-CLI 构建产物位于 `flydb-cli/target/flydb-cli-2.0.0-SNAPSHOT.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
+CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.2.0-SNAPSHOT.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
 
 本地集成契约默认只启动 MySQL 8；需要显式运行某个 CI 方言项时设置 `-Pmysql`/`-Ppostgresql` 与 `-Dflydb.integration.database=<dialect>`，完整矩阵由 `.github/workflows/ci.yml` 执行。
 

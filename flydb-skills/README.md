@@ -36,7 +36,7 @@ Flydb 的 Agent Skills 集合。Skill 负责把重复的操作流程交给 Agent
 
 ## 使用方式
 
-将 [`skills/flydb-cli`](skills/flydb-cli) 复制到支持 Agent Skills 的技能目录，或在当前 Flydb 工作区直接使用。触发该 Skill 后，Agent 会先定位 Flydb 仓库并读取对应文档，再决定 CLI 命令；不会把密码写进命令行、日志或迁移脚本。
+将 [`skills/flydb-cli`](skills/flydb-cli) 复制到支持 Agent Skills 的技能目录，或在 Flydb 源码仓库/CLI 发行包中直接使用。发行包同时附带版本匹配的 `docs/`；复制 Skill 后应保留发行包路径，Agent 会优先从目标发行包读取文档，再决定 CLI 命令。它不会把密码写进命令行、日志或迁移脚本。
 
 使用本 Skill 处理信创或新型 JDBC 数据库时，先阅读[JDBC 数据库快速接入](../docs/getting-started/jdbc-integration.md)，确认驱动、方言和迁移语义，再执行 CLI 操作。
 
@@ -62,6 +62,6 @@ python3 /Users/xuan/.agents/skills/skill-creator/scripts/quick_validate.py \
   flydb-skills/skills/flydb-cli
 ```
 
-测试提示词草案位于 [`skills/flydb-cli/evals/evals.json`](skills/flydb-cli/evals/evals.json)。它们用于后续评估 Skill 是否正确触发和遵守 CLI 安全边界。
+评测提示词与可验证预期位于 [`skills/flydb-cli/evals/evals.json`](skills/flydb-cli/evals/evals.json)，覆盖基本迁移、外部 locations、范围/版本族选择、发现完整性、业务模板占位符、MISSING、驱动诊断和 clean 安全边界。
 
 项目复用仓库根目录的 [Apache-2.0 许可证](../LICENSE)。

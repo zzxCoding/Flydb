@@ -32,10 +32,20 @@
             <directory>${project.parent.basedir}</directory>
             <outputDirectory>/</outputDirectory>
             <includes>
+                <include>AGENTS.md</include>
                 <include>LICENSE</include>
                 <include>NOTICE</include>
                 <include>README.md</include>
+                <include>README.en.md</include>
             </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.parent.basedir}/docs</directory>
+            <outputDirectory>docs</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>${project.parent.basedir}/flydb-skills</directory>
+            <outputDirectory>flydb-skills</outputDirectory>
         </fileSet>
     </fileSets>
 </assembly>
