@@ -34,8 +34,8 @@ CLI 不捆绑厂商驱动。启动时先扫描安装目录下的 `drivers/*.jar`
 下面以一个使用 MySQL 兼容语法、但 URL 和驱动类均为厂商自定义的数据库为例。这里的 `vendor`、`vendor.jdbc.Driver` 只是占位符，请替换为厂商实际值：
 
 ```bash
-unzip flydb-cli-2.0.0-SNAPSHOT.zip
-cd flydb-cli-2.0.0
+unzip flydb-cli-0.2.0-SNAPSHOT.zip
+cd flydb-cli-0.2.0-SNAPSHOT
 
 cp /path/to/vendor-jdbc.jar drivers/
 
@@ -94,7 +94,7 @@ bin/flydb init --url 'jdbc:oceanbase://db.example.com:2883/app' \
 没有合适的内置方言时，把两个 JAR 放入同一个目录：
 
 ```text
-flydb-cli-2.0.0-SNAPSHOT/
+flydb-cli-0.2.0-SNAPSHOT/
 └── drivers/
     ├── vendor-jdbc.jar
     └── flydb-dialect-vendorx.jar

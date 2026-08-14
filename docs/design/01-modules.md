@@ -107,11 +107,11 @@ public interface Log {
 
 ## 6. 版本与发布
 
-- 版本号：`2.0.0` 起步（与旧原型 1.x 划清界限），语义化版本。
+- 版本号：`0.2.0` 起步（0.x 表示初始开发期、公共 API 未承诺稳定；1.0 留给迁移引擎与机器契约稳定后发布），语义化版本。
 - 所有模块统一版本号，由根 POM `revision` 属性管理（`flatten-maven-plugin` 处理发布）。
 - 发布物：
   1. Maven 仓库：flydb-core、flydb-cli（jar）、两个 starter；
-  2. GitHub Releases：`flydb-cli-2.0.0.zip` 发行包（布局见 [06 §7](06-config-cli.md)）。
+  2. GitHub Releases：`flydb-cli-0.2.0.zip` 发行包（布局见 [06 §7](06-config-cli.md)）。
 
 ## 7. 旧代码处置
 

@@ -102,7 +102,7 @@ flydb [全局选项] <命令> [命令选项]
 ### 4.2 `info` 表格输出（中文友好）
 
 ```
-flydb 2.0.0 · 达梦 DM8 · jdbc:dm://10.0.0.1:5236 · 历史表: flydb_schema_history
+flydb 0.2.0 · 达梦 DM8 · jdbc:dm://10.0.0.1:5236 · 历史表: flydb_schema_history
 
 版本      描述                     类型   已安装时间            耗时(ms)   状态
 -------  ----------------------  -----  -------------------  --------  --------
@@ -155,7 +155,7 @@ flydb 2.0.0 · 达梦 DM8 · jdbc:dm://10.0.0.1:5236 · 历史表: flydb_schema_
 ## 7. 发行形态
 
 ```
-flydb-cli-2.0.0/
+flydb-cli-0.2.0/
 ├── bin/flydb  bin/flydb.bat          # 启动脚本（检测 JAVA_HOME，要求 Java 8+）
 ├── lib/                              # flydb-cli.jar + flydb-core.jar + picocli.jar
 ├── drivers/README.md                 # 驱动放置说明 + 坐标速查（01 §5）

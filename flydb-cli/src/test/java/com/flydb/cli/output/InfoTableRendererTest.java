@@ -34,11 +34,11 @@ class InfoTableRendererTest {
                 MigrationInfo.derive(second, null, MigrationVersion.parse("1"),
                         MigrationVersion.parse("2.1"))));
 
-        String table = new InfoTableRenderer().render("2.0.0", "达梦 DM8",
+        String table = new InfoTableRenderer().render("0.2.0", "达梦 DM8",
                 "jdbc:dm://localhost:5236", "flydb_schema_history", information, false);
 
         assertThat(table).contains(
-                "flydb 2.0.0 · 达梦 DM8 · jdbc:dm://localhost:5236 · 历史表: flydb_schema_history",
+                "flydb 0.2.0 · 达梦 DM8 · jdbc:dm://localhost:5236 · 历史表: flydb_schema_history",
                 "1           初始化用户              SQL     2026-08-12 09:12:03  128       成功",
                 "2.1         add_status              SQL     -                    -         待执行");
         assertThat(table).doesNotContain("\u001B[");

@@ -6,7 +6,7 @@
 
 ## 1. 任务背景（30 秒版）
 
-本仓库正在从"993 行的 Spring Boot REST 原型"推倒重写为 **Flydb 2.0**：面向所有提供 JDBC 驱动的数据库的类 Flyway 迁移工具，内置支持主流数据库，以国产信创数据库（达梦/金仓/openGauss 等）的一等支持为特色，并可通过方言 SPI 扩展接入小众 JDBC 数据库。产品形态 = flydb-core（纯 Java 8 API 库，零第三方运行时依赖）+ flydb-cli（picocli）+ 双 Spring Boot Starter。设计已评审定稿（docs/design/00~08），**不要偏离设计中标注为"契约"与"决策"的内容**；发现设计与现实冲突时，停下来在 PR/issue 中提出，不要自行改设计。
+本仓库正在从"993 行的 Spring Boot REST 原型"推倒重写为 **Flydb 0.2**：面向所有提供 JDBC 驱动的数据库的类 Flyway 迁移工具，内置支持主流数据库，以国产信创数据库（达梦/金仓/openGauss 等）的一等支持为特色，并可通过方言 SPI 扩展接入小众 JDBC 数据库。产品形态 = flydb-core（纯 Java 8 API 库，零第三方运行时依赖）+ flydb-cli（picocli）+ 双 Spring Boot Starter。设计已评审定稿（docs/design/00~08），**不要偏离设计中标注为"契约"与"决策"的内容**；发现设计与现实冲突时，停下来在 PR/issue 中提出，不要自行改设计。
 
 ## 2. 全局约束（每个阶段都适用）
 
@@ -23,7 +23,7 @@
 ### 阶段 1：工程骨架 + 领域模型（依赖：[01](01-modules.md)、[02](02-domain-api.md)）
 
 1. **清理旧代码**：删除 `src/`、`flydb.sh`、`logs/`、`target/`；保留 `LICENSE`（Apache-2.0）、`NOTICE`、`mvnw*`；`README.md` 暂留（阶段 8 重写）。
-2. **搭多模块骨架**：根 POM（`revision` 统一版本 2.0.0-SNAPSHOT、compiler release 8、enforcer 零依赖规则、JaCoCo 门禁）+ 5 个子模块空壳（[01 §1](01-modules.md) 表）。
+2. **搭多模块骨架**：根 POM（`revision` 统一版本 0.2.0-SNAPSHOT、compiler release 8、enforcer 零依赖规则、JaCoCo 门禁）+ 5 个子模块空壳（[01 §1](01-modules.md) 表）。
 3. **领域模型（TDD）**，全部在 `flydb-core`：
    - `MigrationVersion`（[02 §3](02-domain-api.md)）→ 测试：`MigrationVersionTest`（[08 §1](08-testing-roadmap.md) 用例清单）
    - `MigrationType` / `MigrationState` / `ResolvedMigration` / `AppliedMigration`（[02 §4/§6](02-domain-api.md)）
@@ -146,7 +146,7 @@
 ```bash
 # 纯 JDK8 容器内，MySQL 8 目标库（密码为演示用合成值）
 docker run -d --name flydb-mysql -e MYSQL_ROOT_PASSWORD=test -p 3306:3306 mysql:8
-unzip flydb-cli-2.0.0.zip && cd flydb-cli-2.0.0
+unzip flydb-cli-0.2.0.zip && cd flydb-cli-0.2.0
 # 放入 mysql-connector-j.jar 到 drivers/
 bin/flydb init --url "jdbc:mysql://127.0.0.1:3306/demo" --user root --yes
 echo "CREATE TABLE t1(id INT PRIMARY KEY);" > db/migration/V1__init.sql

@@ -32,7 +32,7 @@ class InitScaffolderTest {
                 temporaryDirectory.resolve("db/migration/V1__init.sql"),
                 temporaryDirectory.resolve("drivers/README.md"));
         assertThat(read(temporaryDirectory.resolve("flydb.conf")))
-                .contains("# Flydb 2.0 配置", "JDBC 连接地址（必填）",
+                .contains("# Flydb 0.2 配置", "JDBC 连接地址（必填）",
                         "flydb.password=你的明文密码", "flydb.password=${env:DB_PASSWORD}",
                         "flydb.password.file=/run/secrets/db_password",
                         "flydb.url=jdbc:mysql://localhost:3306/app",

@@ -76,7 +76,7 @@ FLYDB_PASSWORD='...' bin/flydb info --color=never
 FLYDB_PASSWORD='...' bin/flydb validate
 ```
 
-迁移脚本命名：`V1__init.sql`、`V20260327-b06.4__data.sql`、`R__view.sql`、`U1__init.sql`。版本以数字开头，字母数字 token 可用点、下划线或连字符分隔；无法解析的 `V`/`U` SQL 候选会报 `FLYDB-2001`，不会静默跳过。2.0 起 `R1__...sql` 会报 `FLYDB-2005`；失败记录必须先 `repair`，否则后续 `migrate` 报 `FLYDB-2004`。
+迁移脚本命名：`V1__init.sql`、`V20260327-b06.4__data.sql`、`R__view.sql`、`U1__init.sql`。版本以数字开头，字母数字 token 可用点、下划线或连字符分隔；无法解析的 `V`/`U` SQL 候选会报 `FLYDB-2001`，不会静默跳过。0.2 起 `R1__...sql` 会报 `FLYDB-2005`；失败记录必须先 `repair`，否则后续 `migrate` 报 `FLYDB-2004`。
 
 不配置 `--version-selection` 时保持兼容行为：`--target-version` 精确匹配，起止版本按包含边界的版本顺序匹配。`family` 将目标版本作为 token 前缀版本族；`family-range` 包含结束版本族的所有子版本；`regex` 对版本文本做整串匹配。`--version-source=directory` 会把相同目录版本下的多个文件版本作为一个选择集合，例如精确目标 `20230531` 可选择 `V20230531.1`、`.2`、`.3`。显式版本选择不执行 `R__...sql`，且不会绕过 checksum、失败记录或 `out-of-order`。
 

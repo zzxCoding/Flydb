@@ -74,7 +74,7 @@ public final class InitScaffolder {
     private static String configuration(String url, String user, String driver,
                                         String databaseType, Path migrationDirectory) {
         StringBuilder value = new StringBuilder()
-                .append("# Flydb 2.0 配置（UTF-8 Properties）\n")
+                .append("# Flydb 0.2 配置（UTF-8 Properties）\n")
                 .append("# 配置优先级：CLI 参数 > FLYDB_* 环境变量 > 本文件 > 内置默认值。\n")
                 .append("# 修改本文件后，可执行 bin/flydb validate 检查配置与迁移脚本。\n\n")
                 .append("# JDBC 连接地址（必填）；CLI: -u/--url；环境变量: FLYDB_URL。\n")

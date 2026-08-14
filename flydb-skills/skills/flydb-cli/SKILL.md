@@ -2,7 +2,7 @@
 name: flydb-cli
 description: >-
   使用和排查 Flydb CLI 完成数据库迁移、初始化、校验、状态查看、baseline、repair、clean、undo 和驱动接入。当用户提到 Flydb、bin/flydb、flydb.conf、drivers/、JDBC 驱动、--driver、--database-type，或需要把信创/新型 JDBC 数据库接入 Flydb CLI 时使用。先读取 Flydb 仓库内对应 CLI 文档，再执行最小、可验证的操作；涉及真实数据库写入时保留明确的授权和安全边界。
-compatibility: Flydb CLI 2.0，Java 8 或更高版本；需要 Flydb CLI 发行包或源码仓库，以及目标数据库的 JDBC 驱动。
+compatibility: Flydb CLI 0.2，Java 8 或更高版本；需要 Flydb CLI 发行包或源码仓库，以及目标数据库的 JDBC 驱动。
 ---
 
 # Flydb CLI

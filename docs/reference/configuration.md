@@ -176,6 +176,6 @@ R__refresh_user_view.sql  可重复迁移
 U1__create_user.sql       撤销 V1
 ```
 
-2.0 起 `R` 不带版本号。扫描到 `R1__...sql` 会报 `FLYDB-2005` 并阻断，不提供兼容开关；回退脚本请使用 `U<version>__...sql`。
+0.2 起 `R` 不带版本号。扫描到 `R1__...sql` 会报 `FLYDB-2005` 并阻断，不提供兼容开关；回退脚本请使用 `U<version>__...sql`。
 
 `clean` 默认禁用；非交互执行还必须同时设置 `flydb.clean-disabled=false` 和 `--force`。执行时会输出 schema、对象总数、逐对象删除进度、历史表/锁表清理及完成日志。不要把真实密码提交到版本库。
