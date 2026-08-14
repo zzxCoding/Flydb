@@ -53,11 +53,12 @@ bin/flydb validate
 |---|---:|---|
 | MySQL  | 是 | 自动化兼容测试；CLI 发行包端到端验证 |
 | PostgreSQL | 是 | 自动化兼容测试 |
-| Oracle | 是 | 原生 Oracle 方言单测与授权实例契约入口；真实环境待补 |
+| Oracle | 是 | 自动化契约测试；已在授权真实实例完成 validate、clean、migrate 端到端验证 |
 | 达梦 DM8 | 是 | 方言与驱动元数据契约测试；真实环境认证待补 |
 | 人大金仓 KingbaseES | 是 | 方言与驱动元数据契约测试；真实环境认证待补 |
 | openGauss | 是 | 方言与驱动元数据契约测试；真实环境认证待补 |
-| OceanBase / TiDB | 复用对应家族 | 轻量兼容测试；真实环境覆盖持续补充 |
+| OceanBase | 复用 Oracle/MySQL 家族 | Oracle 租户已在授权真实实例完成端到端验证；MySQL 租户为轻量兼容测试 |
+| TiDB | 复用 MySQL 家族 | 轻量兼容测试；真实环境覆盖持续补充 |
 | 其他 JDBC 数据库 | 可扩展 | 需提供 JDBC 驱动及 `DatabaseType` SPI 方言实现 |
 
 每个数据库的驱动、连接、权限和已知限制见[数据库上手指南](./docs/getting-started/README.md)。状态只代表当前验证证据，不代表厂商认证。信创或新型 JDBC 数据库快速接入见 [JDBC 数据库快速接入](./docs/getting-started/jdbc-integration.md)。

@@ -115,6 +115,10 @@
 
 > **Oracle 补充记录（2026-08-13）**：按支持矩阵复核补齐原生 `OracleDatabaseType`，注册 `jdbc:oracle:` URL 探测并复用 `OracleFamilyDatabase`；新增 Oracle Registry/PL/SQL/非事务 DDL 单元契约、`FLYDB_TEST_ORACLE_*` 授权实例契约入口，以及 Oracle 上手指南。当前仅完成代码级验证，未在本机部署 Oracle 或捆绑 `ojdbc`，不宣称真实版本认证。
 
+> **Oracle 真实实例验证记录（2026-08-14）**：在授权真实 Oracle 实例完成端到端验证——validate、`--dry-run migrate`、clean、migrate（26 个脚本，含 `CREATE OR REPLACE EDITIONABLE TRIGGER` 的 PL/SQL 块、目录版本族 `family-range` 范围、`--placeholder-replacement=false` 业务模板保留）。该轮验证暴露并修复三处方言缺陷（提交 `4c5cd41`、`91fa3d8`、`d9e7142`）：历史表 DDL 的 `DEFAULT`/`NOT NULL` 顺序（ORA-00907）、clean 序列与回收站发现缺失（75 个用户序列残留导致 ORA-00955）、PL/SQL 块探测器不识别 `EDITIONABLE`（孤儿 `END;` 报 ORA-00900）。仍未做厂商认证，undo/baseline 未在真库演练。
+
+> **OceanBase-Oracle 真实实例验证记录（2026-08-14）**：在授权真实 OceanBase 实例的 Oracle 兼容租户完成端到端验证——validate、`--dry-run migrate`、clean、migrate，复用 Oracle 家族方言与同轮三项修复（`4c5cd41`、`91fa3d8`、`d9e7142`）；`DBMS_LOCK` 锁路径与 clean 的 `user_sequences`/`PURGE RECYCLEBIN` 流程随迁移覆盖。上手页由"实验性"升级为真实实例验证。MySQL 兼容租户仍为轻量兼容测试；不宣称厂商认证。
+
 > **Agent Skills 增补记录（2026-08-13）**：新增 [`flydb-skills`](../../flydb-skills/README.md)，首个 [`flydb-cli`](../../flydb-skills/skills/flydb-cli/SKILL.md) Skill 覆盖 CLI 定位、文档引用、dry-run 优先、驱动/方言选择、错误处理和安全汇报；Skill 通过源文档路径避免命令表漂移。
 
 ## 4. 阶段依赖图

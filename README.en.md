@@ -53,11 +53,12 @@ bin/flydb validate
 |---|---:|---|
 | MySQL  | Yes | Automated contract tests; CLI distribution end-to-end verification |
 | PostgreSQL | Yes | Automated contract tests |
-| Oracle | Yes | Native dialect unit tests and licensed-instance contract entry; real-environment validation pending |
+| Oracle | Yes | Automated contract tests; end-to-end validation (validate / clean / migrate) completed on a licensed real instance |
 | DM8 (Dameng) | Yes | Dialect and driver-metadata contract tests; real-environment certification pending |
 | KingbaseES | Yes | Dialect and driver-metadata contract tests; real-environment certification pending |
 | openGauss | Yes | Dialect and driver-metadata contract tests; real-environment certification pending |
-| OceanBase / TiDB | Family reuse | Lightweight compatibility tests; real-environment coverage growing |
+| OceanBase | Oracle/MySQL family reuse | Oracle tenant end-to-end validated on a licensed real instance; MySQL tenant under lightweight compatibility tests |
+| TiDB | MySQL family reuse | Lightweight compatibility tests; real-environment coverage growing |
 | Other JDBC databases | Extensible | Requires a JDBC driver and a `DatabaseType` SPI dialect |
 
 See the [database getting-started guides](./docs/getting-started/README.md) for drivers, URLs, permissions, and known limitations per database. The status reflects current verification evidence, not vendor certification. For vendor or Xinchuang JDBC databases, start with the [JDBC integration guide](./docs/getting-started/jdbc-integration.md).
