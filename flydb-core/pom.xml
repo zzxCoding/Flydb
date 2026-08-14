@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.flydb</groupId>
+        <artifactId>flydb-parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <!--
+        flydb-core：纯 Java 8 API 库，零第三方运行时依赖（设计 01 §1/§5）。
+        仅依赖 JDK 自带 API；测试期才引入 JUnit/AssertJ（test 作用域，enforcer 不拦）。
+    -->
+    <artifactId>flydb-core</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Flydb :: Core</name>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 强制"零非 test 运行时依赖"：任何 compile/runtime/provided/system 作用域依赖都将构建失败 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-zero-runtime-deps</id>
+                        <goals><goal>enforce</goal></goals>
+                        <configuration>
+                            <rules>
+                                <!--
+                                    设计 01 §1/§5：flydb-core 零非 test 运行时依赖。
+                                    enforcer 3.4.1 的 bannedDependencies 不支持按 scope 过滤，故采用"全量封禁 + 测试库白名单"
+                                    的等价实现：exclude *:* 封禁一切，include 仅放行 JUnit5/AssertJ 全家桶（按 groupId，
+                                    与版本解耦）。任何 compile/runtime/provided 作用域依赖都将被拦下。
+                                -->
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>*:*</exclude>
+                                    </excludes>
+                                    <includes>
+                                        <include>org.junit.jupiter:*</include>
+                                        <include>org.junit.platform:*</include>
+                                        <include>org.apiguardian:*</include>
+                                        <include>org.opentest4j:*</include>
+                                        <include>org.assertj:*</include>
+                                        <include>net.bytebuddy:*</include>
+                                    </includes>
+                                    <message>flydb-core 必须零非 test 运行时依赖（设计 01 §1/§5）。</message>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 行覆盖率门禁 ≥80%（设计 01 §1、08 §1） -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals><goal>prepare-agent</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>coverage-check</id>
+                        <phase>verify</phase>
+                        <goals><goal>check</goal></goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.80</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

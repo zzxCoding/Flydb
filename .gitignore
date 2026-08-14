@@ -1,0 +1,63 @@
+# ---- Maven 构建产物 ----
+target/
+build/
+.flattened-pom.xml
+
+# ---- 日志 ----
+logs/
+*.log
+
+# ---- 编译产物 ----
+*.class
+
+# ---- 打包产物（仓库不托管 jar/war/zip；CLI 发行 zip 由 CI 产出挂在 Releases）----
+*.jar
+*.war
+*.ear
+*.zip
+*.tar
+*.gz
+
+# ---- IDE：IntelliJ ----
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# ---- IDE：Eclipse ----
+.classpath
+.project
+.settings/
+bin/
+!flydb-cli/src/main/distribution/bin/
+!flydb-cli/src/main/distribution/bin/**
+
+# ---- IDE：VS Code ----
+.vscode/
+
+# ---- IDE：NetBeans ----
+nbproject/
+nb-configuration.xml
+
+# ---- 操作系统 ----
+.DS_Store
+Thumbs.db
+
+# ---- 临时/备份/交换文件 ----
+*.tmp
+*.bak
+*.swp
+
+# ---- Agent 本地状态 ----
+.goals/
+
+# ---- 环境变量文件（密钥不入库）----
+.env
+.env.*
+!.env.example
+
+# ---- Maven Wrapper：必须入库，否则 fresh clone 无法 ./mvnw 构建 ----
+!.mvn/
+!.mvn/**
+!mvnw
+!mvnw.cmd

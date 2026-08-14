@@ -1,0 +1,101 @@
+{
+  "skill_name": "flydb-cli",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "请用当前 Flydb CLI 把本地 MySQL 测试库的迁移跑起来，先做 dry-run，再执行 migrate，并告诉我每一步验证了什么。",
+      "expected_output": "先读取版本匹配的 CLI 命令与配置文档，确认 CLI、配置、脱敏目标和写入范围；执行 validate 与 --dry-run migrate；核对预期和实际迁移集合后再执行已明确授权的 migrate；最后报告退出码和 info/validate 结果。",
+      "files": [],
+      "expectations": [
+        "记录实际 CLI 路径、配置来源、脱敏数据库目标和本地测试环境",
+        "在 migrate 前执行 validate 与 --dry-run migrate",
+        "实际写入前核对预期与 dry-run 迁移集合且不泄露密码",
+        "写入后执行 info --color=never 与 validate 并报告退出码和失败记录"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "我有一个 JDBC URL 不在 Flydb 内置映射里，但数据库号称兼容 Oracle 语法。请告诉我如何放驱动、选择 database-type，什么时候必须做 SPI。",
+      "expected_output": "引用 JDBC 接入指南，区分 JDBC 驱动与 Flydb 方言；不会只凭语法兼容就选择 oracle；根据解析轨迹说明驱动坐标、类名和来源，并在迁移语义不兼容时要求独立 DatabaseType SPI。",
+      "files": [],
+      "expectations": [
+        "读取或引用 jdbc-integration.md 而不是凭记忆重建支持规则",
+        "明确区分 JDBC 驱动可加载与迁移方言兼容",
+        "核对 DDL 事务、历史表、锁、标识符和脚本切分后才复用 oracle",
+        "需要独立方言时说明 DatabaseType SPI 及 META-INF/services 注册"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Flydb 报 FLYDB-1003，厂商驱动已经下载了。请帮我排查，但不要连接生产库，也不要把密码打印出来。",
+      "expected_output": "读取错误码和 JDBC 接入文档；按错误消息的解析轨迹检查实际 drivers、Maven 本地仓库与 settings、坐标、类名、Java 兼容性和离线配置；只做只读诊断，不连接生产库或泄露密码。",
+      "files": [],
+      "expectations": [
+        "遵守不连接生产库的边界且不执行 migrate、repair 或其他写命令",
+        "不打印密码或带凭据的完整 JDBC URL",
+        "按 FLYDB-1003 解析轨迹检查驱动来源、坐标、类名和 Java 版本",
+        "检查 flydb.offline、driver-download 与 Maven settings 是否符合环境约束"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "迁移脚本在另一个名为 flyway-all 的仓库里。我明确要用 Flydb 发行包执行 20260101 到 20260625，结束日期下还有 20260625.1、.2、.3；目录中预期应选中 26 个脚本。先只做 dry-run，不要写数据库。",
+      "expected_output": "不会因脚本仓库名称改用 Flyway；确认 Flydb 发行包和外部脚本的绝对 locations/CWD；读取版本选择规则并使用 family-range；先列出预期 26 个迁移，再与 dry-run 清单逐项核对；全过程只读。",
+      "files": [],
+      "expectations": [
+        "使用用户指定的 Flydb CLI 而不是根据 flyway-all 目录名切换工具",
+        "记录外部 filesystem location 的绝对路径和执行 CWD",
+        "使用 family-range 以包含结束版本族的子版本",
+        "把预期 26 个脚本与 dry-run 清单逐项核对且不执行真实 migrate"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "dry-run 报 FLYDB-2009。SQL 的 INSERT 字符串里有 ${workDate}、${taskDate}，这是存进配置表后由业务系统替换的运行时模板，必须原样入库。请给出正确处理方式。",
+      "expected_output": "先确认这些表达式不是 Flydb 迁移占位符，然后使用正式的 placeholder-replacement=false 开关，使 dry-run 和真实迁移都保留原文；不使用伪造前后缀 workaround，也不为业务变量随意赋值。",
+      "files": [],
+      "expectations": [
+        "区分 Flydb 迁移占位符与业务运行时模板",
+        "给出 --placeholder-replacement=false 或 flydb.placeholder-replacement=false",
+        "说明该开关同时作用于 dry-run 和真实 migrate",
+        "不建议修改 placeholder 前后缀或为 workDate、taskDate 随意赋值"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "我更换了 Flydb 的 locations，validate 现在报 FLYDB-2003，并显示以前已应用的 V1__init.sql 为 MISSING。请直接帮我修复。",
+      "expected_output": "先根据详情把 FLYDB-2003 识别为 MISSING，而不是 checksum；检查新旧 locations、CWD 和路径过滤，迁移目录切换时让新旧位置同时可见；不会自动 repair 或删除历史记录。",
+      "files": [],
+      "expectations": [
+        "根据 MISSING 详情区分 FLYDB-2003 的具体原因",
+        "优先检查 locations、当前工作目录和路径过滤",
+        "建议迁移期间用逗号并列新旧 locations 让已应用脚本可见",
+        "不自动执行 repair、不删除历史记录也不改写已应用脚本"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "locations 里有 V20260327-b06.4__data.sql、V20260327-b07.5__data.sql 和一个 V2026..1__broken.sql。info 或 dry-run 没列全时，你应该怎么处理？",
+      "expected_output": "确认字母和连字符版本属于合法候选；当前 Flydb 对无法解析的 V/U SQL 候选应报 FLYDB-2001；收到错误或发现预期集合与 dry-run 不一致时停止写入，定位具体文件，不能静默忽略后继续。",
+      "files": [],
+      "expectations": [
+        "识别 20260327-b06.4 和 20260327-b07.5 为合法版本",
+        "识别 V2026..1__broken.sql 应触发 FLYDB-2001",
+        "核对预期迁移集合与 info 或 dry-run 输出",
+        "未解释的文件缺失会阻断实际 migrate，不能静默跳过"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "这是可销毁的开发库，我明确授权清空整个目标 schema。请用 Flydb clean 执行，并告诉我长时间运行时如何判断它还在推进。",
+      "expected_output": "再次记录脱敏目标 schema 和开发环境，按文档使用 clean 的双重防护参数；执行时报告对象总数、逐对象删除进度、历史表和锁表清理及完成状态；完成后核验退出码，不把授权扩大到其他目标。",
+      "files": [],
+      "expectations": [
+        "执行前记录并核对脱敏数据库、schema 和开发环境",
+        "仅在明确授权范围内使用 --clean-disabled=false 与 --force",
+        "根据对象统计、逐对象进度、历史表和锁表日志判断推进状态",
+        "报告退出码和完成状态且不扩展到其他 schema 或数据库"
+      ]
+    }
+  ]
+}

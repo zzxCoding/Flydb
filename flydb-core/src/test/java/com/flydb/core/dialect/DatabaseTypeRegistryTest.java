@@ -1,0 +1,343 @@
+package com.flydb.core.dialect;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
+import java.sql.SQLException;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import com.flydb.core.api.FlydbConfiguration;
+import com.flydb.core.exception.ErrorCode;
+import com.flydb.core.exception.FlydbException;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+/**
+ * DatabaseTypeRegistry 单测（设计 03 §1、08 §1）。
+ *
+ * <p>覆盖：URL 前缀优先于产品名（mock Connection 模拟达梦 compatibleMode=oracle 伪装场景）、
+ * TiDB 与 MySQL 歧义消解、显式 databaseType 跳过探测、零候选报错。
+ */
+@DisplayName("DatabaseTypeRegistry")
+class DatabaseTypeRegistryTest {
+
+    @Test
+    @DisplayName("默认注册中心包含内置 PostgreSQL 与 MySQL 方言")
+    void defaultRegistryIncludesBuiltInTypes() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:postgresql://localhost/db",
+                mockQueryConnection("PostgreSQL", "SELECT version()", "PostgreSQL 16"),
+                null).name())
+                .isEqualTo("postgresql");
+        assertThat(registry.detect("jdbc:mysql://localhost/db", null, "mysql").name())
+                .isEqualTo("mysql");
+    }
+
+    @Test
+    @DisplayName("默认注册中心通过 Oracle JDBC URL 识别官方 Oracle 方言")
+    void defaultRegistryDetectsOracleUrl() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:oracle:thin:@//localhost:1521/XEPDB1", null, null).name())
+                .isEqualTo("oracle");
+    }
+
+    @Test
+    @DisplayName("Oracle 官方方言使用 Oracle 家族的 PL/SQL 与非事务 DDL 语义")
+    void oracleTypeUsesOracleFamily() throws Exception {
+        OracleDatabaseType type = new OracleDatabaseType();
+        Connection connection = mockConnection("Oracle Database 19c");
+
+        assertThat(type.handlesUrl("jdbc:oracle:thin:@//localhost:1521/XEPDB1")).isTrue();
+        assertThat(type.handlesConnection(connection)).isTrue();
+        try (Database database = type.createDatabase(connection, null)) {
+            assertThat(database.name()).isEqualTo("Oracle");
+            assertThat(database.supportsDdlTransactions()).isFalse();
+            assertThat(database.statementBuilderConfig().plsqlBlockDetector()).isNotNull();
+            assertThat(database.quote("MixedCase")).isEqualTo("\"MixedCase\"");
+        }
+    }
+
+    @Test
+    @DisplayName("默认注册中心通过专用 URL 识别 openGauss")
+    void defaultRegistryDetectsOpenGaussUrl() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:opengauss://localhost:5432/postgres", null, null).name())
+                .isEqualTo("opengauss");
+    }
+
+    @Test
+    @DisplayName("PostgreSQL 驱动连接 openGauss 时通过 version() 二阶段识别")
+    void postgresDriverConnectionDetectsOpenGaussByVersion() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+        Connection connection = mockQueryConnection(
+                "PostgreSQL", "SELECT version()", "openGauss 6.0.0 build 1234");
+
+        assertThat(registry.detect("jdbc:postgresql://localhost:5432/postgres",
+                connection, null).name()).isEqualTo("opengauss");
+    }
+
+    @Test
+    @DisplayName("MySQL 协议连接 TiDB 时通过 tidb_version() 二阶段识别")
+    void mysqlProtocolConnectionDetectsTiDb() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+        Connection connection = mockQueryConnection(
+                "MySQL", "SELECT tidb_version()", "Release Version: v8.5.0");
+
+        assertThat(registry.detect("jdbc:mysql://localhost:4000/test", connection, null).name())
+                .isEqualTo("tidb");
+    }
+
+    @Test
+    @DisplayName("默认注册中心通过专用 URL 识别 OceanBase")
+    void defaultRegistryDetectsOceanBaseUrl() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:oceanbase://localhost:2881/test", null, null).name())
+                .isEqualTo("oceanbase");
+    }
+
+    @Test
+    @DisplayName("默认注册中心通过专用 URL 识别 KingbaseES")
+    void defaultRegistryDetectsKingbaseUrl() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:kingbase8://localhost:54321/test", null, null).name())
+                .isEqualTo("kingbasees");
+    }
+
+    @Test
+    @DisplayName("默认注册中心按 jdbc:dm URL 识别达梦且不受 Oracle 产品名影响")
+    void defaultRegistryDetectsDmDespiteOracleProductName() {
+        DatabaseTypeRegistry registry = new DatabaseTypeRegistry();
+
+        assertThat(registry.detect("jdbc:dm://localhost:5236?compatibleMode=oracle",
+                mockConnection("Oracle"), null).name()).isEqualTo("dm");
+    }
+
+    @Test
+    @DisplayName("OceanBase Oracle 租户分派到 Oracle 家族方言")
+    void oceanBaseOracleModeUsesOracleFamily() throws Exception {
+        Connection connection = mockQueryConnection("OceanBase",
+                "SHOW VARIABLES LIKE 'ob_compatibility_mode'", "oracle");
+
+        Database database = new OceanBaseDatabaseType().createDatabase(connection, null);
+
+        assertThat(database.name()).isEqualTo("OceanBase-Oracle（实验性）");
+        assertThat(database.supportsDdlTransactions()).isFalse();
+        assertThat(database.statementBuilderConfig().plsqlBlockDetector()).isNotNull();
+        assertThat(database.quote("MixedCase")).isEqualTo("\"MixedCase\"");
+    }
+
+    @Nested
+    @DisplayName("显式指定跳过探测")
+    class ExplicitDatabaseType {
+
+        @Test
+        @DisplayName("配置了 databaseType 时按 name() 直接命中，跳过全部探测")
+        void explicitTypeBypassesDetection() {
+            DatabaseTypeRegistry registry = new DatabaseTypeRegistry(new DatabaseType[]{
+                    new FakeDatabaseType("mysql", 0, "jdbc:mysql://", "MySQL"),
+                    new FakeDatabaseType("pg", 1, "jdbc:postgresql://", "PostgreSQL"),
+            });
+            DatabaseType result = registry.detect("jdbc:mysql://localhost:3306/test", null, "pg");
+            assertThat(result.name()).isEqualTo("pg");
+        }
+
+        @Test
+        @DisplayName("显式指定的类型不存在 → FLYDB-1002")
+        void explicitTypeNotExistsErrors() {
+            DatabaseTypeRegistry registry = new DatabaseTypeRegistry(new DatabaseType[]{});
+            assertThatThrownBy(() -> registry.detect("jdbc:mysql://localhost:3306/test", null, "nonexistent"))
+                    .isInstanceOf(FlydbException.class)
+                    .satisfies(ex -> assertThat(((FlydbException) ex).errorCode())
+                            .isEqualTo(ErrorCode.UNRECOGNIZED_DATABASE_TYPE));
+        }
+    }
+
+    @Nested
+    @DisplayName("URL 前缀优先于产品名")
+    class UrlPrefixOverridesProductName {
+
+        @Test
+        @DisplayName("达梦带 compatibleMode=oracle 时按 URL 前缀 jdbc:dm:// 判定")
+        void dmWithOracleCompatibleMode() {
+            DatabaseType dm = new FakeDatabaseType("dm", 0, "jdbc:dm://", "DM DBMS");
+            DatabaseType oracle = new FakeDatabaseType("oracle", 0, "jdbc:oracle://", "Oracle");
+            DatabaseTypeRegistry registry = new DatabaseTypeRegistry(new DatabaseType[]{dm, oracle});
+
+            // 模拟达梦 compatibleMode=oracle：产品名返回 "Oracle" 但 URL 是 jdbc:dm://
+            Connection fakeConn = mockConnection("Oracle");
+            DatabaseType result = registry.detect("jdbc:dm://localhost:5236", fakeConn, null);
+            assertThat(result.name()).isEqualTo("dm"); // URL 前缀优先，不被产品名 Oracle 推翻
+        }
+
+        @Test
+        @DisplayName("同前缀时阶段二（产品名）区分 TiDB 与 MySQL")
+        void samePrefixDisambiguatedByProductName() {
+            DatabaseType tidb = new FakeDatabaseType("tidb", 10, "jdbc:mysql://", "TiDB");
+            DatabaseType mysql = new FakeDatabaseType("mysql", 5, "jdbc:mysql://", "MySQL");
+            DatabaseTypeRegistry registry = new DatabaseTypeRegistry(new DatabaseType[]{tidb, mysql});
+
+            Connection tidbConn = mockConnection("TiDB");
+            DatabaseType result = registry.detect("jdbc:mysql://localhost:4000", tidbConn, null);
+            assertThat(result.name()).isEqualTo("tidb");
+
+            Connection mysqlConn = mockConnection("MySQL");
+            result = registry.detect("jdbc:mysql://localhost:3306", mysqlConn, null);
+            assertThat(result.name()).isEqualTo("mysql");
+        }
+    }
+
+    @Nested
+    @DisplayName("零候选与歧义")
+    class NoCandidateOrAmbiguity {
+
+        @Test
+        @DisplayName("零候选 → FLYDB-1002")
+        void noCandidateErrors() {
+            DatabaseTypeRegistry registry = new DatabaseTypeRegistry(new DatabaseType[]{});
+            assertThatThrownBy(() -> registry.detect("jdbc:unknown://host:1234/db", null, null))
+                    .isInstanceOf(FlydbException.class)
+                    .satisfies(ex -> assertThat(((FlydbException) ex).errorCode())
+                            .isEqualTo(ErrorCode.UNRECOGNIZED_DATABASE_TYPE));
+        }
+
+        @Test
+        @DisplayName("歧义 → 报错而非猜测")
+        void ambiguousAfterStageTwoErrors() {
+            DatabaseType a = new FakeDatabaseType("a", 0, "jdbc:same://", "SameProduct");
+            DatabaseType b = new FakeDatabaseType("b", 0, "jdbc:same://", "SameProduct");
+            DatabaseTypeRegistry registry = new DatabaseTypeRegistry(new DatabaseType[]{a, b});
+            Connection conn = mockConnection("SameProduct");
+            assertThatThrownBy(() -> registry.detect("jdbc:same://host", conn, null))
+                    .isInstanceOf(FlydbException.class)
+                    .hasMessageContaining("jdbc:same://");
+        }
+    }
+
+    // ---- 桩 ----
+
+    private static Connection mockConnection(final String productName) {
+        return (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(),
+                new Class<?>[]{Connection.class},
+                new InvocationHandler() {
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                        String name = method.getName();
+                        if ("getMetaData".equals(name)) {
+                            return Proxy.newProxyInstance(
+                                    java.sql.DatabaseMetaData.class.getClassLoader(),
+                                    new Class<?>[]{java.sql.DatabaseMetaData.class},
+                                    (mdProxy, mdMethod, mdArgs) -> {
+                                        if ("getDatabaseProductName".equals(mdMethod.getName())) {
+                                            return productName;
+                                        }
+                                        return defaultValue(mdMethod.getReturnType());
+                                    });
+                        }
+                        if ("close".equals(name) || "commit".equals(name) || "rollback".equals(name)) {
+                            return null;
+                        }
+                        if ("isClosed".equals(name) || "getAutoCommit".equals(name) || "isReadOnly".equals(name)) {
+                            return false;
+                        }
+                        return defaultValue(method.getReturnType());
+                    }
+                });
+    }
+
+    private static Connection mockQueryConnection(final String productName,
+                                                  final String expectedSql,
+                                                  final String value) {
+        return (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(), new Class<?>[]{Connection.class},
+                (proxy, method, args) -> {
+                    if ("getMetaData".equals(method.getName())) {
+                        return Proxy.newProxyInstance(java.sql.DatabaseMetaData.class.getClassLoader(),
+                                new Class<?>[]{java.sql.DatabaseMetaData.class},
+                                (md, mdMethod, mdArgs) -> "getDatabaseProductName".equals(mdMethod.getName())
+                                        ? productName : defaultValue(mdMethod.getReturnType()));
+                    }
+                    if ("createStatement".equals(method.getName())) {
+                        return Proxy.newProxyInstance(java.sql.Statement.class.getClassLoader(),
+                                new Class<?>[]{java.sql.Statement.class},
+                                (statement, statementMethod, statementArgs) -> {
+                                    if ("executeQuery".equals(statementMethod.getName())) {
+                                        assertThat(statementArgs[0]).isEqualTo(expectedSql);
+                                        return singleValueResultSet(value);
+                                    }
+                                    return defaultValue(statementMethod.getReturnType());
+                                });
+                    }
+                    return defaultValue(method.getReturnType());
+                });
+    }
+
+    private static Object singleValueResultSet(final String value) {
+        return Proxy.newProxyInstance(java.sql.ResultSet.class.getClassLoader(),
+                new Class<?>[]{java.sql.ResultSet.class}, new InvocationHandler() {
+                    private boolean beforeFirst = true;
+
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) {
+                        if ("next".equals(method.getName())) {
+                            boolean result = beforeFirst;
+                            beforeFirst = false;
+                            return result;
+                        }
+                        if ("getString".equals(method.getName())) return value;
+                        return defaultValue(method.getReturnType());
+                    }
+                });
+    }
+
+    private static Object defaultValue(Class<?> type) {
+        if (type == boolean.class) return false;
+        if (type == int.class) return 0;
+        if (type == long.class) return 0L;
+        if (type == short.class) return (short) 0;
+        if (type == byte.class) return (byte) 0;
+        if (type == double.class) return 0.0d;
+        if (type == float.class) return 0.0f;
+        if (type == char.class) return '\0';
+        return null;
+    }
+
+    private static final class FakeDatabaseType implements DatabaseType {
+        private final String name;
+        private final int priority;
+        private final String urlPrefix;
+        private final String productName;
+
+        FakeDatabaseType(String name, int priority, String urlPrefix, String productName) {
+            this.name = name;
+            this.priority = priority;
+            this.urlPrefix = urlPrefix;
+            this.productName = productName;
+        }
+
+        @Override
+        public String name() { return name; }
+        @Override
+        public int priority() { return priority; }
+        @Override
+        public boolean handlesUrl(String jdbcUrl) { return jdbcUrl != null && jdbcUrl.startsWith(urlPrefix); }
+        @Override
+        public boolean handlesConnection(Connection connection) throws SQLException {
+            return productName.equals(connection.getMetaData().getDatabaseProductName());
+        }
+        @Override
+        public Database createDatabase(Connection connection, FlydbConfiguration cfg) {
+            return null;
+        }
+    }
+}

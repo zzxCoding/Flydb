@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.flydb</groupId>
+        <artifactId>flydb-parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <!--
+        flydb-integration-tests：Testcontainers 契约测试矩阵，不发布（设计 01 §1）。
+        阶段 3 起实现：DatabaseTestSupport 抽象 + 各方言实现 + MigrateContractTest 等。
+        注：本模块含代码后需 maven.compiler.release=17（须在 JDK 17+ 上构建）。
+    -->
+    <artifactId>flydb-integration-tests</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Flydb :: Integration Tests</name>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <testcontainers.version>1.20.1</testcontainers.version>
+        <postgresql.driver.version>42.7.4</postgresql.driver.version>
+        <mysql.driver.version>8.2.0</mysql.driver.version>
+        <!-- 父级 surefire 使用 JaCoCo 的 @{argLine} 延迟占位；本模块不挂 JaCoCo，显式置空。 -->
+        <argLine></argLine>
+        <flydb.integration.enabled>false</flydb.integration.enabled>
+        <!-- 本地默认只启动 MySQL；CI 矩阵通过 -Dflydb.integration.database 选择具体方言。 -->
+        <flydb.integration.database>mysql</flydb.integration.database>
+        <docker.api.version>1.44</docker.api.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.flydb</groupId>
+            <artifactId>flydb-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.driver.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>${mysql.driver.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.36</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <flydb.integration.enabled>${flydb.integration.enabled}</flydb.integration.enabled>
+                        <flydb.integration.database>${flydb.integration.database}</flydb.integration.database>
+                        <api.version>${docker.api.version}</api.version>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>postgresql</id>
+            <properties>
+                <flydb.integration.enabled>true</flydb.integration.enabled>
+            </properties>
+        </profile>
+        <profile>
+            <id>mysql</id>
+            <properties>
+                <flydb.integration.enabled>true</flydb.integration.enabled>
+            </properties>
+        </profile>
+    </profiles>
+</project>

@@ -1,0 +1,6 @@
+CREATE FUNCTION add(a INT, b INT) RETURNS INT AS $$
+BEGIN
+  RETURN a + b;
+END;
+$$ LANGUAGE plpgsql;
+SELECT add(1, 2);
