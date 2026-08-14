@@ -14,7 +14,8 @@
 - [x] MySQL、PostgreSQL、Oracle、达梦 DM8、KingbaseES、openGauss、OceanBase、TiDB 内置方言与 `DatabaseType` SPI
 - [x] Spring Boot 2 / 3 starter 与可运行示例
 - [x] `flydb-cli` Agent Skill 与评测用例
-- [ ] 0.2 正式发布与分发渠道（包管理器、中央仓库），兼容性矩阵公开化
+- [x] `v0.2.0` GitHub Release 与 CLI 发行包
+- [ ] 包管理器、Maven Central 等安装渠道，兼容性矩阵公开化
 
 ## 阶段二：开发体验与机器契约
 

@@ -58,7 +58,7 @@ Flydb 的 Agent Skills 集合。Skill 负责把重复的操作流程交给 Agent
 在仓库根目录执行：
 
 ```bash
-python3 /Users/xuan/.agents/skills/skill-creator/scripts/quick_validate.py \
+python3 "${HOME}/.agents/skills/skill-creator/scripts/quick_validate.py" \
   flydb-skills/skills/flydb-cli
 ```
 

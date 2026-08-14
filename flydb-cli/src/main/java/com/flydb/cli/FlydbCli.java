@@ -594,7 +594,7 @@ public final class FlydbCli {
     private static String version() {
         Package pkg = FlydbCli.class.getPackage();
         String implementation = pkg == null ? null : pkg.getImplementationVersion();
-        return implementation != null ? implementation : "0.2.0-SNAPSHOT";
+        return implementation != null ? implementation : "0.2.0";
     }
 
     private static Path detectInstallDirectory() {

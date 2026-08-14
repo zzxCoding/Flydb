@@ -39,7 +39,7 @@ class FlydbCliTest {
         int exitCode = cli.execute("version");
 
         assertThat(exitCode).isZero();
-        assertThat(standardOutput.toString()).contains("flydb 0.2.0-SNAPSHOT");
+        assertThat(standardOutput.toString()).contains("flydb 0.2.0");
         assertThat(errorOutput.toString()).isEmpty();
     }
 

@@ -1,0 +1,68 @@
+name: Bug 报告
+description: 报告可复现的 Flydb 行为错误
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢报告。请删除密码、令牌、完整生产连接串和业务数据；安全漏洞请使用仓库 Security 页面的私密报告入口。
+  - type: input
+    id: flydb-version
+    attributes:
+      label: Flydb 版本
+      placeholder: 例如 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Java、数据库与驱动版本
+      placeholder: 例如 Java 17 / MySQL 8.0 / Connector-J 8.2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: interface
+    attributes:
+      label: 使用入口
+      options:
+        - CLI
+        - Java API
+        - Spring Boot 2 Starter
+        - Spring Boot 3 Starter
+        - Agent Skill
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 最小复现步骤
+      description: 包含脱敏后的配置来源、命令和迁移文件结构。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为、退出码与脱敏日志
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: 已尝试的验证
+      description: 例如 validate、dry-run、定向测试或真实实例验证。
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: 安全确认
+      options:
+        - label: 我已删除密码、令牌、完整生产连接串和业务数据
+          required: true
