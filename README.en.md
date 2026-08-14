@@ -7,12 +7,15 @@ English | [中文](./README.md)
 # Flydb
 
 [![CI](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml/badge.svg)](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/zzxCoding/Flydb)](https://github.com/zzxCoding/Flydb/releases/latest)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](./LICENSE)
 ![Java 8+](https://img.shields.io/badge/Java-8%2B-blue)
 
 Flydb is a versioned schema migration tool for databases with JDBC drivers: built-in dialects for mainstream databases, first-class support for Chinese Xinchuang databases, and extension to niche JDBC databases through the `DatabaseType` SPI.
 
 **Today**, Flydb 0.2 is a reliable migration runtime: commands such as `migrate`, `info`, `validate`, `baseline`, `repair`, `undo`, and `clean`, backed by concurrency locks, transaction semantics, checksum validation, and failure blocking with recovery; eight built-in dialects; and Spring Boot 2/3 starters. **The long-term direction** is a database change capability shared safely by humans and AI agents: agents decide *what* changes; Flydb guarantees *how* it changes safely. See the [roadmap](./ROADMAP.md) (in Chinese) for stage goals and current progress.
+
+> **Scope boundary:** Flydb manages migration versions, execution safety, and database dialect behavior. It does not translate arbitrary vendor SQL into every database syntax. Keep separate migration directories for database families when their dialects differ; see the [multi-environment guide](./docs/getting-started/multi-environment.md#4-脚本仓库按数据库家族分目录).
 
 ## Why Flydb
 
@@ -26,8 +29,9 @@ Flydb is a versioned schema migration tool for databases with JDBC drivers: buil
 Prerequisites: Java 8 or newer, an existing target database, and a Java 8-compatible JDBC driver.
 
 ```bash
-unzip flydb-cli-0.2.0-SNAPSHOT.zip
-cd flydb-cli-0.2.0-SNAPSHOT
+curl -LO https://github.com/zzxCoding/Flydb/releases/download/v0.2.0/flydb-cli-0.2.0.zip
+unzip flydb-cli-0.2.0.zip
+cd flydb-cli-0.2.0
 
 # Example: place mysql-connector-j.jar into drivers/
 cp /path/to/mysql-connector-j.jar drivers/
@@ -65,7 +69,7 @@ See the [database getting-started guides](./docs/getting-started/README.md) for 
 
 ## Roadmap
 
-- [x] **Reliable migration runtime**: engine, 8 built-in dialects, CLI, Spring Boot starters, Agent Skill (current stage; official release remaining)
+- [x] **Reliable migration runtime**: engine, 8 built-in dialects, CLI, Spring Boot starters, Agent Skill, and the `v0.2.0` GitHub Release
 - [ ] **DX and machine contract**: release and install channels, `--json` machine-readable output, CI recipes
 - [ ] **Agent distribution**: MCP adapter on top of a stable CLI contract
 - [ ] **Brownfield change intelligence**: impact analysis, application reference scanning, coverage with explicit unknowns
@@ -108,9 +112,11 @@ Spring Boot applications pick the matching starter; it runs `migrate` during con
 <dependency>
   <groupId>com.flydb</groupId>
   <artifactId>flydb-spring-boot-3-starter</artifactId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>0.2.0</version>
 </dependency>
 ```
+
+> The CLI is distributed through the [GitHub Release](https://github.com/zzxCoding/Flydb/releases/tag/v0.2.0). Maven Central publishing is not available yet; Java API and starter users currently build from source and install artifacts into a local or private Maven repository.
 
 Java 8 applications use `flydb-spring-boot-2-starter` (Boot 2.7.18; [Spring states](https://spring.io/blog/2023/11/23/spring-boot-2-7-18-available-now/) that 2.7.18 is the last open-source release of the Boot 2.x line, so new projects should prefer the Boot 3 starter). The starter reuses the application's primary `DataSource` by default; set `flydb.url/user/password` to migrate with a separate DDL account, and `flydb.enabled=false` to disable auto-configuration entirely. Runnable examples: [Boot 2](./examples/boot2-demo), [Boot 3](./examples/boot3-demo); see the [Spring Boot starter design](./docs/design/07-spring-boot-starter.md).
 
@@ -150,7 +156,7 @@ The full reactor, including the Boot 3 modules, is built with Java 17; the Boot 
 ./mvnw verify
 ```
 
-The CLI distribution is generated at `flydb-cli/target/flydb-cli-0.2.0-SNAPSHOT.zip`. The core module enforces an 80% JaCoCo line-coverage gate and zero non-test runtime dependencies via Maven Enforcer.
+The CLI distribution is generated at `flydb-cli/target/flydb-cli-0.2.0.zip`. The core module enforces an 80% JaCoCo line-coverage gate and zero non-test runtime dependencies via Maven Enforcer.
 
 Local integration contracts default to MySQL 8 only; to run a specific CI dialect, set `-Pmysql`/`-Ppostgresql` and `-Dflydb.integration.database=<dialect>`. The full matrix runs in `.github/workflows/ci.yml`.
 
@@ -172,7 +178,7 @@ Local integration contracts default to MySQL 8 only; to run a specific CI dialec
 
 ## Contributing
 
-Issues and PRs are welcome. Before submitting, run `./mvnw -B verify` so tests and coverage gates pass; changes touching CLI behavior, configuration keys, or error codes must update `docs/reference` accordingly, and the Skill references in `flydb-skills` should be re-checked. Start with the [design overview](./docs/design/00-overview.md) for architecture and design documents.
+Issues and PRs are welcome. See the [contributing guide](./CONTRIBUTING.md) for the full workflow, and run `./mvnw -B verify` before submitting. Report vulnerabilities privately through the process in the [security policy](./SECURITY.md), not in a public issue. Start with the [design overview](./docs/design/00-overview.md) for architecture and design documents.
 
 ## License
 

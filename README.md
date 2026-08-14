@@ -7,12 +7,15 @@
 # Flydb
 
 [![CI](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml/badge.svg)](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/zzxCoding/Flydb)](https://github.com/zzxCoding/Flydb/releases/latest)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](./LICENSE)
 ![Java 8+](https://img.shields.io/badge/Java-8%2B-blue)
 
 Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工具：内置主流数据库方言，以国产信创数据库支持为特色，并通过 `DatabaseType` SPI 扩展小众 JDBC 数据库。
 
 **现在**，Flydb 0.2 是一个可靠的迁移运行时：`migrate`、`info`、`validate`、`baseline`、`repair`、`undo`、`clean` 等命令，配合并发锁、事务语义、checksum 校验、失败阻断与恢复，内置主流与信创共 8 个数据库方言，并提供 Spring Boot 2/3 starter。**长期方向**，是让人类与 AI Agent 共用同一套安全的数据库变更能力：Agent 决定“改什么”，Flydb 保证“怎么改是安全的”。各阶段目标与当前进度见[路线图](./ROADMAP.md)。
+
+> **能力边界：** Flydb 负责迁移版本、执行安全与数据库方言适配，不会把任意一套厂商 SQL 自动转换成所有数据库语法。存在方言差异时，请按数据库家族维护迁移目录，具体组织方式见[多环境自动化指南](./docs/getting-started/multi-environment.md#4-脚本仓库按数据库家族分目录)。
 
 ## 为什么选 Flydb
 
@@ -26,8 +29,9 @@ Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工
 前置条件：Java 8 或更高版本、一个已创建的目标数据库，以及与 Java 8 兼容的 JDBC 驱动。
 
 ```bash
-unzip flydb-cli-0.2.0-SNAPSHOT.zip
-cd flydb-cli-0.2.0-SNAPSHOT
+curl -LO https://github.com/zzxCoding/Flydb/releases/download/v0.2.0/flydb-cli-0.2.0.zip
+unzip flydb-cli-0.2.0.zip
+cd flydb-cli-0.2.0
 
 # 示例：把 mysql-connector-j.jar 放入 drivers/
 cp /path/to/mysql-connector-j.jar drivers/
@@ -65,7 +69,7 @@ bin/flydb validate
 
 ## 路线图
 
-- [x] **可靠的迁移运行时**：迁移引擎、8 个内置方言、CLI、Spring Boot starter、Agent Skill（当前阶段，余正式发布）
+- [x] **可靠的迁移运行时**：迁移引擎、8 个内置方言、CLI、Spring Boot starter、Agent Skill、`v0.2.0` GitHub Release
 - [ ] **开发体验与机器契约**：发布与安装渠道、`--json` 机器输出、CI 集成方案
 - [ ] **Agent 分发**：基于稳定 CLI 契约的 MCP 适配
 - [ ] **存量变更智能**：影响分析、应用引用扫描、覆盖率与未知项标注
@@ -108,9 +112,11 @@ Spring Boot 应用选择对应 starter，容器初始化期间执行 `migrate`�
 <dependency>
   <groupId>com.flydb</groupId>
   <artifactId>flydb-spring-boot-3-starter</artifactId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>0.2.0</version>
 </dependency>
 ```
+
+> CLI 已通过 [GitHub Release](https://github.com/zzxCoding/Flydb/releases/tag/v0.2.0) 分发；Maven Central 尚未发布。Java API 与 starter 用户当前需从源码构建并安装到本地或企业 Maven 仓库。
 
 Java 8 存量应用改用 `flydb-spring-boot-2-starter`（Boot 2.7.18；[Spring 官方已说明](https://spring.io/blog/2023/11/23/spring-boot-2-7-18-available-now/) 2.7.18 是 Boot 2.x 最后一个开源支持版本，因此新项目应优先 Boot 3 starter）。默认复用应用主 `DataSource`；需要权限隔离时设置 `flydb.url/user/password`，用独立 DDL 账号迁移；`flydb.enabled=false` 可完全关闭自动装配。可运行示例：[Boot 2 示例](./examples/boot2-demo)、[Boot 3 示例](./examples/boot3-demo)，详见 [Spring Boot Starter 设计](./docs/design/07-spring-boot-starter.md)。
 
@@ -150,7 +156,7 @@ bin/flydb clean --clean-disabled=false --force   # clean 默认禁用；非交�
 ./mvnw verify
 ```
 
-CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.2.0-SNAPSHOT.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
+CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.2.0.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
 
 本地集成契约默认只启动 MySQL 8；需要显式运行某个 CI 方言项时设置 `-Pmysql`/`-Ppostgresql` 与 `-Dflydb.integration.database=<dialect>`，完整矩阵由 `.github/workflows/ci.yml` 执行。
 
@@ -172,7 +178,7 @@ CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.2.0-SNAPSHOT.zip`。core �
 
 ## 参与贡献
 
-欢迎通过 Issue 和 PR 参与贡献。提交前请运行 `./mvnw -B verify` 保证测试与覆盖率门禁通过；涉及 CLI 行为、配置键或错误码的改动，请同步更新 `docs/reference` 并检查 `flydb-skills` 中的 Skill 引用是否仍然有效。架构与设计文档入口见[设计总览](./docs/design/00-overview.md)。
+欢迎通过 Issue 和 PR 参与贡献。完整流程见[贡献指南](./CONTRIBUTING.md)；提交前请运行 `./mvnw -B verify` 保证测试与覆盖率门禁通过。安全问题请按[安全策略](./SECURITY.md)私下报告，不要在公开 Issue 中披露漏洞细节。架构与设计文档入口见[设计总览](./docs/design/00-overview.md)。
 
 ## 许可证
 

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用文档
+    url: https://github.com/zzxCoding/Flydb/blob/main/SUPPORT.md
+    about: 提问前先查看快速开始、数据库指南、命令、配置和错误码参考。
+  - name: 私密安全报告
+    url: https://github.com/zzxCoding/Flydb/security/advisories/new
+    about: 漏洞或可能暴露凭据的问题请通过私密安全通道报告。

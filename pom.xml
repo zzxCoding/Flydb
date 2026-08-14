@@ -28,8 +28,32 @@
         </license>
     </licenses>
 
+    <developers>
+        <developer>
+            <name>zzxcoding</name>
+            <url>https://github.com/zzxCoding</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/zzxCoding/Flydb.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/zzxCoding/Flydb.git</developerConnection>
+        <url>https://github.com/zzxCoding/Flydb/tree/main</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/zzxCoding/Flydb/issues</url>
+    </issueManagement>
+
+    <ciManagement>
+        <system>GitHub Actions</system>
+        <url>https://github.com/zzxCoding/Flydb/actions</url>
+    </ciManagement>
+
     <properties>
-        <revision>0.2.0-SNAPSHOT</revision>
+        <revision>0.2.0</revision>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
