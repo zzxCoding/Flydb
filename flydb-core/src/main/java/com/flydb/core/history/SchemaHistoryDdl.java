@@ -106,6 +106,7 @@ public interface SchemaHistoryDdl {
         @Override
         public String createTableSql(String tableName) {
             // Oracle 系无 IF NOT EXISTS，使用 "查系统目录后建表" 的幂等策略
+            // Oracle 列定义要求 DEFAULT 子句在 NOT NULL 之前（NOT NULL DEFAULT 顺序报 ORA-00907）
             return "CREATE TABLE " + tableName + " (\n"
                     + "    installed_rank INT NOT NULL,\n"
                     + "    version VARCHAR(50),\n"
@@ -114,7 +115,7 @@ public interface SchemaHistoryDdl {
                     + "    script VARCHAR(1000) NOT NULL,\n"
                     + "    checksum INT,\n"
                     + "    installed_by VARCHAR(100) NOT NULL,\n"
-                    + "    installed_on TIMESTAMP NOT NULL DEFAULT SYSTIMESTAMP,\n"
+                    + "    installed_on TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,\n"
                     + "    execution_time INT NOT NULL,\n"
                     + "    success NUMBER(1) NOT NULL,\n"
                     + "    PRIMARY KEY (installed_rank)\n"

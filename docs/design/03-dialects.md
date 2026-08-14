@@ -92,7 +92,7 @@ public interface Database extends AutoCloseable {
 | 标识符引用 | 双引号（引用即大小写敏感） |
 | 语句切分 | 识别 PL/SQL 块（`CREATE PROCEDURE/FUNCTION/TRIGGER/PACKAGE/TYPE`、裸 `DECLARE`/`BEGIN`），块终止符为独占一行的 `/` |
 | 锁 | 通用锁表方案（家族默认）；OceanBase-Oracle 覆写为 `DBMS_LOCK` |
-| 历史表 DDL | 无 `IF NOT EXISTS` → "先查系统目录后建 + 建表异常兜底"的幂等策略；`success` 用 `NUMBER(1)`；`installed_on TIMESTAMP DEFAULT SYSTIMESTAMP` |
+| 历史表 DDL | 无 `IF NOT EXISTS` → "先查系统目录后建 + 建表异常兜底"的幂等策略；`success` 用 `NUMBER(1)`；`installed_on TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL`——Oracle 列定义要求 `DEFAULT` 在 `NOT NULL` 之前，反序报 `ORA-00907` |
 | currentSchema | 查询会话当前 schema（达梦：`SELECT SYS_CONTEXT('USERENV','CURRENT_SCHEMA') FROM dual`，实施时确认） |
 
 > Oracle 官方方言、达梦 DM8 和 OceanBase-Oracle 共用 Oracle 家族的 SQL/DDL 基线；产品专有差异仍由各自 `DatabaseType` 或 `Database` 子类承担。

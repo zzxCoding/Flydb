@@ -115,6 +115,17 @@ class SchemaHistoryTest {
         }
 
         @Test
+        @DisplayName("Oracle 系模板 DEFAULT 位于 NOT NULL 之前（否则 ORA-00907）")
+        void oracleDdlTemplateOrdersDefaultBeforeNotNull() {
+            String ddl = SchemaHistoryDdl.oracle().createTableSql(TABLE);
+            assertThat(ddl)
+                    .contains("CREATE TABLE " + TABLE)
+                    .contains("NUMBER(1)")
+                    .contains("TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL")
+                    .doesNotContain("NOT NULL DEFAULT");
+        }
+
+        @Test
         @DisplayName("锁表模板包含 INT PRIMARY KEY")
         void lockTableDdl() {
             String ddl = SchemaHistoryDdl.postgresql().createLockTableSql(TABLE.replace("history", "lock"));
