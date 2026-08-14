@@ -23,7 +23,7 @@
     <properties>
         <maven.deploy.skip>true</maven.deploy.skip>
         <testcontainers.version>1.20.1</testcontainers.version>
-        <postgresql.driver.version>42.7.4</postgresql.driver.version>
+        <postgresql.driver.version>42.7.12</postgresql.driver.version>
         <mysql.driver.version>8.2.0</mysql.driver.version>
         <!-- 父级 surefire 使用 JaCoCo 的 @{argLine} 延迟占位；本模块不挂 JaCoCo，显式置空。 -->
         <argLine></argLine>
