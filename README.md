@@ -2,22 +2,48 @@
 
 # Flydb
 
+[![CI](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml/badge.svg)](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](./LICENSE)
+![Java 8+](https://img.shields.io/badge/Java-8%2B-blue)
+
 Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工具：内置主流数据库方言，以国产信创数据库支持为特色，并通过 `DatabaseType` SPI 扩展小众 JDBC 数据库。
 
-项目采用 Java 8 基线。`flydb-core` 保持零第三方运行时依赖；独立 CLI 不捆绑数据库厂商驱动，可从 `drivers/`、运行时 classpath、Maven 本地仓库和 Maven settings 配置的企业私服自动解析后动态加载。
+**现在**，Flydb 0.2 是一个可靠的迁移运行时：`migrate`、`info`、`validate`、`baseline`、`repair`、`undo`、`clean` 等命令，配合并发锁、事务语义、checksum 校验、失败阻断与恢复，内置主流与信创共 8 个数据库方言，并提供 Spring Boot 2/3 starter。**长期方向**，是让人类与 AI Agent 共用同一套安全的数据库变更能力：Agent 决定“改什么”，Flydb 保证“怎么改是安全的”。各阶段目标与当前进度见[路线图](./ROADMAP.md)。
 
-> Flydb 2.0 正在按 [实施计划](./docs/design/09-implementation-plan.md) 分阶段交付。当前代码已覆盖 core 命令、SQL 解析、历史仓储、锁与事务语义、主流与信创内置方言、独立 CLI，以及 Spring Boot 2/3 starter。数据库兼容状态以实际测试证据为准，不把方言实现等同于生产认证。
+## 为什么选 Flydb
 
-## 能做什么
+- **信创数据库一等公民**：达梦 DM8、人大金仓 KingbaseES、openGauss、OceanBase、TiDB 与 MySQL、PostgreSQL、Oracle 同为内置方言；CLI 不捆绑厂商驱动，从 `drivers/`、运行时 classpath 或 Maven 私服外置解析加载，适配不能公开分发的驱动。
+- **零依赖的 Java 8 内核**：`flydb-core` 无任何第三方运行时依赖（由 Maven Enforcer 强制），可直接进入任何存量 Java 8 系统；Boot 3 / Java 17 环境使用独立 starter。
+- **对人和 Agent 同样友好**：稳定退出码与错误码、`--dry-run` 预览、非交互可用；发行包随附与 CLI 版本匹配的 Agent Skill 和文档。
+- **安全默认**：`clean` 默认禁用且需双重开关；失败迁移阻断后续执行；密码支持环境变量与密码文件，不落命令行、日志和 SQL。
 
-- 版本化迁移 `V1__init.sql`、可重复迁移 `R__view.sql`、撤销迁移 `U1__init.sql`
-- `migrate`、`info`、`validate`、`baseline`、`repair`、`clean`、`undo`
-- advisory lock 或锁表互斥、DDL 事务差异、失败记录阻断与 repair 恢复
-- UTF-8 Properties、环境变量、命令行参数、密码文件和占位符
-- migrate/undo 的 `--dry-run`，只完成探测、校验、解析和打印，不执行 SQL
-- 外置 JDBC 驱动和方言 SPI，适配不能公开分发驱动的信创数据库
+## 快速上手
 
-## 数据库状态
+前置条件：Java 8 或更高版本、一个已创建的目标数据库，以及与 Java 8 兼容的 JDBC 驱动。
+
+```bash
+unzip flydb-cli-0.2.0-SNAPSHOT.zip
+cd flydb-cli-0.2.0-SNAPSHOT
+
+# 示例：把 mysql-connector-j.jar 放入 drivers/
+cp /path/to/mysql-connector-j.jar drivers/
+
+bin/flydb init \
+  --url 'jdbc:mysql://127.0.0.1:3306/demo' \
+  --user flydb_user \
+  --database-type mysql \
+  --yes
+
+export FLYDB_PASSWORD='replace-me'
+bin/flydb --dry-run migrate
+bin/flydb migrate
+bin/flydb info
+bin/flydb validate
+```
+
+`init` 会生成 `flydb.conf`、`db/migration/V1__init.sql` 和 `drivers/README.md`，并拒绝覆盖已有文件。密码也可通过 `flydb.password=${env:DB_PASSWORD}` 或 `flydb.password.file=/run/secrets/db_password` 提供；明文写入 `flydb.password` 仅建议本地临时测试。
+
+## 数据库支持
 
 | 数据库家族 | 内置方言 | 当前验证层级 |
 |---|---:|---|
@@ -30,56 +56,60 @@ Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工
 | OceanBase / TiDB | 复用对应家族 | 轻量兼容测试；真实环境覆盖持续补充 |
 | 其他 JDBC 数据库 | 可扩展 | 需提供 JDBC 驱动及 `DatabaseType` SPI 方言实现 |
 
-每个数据库的驱动、连接、权限和已知限制见[数据库上手指南](./docs/getting-started/README.md)。状态只代表当前验证证据，不代表厂商认证。
+每个数据库的驱动、连接、权限和已知限制见[数据库上手指南](./docs/getting-started/README.md)。状态只代表当前验证证据，不代表厂商认证。信创或新型 JDBC 数据库快速接入见 [JDBC 数据库快速接入](./docs/getting-started/jdbc-integration.md)。
 
-信创或新型 JDBC 数据库需要快速接入时，先看[JDBC 数据库快速接入](./docs/getting-started/jdbc-integration.md)：驱动 JAR 放置、`--driver`/`--database-type` 选择、MySQL/Oracle 家族复用，以及自定义 `DatabaseType` SPI 都有可复制示例。
+## 路线图
 
-## Agent Skills
+- [x] **可靠的迁移运行时**：迁移引擎、8 个内置方言、CLI、Spring Boot starter、Agent Skill（当前阶段，余正式发布）
+- [ ] **开发体验与机器契约**：发布与安装渠道、`--json` 机器输出、CI 集成方案
+- [ ] **Agent 分发**：基于稳定 CLI 契约的 MCP 适配
+- [ ] **存量变更智能**：影响分析、应用引用扫描、覆盖率与未知项标注
+- [ ] **Agent 安全变更运行时**：Plan → Validate → Risk → Approval → Apply → Verify 协议
 
-### 给 Agent 的首屏入口
+路线图代表方向而非交付承诺，详细说明与产品边界见 [ROADMAP.md](./ROADMAP.md)。
 
-如果你是 Agent，请先阅读仓库根目录的 [`AGENTS.md`](./AGENTS.md)。涉及 Flydb CLI、JDBC 迁移或 Schema 变更时，按该文件安装/启用 `flydb-cli` 后再执行命令；文档-only 任务只需阅读相关文档即可。文件内还包含各主流 Agent 的发现目录、首次安全执行流程和 JDBC 接入边界。
+## Agent 使用
 
-### 给人类用户：复制给 Agent
+Agent 请先阅读仓库根目录的 [`AGENTS.md`](./AGENTS.md)，按其指引安装或启用 [`flydb-cli` Skill](./flydb-skills/skills/flydb-cli/SKILL.md) 后再执行命令；涉及迁移时先执行 `validate` 和 `--dry-run migrate`。Skill 是薄编排层，不复制 CLI 手册；命令、配置和错误码细节以 [`docs/reference`](./docs/reference/README.md) 为准，Skill 面向 Claude Code、Codex、Gemini CLI、ZCode 等主流 Agent 复用，格式与安装方式见 [`flydb-skills`](./flydb-skills/README.md)。
 
-如果你希望 Agent 自动安装并使用 Flydb Skill，可以直接复制下面这段话：
+CLI 发行 ZIP 同时包含 `AGENTS.md`、`docs/` 和 `flydb-skills/`，因此只有发行包、没有源码 checkout 时，也能使用与当前 CLI 版本匹配的文档和 Skill；复制 Skill 到 Agent 目录后，应保留发行包路径供其查找这些文档。
+
+<details>
+<summary>给人类用户：让 Agent 自动安装并使用 Flydb Skill</summary>
 
 > 我正在使用 Flydb。请先阅读并遵循 [AGENTS.md](https://github.com/zzxCoding/Flydb/blob/main/AGENTS.md)，然后安装或启用 `flydb-cli` Skill。安装完成后先确认 `bin/flydb version`；涉及迁移时先执行 `validate` 和 `--dry-run migrate`。不要把密码写入命令、日志或 SQL；未经我明确授权，不要执行会修改数据库的命令。完成后告诉我 Skill 的安装位置和下一步。
 
-仓库同时提供 [`flydb-skills`](./flydb-skills/README.md)，当前先包含 [`flydb-cli`](./flydb-skills/skills/flydb-cli/SKILL.md)。它使用开放的 `SKILL.md` 格式，面向 Claude Code、OpenAI Codex、Gemini CLI、Kimi Code、ZCode、Hermes Agent、Pi 等主流 Agent 复用；同时引用 CLI 命令、配置、错误码和 JDBC 接入文档，帮助 Agent 安全地执行 `init`、`validate`、`info`、`migrate`、`baseline`、`repair`、`undo` 和 `clean`。Skill 不复制 CLI 手册；修改 CLI 行为时以 `docs/` 为准并同步检查 Skill。
+</details>
 
-## 五分钟上手
+## 在应用中使用
 
-前置条件：Java 8 或更高版本、一个已创建的目标数据库，以及与 Java 8 兼容的 JDBC 驱动。
+Java API——`flydb-core` 不依赖特定连接池、日志框架或 JDBC 驱动，由调用方管理 `DataSource`：
 
-```bash
-unzip flydb-cli-2.0.0.zip
-cd flydb-cli-2.0.0
+```java
+Flydb flydb = Flydb.configure()
+    .dataSource(dataSource)
+    .databaseType("mysql") // 兼容家族或自定义方言建议显式指定
+    .locations("classpath:db/migration")
+    // .targetVersion("3")
+    .load();
 
-# 示例：把 mysql-connector-j.jar 放入 drivers/
-cp /path/to/mysql-connector-j.jar drivers/
-
-bin/flydb init \
-  --url 'jdbc:mysql://127.0.0.1:3306/demo' \
-  --user flydb_user \
-  --database-type mysql \
-  --yes
+flydb.migrate();
 ```
 
-`init` 会生成 `flydb.conf`、`db/migration/V1__init.sql` 和本项目专用的 `drivers/README.md`，并拒绝覆盖已有文件。编辑首个迁移脚本后执行：
+Spring Boot 应用选择对应 starter，容器初始化期间执行 `migrate`，失败会中止应用启动：
 
-```bash
-export FLYDB_PASSWORD='replace-me'
-
-bin/flydb --dry-run migrate
-bin/flydb migrate
-bin/flydb info
-bin/flydb validate
+```xml
+<!-- Spring Boot 3.x / Java 17+ -->
+<dependency>
+  <groupId>com.flydb</groupId>
+  <artifactId>flydb-spring-boot-3-starter</artifactId>
+  <version>0.2.0-SNAPSHOT</version>
+</dependency>
 ```
 
-密码也可以直接写入 `flydb.password=明文密码`（仅建议本地临时测试），或通过 `flydb.password=${env:DB_PASSWORD}`、`flydb.password.file=/run/secrets/db_password` 提供。生产和共享环境不要把明文密码提交到版本库。
+Java 8 存量应用改用 `flydb-spring-boot-2-starter`（Boot 2.7.18；[Spring 官方已说明](https://spring.io/blog/2023/11/23/spring-boot-2-7-18-available-now/) 2.7.18 是 Boot 2.x 最后一个开源支持版本，因此新项目应优先 Boot 3 starter）。默认复用应用主 `DataSource`；需要权限隔离时设置 `flydb.url/user/password`，用独立 DDL 账号迁移；`flydb.enabled=false` 可完全关闭自动装配。可运行示例：[Boot 2 示例](./examples/boot2-demo)、[Boot 3 示例](./examples/boot3-demo)，详见 [Spring Boot Starter 设计](./docs/design/07-spring-boot-starter.md)。
 
-## 脚本命名
+## 命名与配置
 
 ```text
 V1__create_user.sql       # 版本化迁移，只成功应用一次
@@ -88,107 +118,39 @@ R__refresh_user_view.sql  # checksum 变化后再次执行
 U1__create_user.sql       # 撤销最近一次已应用的 V1
 ```
 
-> **2.0 命名变更：** `R<版本>__...sql` 已被禁止并报 `FLYDB-2005`。回退脚本请使用 `U<版本>__...sql`；可重复迁移统一使用不带版本号的 `R__...sql`，不能通过配置关闭这项检查。
+> **命名变更：** `R<版本>__...sql` 已被禁止并报 `FLYDB-2005`，不能通过配置关闭。回退脚本请使用 `U<版本>__...sql`；可重复迁移统一使用不带版本号的 `R__...sql`。
 
-默认位置为 `filesystem:db/migration`，会递归扫描所有子目录；历史记录中的脚本名保留相对路径。`init` 生成的配置改用绝对位置，避免跨目录执行时受 CWD 影响。SQL 支持 `${key}` 占位符；命令行用 `-Dkey=value` 传入。未定义占位符会在执行前报错并指出脚本行号；业务运行时模板需要原样入库时设置 `flydb.placeholder-replacement=false`。
-
-## 配置优先级
-
-```text
-CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值
-```
-
-配置文件查找顺序为 `--config` 指定文件、当前目录 `flydb.conf`、安装目录 `conf/flydb.conf`。未知的 `flydb.*` 配置键会直接报错并给出近似建议。
-
-常用命令：
+- 默认位置 `filesystem:db/migration`，递归扫描所有子目录；`init` 生成的配置使用绝对位置，避免受 CWD 影响。
+- 配置优先级 `CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值`；配置文件按 `--config` 指定、当前目录、安装目录 `conf/` 的顺序查找；未知的 `flydb.*` 键直接报错并给出近似建议。
+- SQL 支持 `${key}` 占位符，命令行用 `-Dkey=value` 传入；未定义占位符在执行前报错并指出脚本行号。
+- 退出码：`0` 成功、`1` 一般错误、`2` 校验失败、`3` 锁冲突或超时、`4` 配置错误、`5` 用户中断。
 
 ```bash
-bin/flydb migrate
 bin/flydb migrate --target-version 3
 bin/flydb migrate --start-version 2 --end-version 5
-bin/flydb migrate --version-source directory --target-version 20230531 \
-  --migration-order directory-version
-bin/flydb info --color=never
 bin/flydb validate
 bin/flydb baseline --baseline-version 5
 bin/flydb repair
 bin/flydb undo
-
-# clean 默认禁用；非交互环境必须同时满足两道开关
-bin/flydb clean --clean-disabled=false --force
+bin/flydb clean --clean-disabled=false --force   # clean 默认禁用；非交互环境需双开关
 ```
 
-默认 `--target-version` 仍精确匹配文件版本，起止范围包含边界。版本族、目录版本、路径 glob/regex 与目录版本排序是显式启用的高级规则；例如 `--version-source directory --target-version 20230531` 会选择目录版本 `20230531` 下的 `V20230531.1/.2/.3`。完整模式和安全约束见[配置项参考](./docs/reference/configuration.md#版本选择路径过滤与排序)。任何筛选都不会绕过校验或 `out-of-order` 保护。
+版本族、目录版本、路径 glob/regex 过滤与目录版本排序是显式启用的高级规则，任何筛选都不会绕过校验或 `out-of-order` 保护；完整模式与安全约束见[配置项参考](./docs/reference/configuration.md#版本选择路径过滤与排序)。命令语义见[命令参考](./docs/reference/commands.md)，错误码见[错误码参考](./docs/reference/errors.md)。
 
-文件版本以数字开头，并支持点、下划线或连字符分隔的字母数字 token，例如 `V20260327-b06.4__data.sql`。疑似版本化 SQL 但命名无法解析时会报 `FLYDB-2001`，不会静默跳过。`clean` 会输出对象统计与逐对象删除进度。
+## 从源码构建
 
-退出码：`0` 成功、`1` 一般错误、`2` 校验失败、`3` 锁冲突或超时、`4` 配置错误、`5` 用户中断。
-
-完整配置、命令语义和错误码见 [配置与 CLI 设计](./docs/design/06-config-cli.md)；也可直接查阅[配置项参考](./docs/reference/configuration.md)和[错误码参考](./docs/reference/errors.md)；架构入口见 [设计总览](./docs/design/00-overview.md)。
-
-## Java API
-
-应用内使用时由调用方管理 `DataSource`，Flydb 不接管连接池生命周期：
-
-```java
-Flydb flydb = Flydb.configure()
-    .dataSource(dataSource)
-    .databaseType("mysql") // 兼容家族或自定义方言建议显式指定
-    .locations("classpath:db/migration")
-    // .targetVersion("3")
-    // .startVersion("2").endVersion("5")
-    .load();
-
-flydb.migrate();
-```
-
-`flydb-core` 不依赖特定连接池、日志框架或 JDBC 驱动。独立 CLI 才负责 URL 配置和 `drivers/` 动态加载。
-
-## Spring Boot
-
-按应用技术栈选择一个 starter；引入后默认在 Spring 容器初始化期间执行 `migrate`，失败会中止应用启动：
-
-```xml
-<!-- Spring Boot 3.x / Java 17+ -->
-<dependency>
-  <groupId>com.flydb</groupId>
-  <artifactId>flydb-spring-boot-3-starter</artifactId>
-  <version>2.0.0-SNAPSHOT</version>
-</dependency>
-```
-
-Java 8 存量应用改用 `flydb-spring-boot-2-starter`，对应 Spring Boot 2.7.18。[Spring 官方已说明](https://spring.io/blog/2023/11/23/spring-boot-2-7-18-available-now/) 2.7.18 是 Boot 2.x 的最后一个开源支持版本，因此新项目应优先选择 Boot 3 starter；Boot 2 starter 的定位是服务暂时无法升级的存量系统。
-
-默认复用应用主 `DataSource`：
-
-```properties
-spring.datasource.url=jdbc:mysql://127.0.0.1:3306/demo
-spring.datasource.username=app_user
-spring.datasource.password=${DB_PASSWORD}
-
-flydb.locations=classpath:db/migration
-flydb.database-type=mysql
-# flydb.target-version=3
-# flydb.start-version=2
-# flydb.end-version=5
-```
-
-需要权限隔离时，额外设置 `flydb.url/user/password`：Flydb 使用独立的 DDL 账号迁移，应用仍使用低权限主 `DataSource`。设置 `flydb.enabled=false` 可完全关闭自动装配。两个 starter 均生成 `flydb.*` IDE 配置元数据，并将 core 日志桥接到 SLF4J。
-
-可运行工程见 [Boot 2 示例](./examples/boot2-demo) 和 [Boot 3 示例](./examples/boot3-demo)。自动装配与版本边界见 [Spring Boot Starter 设计](./docs/design/07-spring-boot-starter.md)。
-
-## 从源码验证
-
-完整 reactor（含 Boot 3）使用 Java 17 构建；如果终端已配置本仓库开发环境，可先执行 `jdk17`：
+完整 reactor（含 Boot 3）使用 Java 17 构建；Boot 2 starter、Boot 2 示例、core 与 CLI 保持 Java 8 字节码。如果终端通过 shell 函数切换 JDK，可先执行 `jdk17`：
 
 ```bash
-jdk17
-mvn verify
+./mvnw verify
 ```
 
-Boot 2 starter、Boot 2 示例、core 与 CLI 仍保持 Java 8 字节码。CLI 构建产物位于 `flydb-cli/target/flydb-cli-2.0.0-SNAPSHOT.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
+CLI 构建产物位于 `flydb-cli/target/flydb-cli-2.0.0-SNAPSHOT.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
 
-阶段 8 发布前检查：
+本地集成契约默认只启动 MySQL 8；需要显式运行某个 CI 方言项时设置 `-Pmysql`/`-Ppostgresql` 与 `-Dflydb.integration.database=<dialect>`，完整矩阵由 `.github/workflows/ci.yml` 执行。
+
+<details>
+<summary>发布前检查（阶段 8）</summary>
 
 ```bash
 ./scripts/check-bytecode.sh 52 \
@@ -201,7 +163,11 @@ Boot 2 starter、Boot 2 示例、core 与 CLI 仍保持 Java 8 字节码。CLI �
 ./scripts/check-release-artifacts.sh target/staging flydb-cli/target
 ```
 
-本地集成契约默认只启动 MySQL 8；需要显式运行某个 CI 方言项时设置 `-Pmysql`/`-Ppostgresql` 与 `-Dflydb.integration.database=<dialect>`。完整矩阵由 `.github/workflows/ci.yml` 执行。
+</details>
+
+## 参与贡献
+
+欢迎通过 Issue 和 PR 参与贡献。提交前请运行 `./mvnw -B verify` 保证测试与覆盖率门禁通过；涉及 CLI 行为、配置键或错误码的改动，请同步更新 `docs/reference` 并检查 `flydb-skills` 中的 Skill 引用是否仍然有效。架构与设计文档入口见[设计总览](./docs/design/00-overview.md)。
 
 ## 许可证
 
