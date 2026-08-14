@@ -105,6 +105,28 @@ class FlydbCliTest {
     }
 
     @Test
+    @DisplayName("migrate 帮助公开精确版本和版本范围选项")
+    void migrateHelpDocumentsVersionSelectionOptions() {
+        StringWriter standardOutput = new StringWriter();
+        StringWriter errorOutput = new StringWriter();
+        FlydbCli cli = new FlydbCli(new PrintWriter(standardOutput, true),
+                new PrintWriter(errorOutput, true), Collections.<String, String>emptyMap(),
+                temporaryDirectory, temporaryDirectory);
+
+        int exitCode = cli.execute("migrate", "--help");
+
+        assertThat(exitCode).isZero();
+        assertThat(standardOutput.toString()).contains(
+                "--target-version", "--start-version", "--end-version",
+                "--version-selection", "--version-source", "--version-regex",
+                "--directory-glob", "--file-glob", "--path-glob",
+                "--directory-regex", "--file-regex", "--path-regex",
+                "--migration-order", "--directory-version-regex",
+                "--placeholder-replacement");
+        assertThat(errorOutput.toString()).isEmpty();
+    }
+
+    @Test
     @DisplayName("稳定异常类别映射为约定的 CI 退出码")
     void mapsStableFailureCategoriesToExitCodes() {
         FlydbValidationException validation = new FlydbValidationException(

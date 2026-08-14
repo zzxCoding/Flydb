@@ -99,6 +99,25 @@ public final class FlydbCli {
         @Option(names = "--driver", description = "JDBC Driver 类名",
                 scope = CommandLine.ScopeType.INHERIT)
         String driver;
+        @Option(names = "--driver-coordinate", description = "驱动 Maven 坐标 groupId:artifactId:version",
+                scope = CommandLine.ScopeType.INHERIT)
+        String driverCoordinate;
+        @Option(names = "--driver-download", description = "驱动下载策略：auto|never",
+                scope = CommandLine.ScopeType.INHERIT)
+        String driverDownload;
+        @Option(names = "--driver-cache", description = "Flydb 驱动下载缓存目录",
+                scope = CommandLine.ScopeType.INHERIT)
+        Path driverCache;
+        @Option(names = "--maven-settings", description = "Maven settings.xml 路径",
+                scope = CommandLine.ScopeType.INHERIT)
+        Path mavenSettings;
+        @Option(names = "--maven-local-repository", description = "Maven 本地仓库目录",
+                scope = CommandLine.ScopeType.INHERIT)
+        Path mavenLocalRepository;
+        @Option(names = "--offline", arity = "0..1", fallbackValue = "true",
+                description = "禁止联网解析 JDBC 驱动",
+                scope = CommandLine.ScopeType.INHERIT)
+        Boolean offline;
         @Option(names = "--database-type", description = "显式方言名",
                 scope = CommandLine.ScopeType.INHERIT)
         String databaseType;
@@ -126,9 +145,58 @@ public final class FlydbCli {
                 description = "允许补执行低版本脚本",
                 scope = CommandLine.ScopeType.INHERIT)
         Boolean outOfOrder;
+        @Option(names = "--target-version", description = "只执行指定的精确版本",
+                scope = CommandLine.ScopeType.INHERIT)
+        String targetVersion;
+        @Option(names = "--start-version", description = "执行范围起始版本（包含）",
+                scope = CommandLine.ScopeType.INHERIT)
+        String startVersion;
+        @Option(names = "--end-version", description = "执行范围结束版本（包含）",
+                scope = CommandLine.ScopeType.INHERIT)
+        String endVersion;
+        @Option(names = "--version-selection",
+                description = "版本筛选：exact|range|family|family-range|regex",
+                scope = CommandLine.ScopeType.INHERIT)
+        String versionSelection;
+        @Option(names = "--version-source", description = "版本来源：file|directory",
+                scope = CommandLine.ScopeType.INHERIT)
+        String versionSource;
+        @Option(names = "--version-regex", description = "版本正则（整串匹配）",
+                scope = CommandLine.ScopeType.INHERIT)
+        String versionRegex;
+        @Option(names = "--directory-glob", description = "相对父目录 glob",
+                scope = CommandLine.ScopeType.INHERIT)
+        String directoryGlob;
+        @Option(names = "--file-glob", description = "文件名 glob",
+                scope = CommandLine.ScopeType.INHERIT)
+        String fileGlob;
+        @Option(names = "--path-glob", description = "完整相对路径 glob",
+                scope = CommandLine.ScopeType.INHERIT)
+        String pathGlob;
+        @Option(names = "--directory-regex", description = "相对父目录正则（整串匹配）",
+                scope = CommandLine.ScopeType.INHERIT)
+        String directoryRegex;
+        @Option(names = "--file-regex", description = "文件名正则（整串匹配）",
+                scope = CommandLine.ScopeType.INHERIT)
+        String fileRegex;
+        @Option(names = "--path-regex", description = "完整相对路径正则（整串匹配）",
+                scope = CommandLine.ScopeType.INHERIT)
+        String pathRegex;
+        @Option(names = "--migration-order",
+                description = "迁移排序：version|directory-version",
+                scope = CommandLine.ScopeType.INHERIT)
+        String migrationOrder;
+        @Option(names = "--directory-version-regex",
+                description = "目录版本提取正则，使用 version 命名组或第一个捕获组",
+                scope = CommandLine.ScopeType.INHERIT)
+        String directoryVersionRegex;
         @Option(names = "-D", description = "迁移占位符 key=value",
                 scope = CommandLine.ScopeType.INHERIT)
         Map<String, String> placeholders = new LinkedHashMap<String, String>();
+        @Option(names = "--placeholder-replacement", arity = "0..1", fallbackValue = "true",
+                description = "是否替换 SQL 占位符",
+                scope = CommandLine.ScopeType.INHERIT)
+        Boolean placeholderReplacement;
         @Option(names = "--placeholder-prefix", description = "占位符前缀",
                 scope = CommandLine.ScopeType.INHERIT)
         String placeholderPrefix;
@@ -213,7 +281,7 @@ public final class FlydbCli {
             Console console = System.console();
             if (console == null) {
                 throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
-                        "非交互终端缺少密码；请使用 --password、FLYDB_PASSWORD、"
+                        "非交互终端缺少密码；请在 flydb.conf 配置 flydb.password，或使用 --password、FLYDB_PASSWORD、"
                                 + "${env:VAR} 或 flydb.password.file");
             }
             char[] passwordValue = console.readPassword("数据库密码: ");
@@ -230,12 +298,33 @@ public final class FlydbCli {
             Map<String, String> values = new LinkedHashMap<String, String>();
             put(values, "flydb.url", url); put(values, "flydb.user", user);
             put(values, "flydb.password", password); put(values, "flydb.driver", driver);
+            put(values, "flydb.driver-coordinate", driverCoordinate);
+            put(values, "flydb.driver-download", driverDownload);
+            put(values, "flydb.driver-cache", driverCache);
+            put(values, "flydb.maven-settings", mavenSettings);
+            put(values, "flydb.maven-local-repository", mavenLocalRepository);
+            put(values, "flydb.offline", offline);
             put(values, "flydb.database-type", databaseType);
             put(values, "flydb.locations", locations); put(values, "flydb.encoding", encoding);
             put(values, "flydb.table", table); put(values, "flydb.baseline-version", baselineVersion);
             put(values, "flydb.baseline-on-migrate", baselineOnMigrate);
             put(values, "flydb.validate-on-migrate", validateOnMigrate);
             put(values, "flydb.out-of-order", outOfOrder);
+            put(values, "flydb.target-version", targetVersion);
+            put(values, "flydb.start-version", startVersion);
+            put(values, "flydb.end-version", endVersion);
+            put(values, "flydb.version-selection", versionSelection);
+            put(values, "flydb.version-source", versionSource);
+            put(values, "flydb.version-regex", versionRegex);
+            put(values, "flydb.directory-glob", directoryGlob);
+            put(values, "flydb.file-glob", fileGlob);
+            put(values, "flydb.path-glob", pathGlob);
+            put(values, "flydb.directory-regex", directoryRegex);
+            put(values, "flydb.file-regex", fileRegex);
+            put(values, "flydb.path-regex", pathRegex);
+            put(values, "flydb.migration-order", migrationOrder);
+            put(values, "flydb.directory-version-regex", directoryVersionRegex);
+            put(values, "flydb.placeholder-replacement", placeholderReplacement);
             put(values, "flydb.placeholder-prefix", placeholderPrefix);
             put(values, "flydb.placeholder-suffix", placeholderSuffix);
             put(values, "flydb.sql-migration-prefix", sqlMigrationPrefix);

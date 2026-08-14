@@ -40,6 +40,7 @@ final class MigrationCommandSupport {
         String sql = ScriptLoader.load(runtime.configuration(), migration.script());
         return new SqlMigrationExecutor(migration.script(), sql,
                 runtime.database().statementBuilderConfig(),
+                runtime.configuration().placeholderReplacement(),
                 runtime.configuration().placeholderPrefix(),
                 runtime.configuration().placeholderSuffix(),
                 runtime.configuration().placeholders(), runtime.builtIns());

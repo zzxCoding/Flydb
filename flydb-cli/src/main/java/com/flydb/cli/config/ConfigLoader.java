@@ -21,9 +21,17 @@ public final class ConfigLoader {
 
     private static final List<String> KNOWN_KEYS = Collections.unmodifiableList(Arrays.asList(
             "flydb.url", "flydb.user", "flydb.password", "flydb.password.file",
-            "flydb.driver", "flydb.database-type", "flydb.locations", "flydb.encoding",
+            "flydb.driver", "flydb.driver-coordinate", "flydb.driver-download",
+            "flydb.driver-cache", "flydb.maven-settings", "flydb.maven-local-repository",
+            "flydb.offline", "flydb.database-type", "flydb.locations", "flydb.encoding",
             "flydb.table", "flydb.baseline-version", "flydb.baseline-on-migrate",
-            "flydb.validate-on-migrate", "flydb.out-of-order", "flydb.placeholder-prefix",
+            "flydb.validate-on-migrate", "flydb.out-of-order", "flydb.target-version",
+            "flydb.start-version", "flydb.end-version", "flydb.version-selection",
+            "flydb.version-source", "flydb.version-regex", "flydb.directory-glob",
+            "flydb.file-glob", "flydb.path-glob", "flydb.directory-regex",
+            "flydb.file-regex", "flydb.path-regex", "flydb.migration-order",
+            "flydb.directory-version-regex", "flydb.placeholder-replacement",
+            "flydb.placeholder-prefix",
             "flydb.placeholder-suffix", "flydb.sql-migration-prefix",
             "flydb.repeatable-migration-prefix", "flydb.undo-migration-prefix",
             "flydb.sql-migration-separator", "flydb.sql-migration-suffix", "flydb.callbacks",
@@ -49,12 +57,19 @@ public final class ConfigLoader {
     private static Map<String, String> defaults() {
         Map<String, String> values = new LinkedHashMap<String, String>();
         values.put("flydb.locations", "filesystem:db/migration");
+        values.put("flydb.driver-download", "auto");
+        values.put("flydb.offline", "false");
         values.put("flydb.encoding", "UTF-8");
         values.put("flydb.table", "flydb_schema_history");
         values.put("flydb.baseline-version", "1");
         values.put("flydb.baseline-on-migrate", "false");
         values.put("flydb.validate-on-migrate", "true");
         values.put("flydb.out-of-order", "false");
+        values.put("flydb.version-source", "file");
+        values.put("flydb.migration-order", "version");
+        values.put("flydb.directory-version-regex",
+                "(?:^|/)(?<version>\\d+(?:\\.\\d+)*)(?=$|/)");
+        values.put("flydb.placeholder-replacement", "true");
         values.put("flydb.placeholder-prefix", "${");
         values.put("flydb.placeholder-suffix", "}");
         values.put("flydb.sql-migration-prefix", "V");

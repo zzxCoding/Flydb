@@ -122,5 +122,20 @@ final class CommandRuntime implements AutoCloseable {
         @Override public String sqlMigrationSeparator() { return configuration.sqlMigrationSeparator(); }
         @Override public String sqlMigrationSuffix() { return configuration.sqlMigrationSuffix(); }
         @Override public ClassLoader classLoader() { return configuration.classLoader(); }
+        @Override public String directoryGlob() { return configuration.directoryGlob(); }
+        @Override public String fileGlob() { return configuration.fileGlob(); }
+        @Override public String pathGlob() { return configuration.pathGlob(); }
+        @Override public String directoryRegex() { return configuration.directoryRegex(); }
+        @Override public String fileRegex() { return configuration.fileRegex(); }
+        @Override public String pathRegex() { return configuration.pathRegex(); }
+        @Override public com.flydb.core.migration.MigrationOrder migrationOrder() {
+            return configuration.migrationOrder();
+        }
+        @Override public com.flydb.core.migration.VersionSource versionSource() {
+            return configuration.versionSelection().source();
+        }
+        @Override public String directoryVersionRegex() {
+            return configuration.directoryVersionRegex();
+        }
     }
 }

@@ -32,7 +32,7 @@ compatibility: Flydb CLI 2.0，Java 8 或更高版本；需要 Flydb CLI 发行�
 - 这是本地、测试、预发还是生产数据库；
 - 用户要查看、校验、预演还是实际写入。
 
-密码只使用 `FLYDB_PASSWORD`、`${env:VAR}` 或 `flydb.password.file`。不要把密码放进命令历史、日志、Skill 输出或 SQL 文件；不要为了确认连接而打印完整 JDBC URL 中的凭据。
+密码支持直接配置 `flydb.password`（明文，仅建议本地临时测试），也支持 `FLYDB_PASSWORD`、`${env:VAR}` 或 `flydb.password.file`。生产和共享环境优先使用后三者。不要把密码放进命令历史、日志、Skill 输出或 SQL 文件；不要为了确认连接而打印完整 JDBC URL 中的凭据。
 
 优先确认 CLI 能运行：
 
@@ -76,7 +76,7 @@ bin/flydb version
 ### 新数据库或厂商驱动
 
 1. 读取 [`docs/getting-started/jdbc-integration.md`](../../../docs/getting-started/jdbc-integration.md)，区分 JDBC 驱动与 Flydb 方言。
-2. CLI 驱动 JAR 放在发行包的 `drivers/`；URL 无法自动推断时显式传 `--driver <class>`。
+2. CLI 依次从 `drivers/`、运行时 classpath、Maven 本地仓库和 Flydb 缓存解析驱动；缺失时遵循 Maven settings 的私服/镜像/认证/代理下载。URL 无法自动推断时显式传 `--driver <class>` 和 `--driver-coordinate <groupId:artifactId:version>`；厂商不提供 Maven 制品时再手工放入 `drivers/`。
 3. 语法兼容不等于迁移语义兼容。确认 DDL 事务、历史表 DDL、锁、引号/大小写和存储过程切分后，才复用 `mysql` 或 `oracle`；否则使用唯一名称的 `DatabaseType` SPI。
 4. 自定义方言 JAR 必须包含 `META-INF/services/com.flydb.core.dialect.DatabaseType` 注册文件，并与目标 `flydb-core` 版本兼容。
 5. 首次接入先在授权测试实例执行 `validate`、`--dry-run migrate`，再用无害迁移验证历史表、锁和失败恢复语义。不要把 MySQL 冒烟结果描述为厂商认证。
@@ -96,7 +96,7 @@ bin/flydb version
 
 - `FLYDB-1001`：先检查 URL、账号、密码、网络和数据库状态；不要先改方言。
 - `FLYDB-1002`：检查 URL 前缀和方言选择；兼容数据库应显式 `--database-type`，有专有语义则接入 SPI。
-- `FLYDB-1003`：确认 JAR 在实际发行包的 `drivers/`、驱动类名准确且 Java 版本兼容。
+- `FLYDB-1003`：按消息中的解析轨迹检查实际 `drivers/`、Maven 本地仓库、settings 私服/镜像认证、驱动坐标、类名和 Java 版本；离线环境确认 `flydb.offline` 与本地制品是否匹配。
 - `FLYDB-2003`/`2004`：不要直接重跑或自动 repair；先解释 checksum/失败记录，再由用户决定修复。
 - `FLYDB-3001`：确认没有并发迁移，再考虑调整锁等待时间。
 - `FLYDB-4001`/`4002`/`4004`：按配置参考检查键名、配置来源、必填项或 init 目标文件冲突；`4004` 不要通过删除或覆盖已有文件来绕过，先确认备份和目录。

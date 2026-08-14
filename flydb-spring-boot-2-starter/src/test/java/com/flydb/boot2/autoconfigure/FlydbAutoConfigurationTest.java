@@ -7,8 +7,13 @@ import java.sql.SQLException;
 import javax.sql.DataSource;
 
 import com.flydb.core.Flydb;
+import com.flydb.core.api.FlydbConfiguration;
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
+import com.flydb.core.migration.MigrationVersion;
+import com.flydb.core.migration.MigrationOrder;
+import com.flydb.core.migration.VersionSelection;
+import com.flydb.core.migration.VersionSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
@@ -23,6 +28,27 @@ class FlydbAutoConfigurationTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(FlydbAutoConfiguration.class));
+
+    @Test
+    void mapsVersionSelectionPropertiesToCoreConfiguration() {
+        FlydbProperties properties = new FlydbProperties();
+        properties.setVersionSelection("family");
+        properties.setVersionSource("directory");
+        properties.setTargetVersion("20230531");
+        properties.setDirectoryGlob("mysql/param/**");
+        properties.setMigrationOrder("directory-version");
+        properties.setPlaceholderReplacement(false);
+
+        FlydbConfiguration configuration = properties.toCoreConfiguration(
+                new DriverManagerDataSource(), getClass().getClassLoader());
+
+        assertThat(configuration.versionSelection().mode()).isEqualTo(VersionSelection.Mode.FAMILY);
+        assertThat(configuration.versionSelection().source()).isEqualTo(VersionSource.DIRECTORY);
+        assertThat(configuration.targetVersion()).isEqualTo(MigrationVersion.parse("20230531"));
+        assertThat(configuration.directoryGlob()).isEqualTo("mysql/param/**");
+        assertThat(configuration.migrationOrder()).isEqualTo(MigrationOrder.DIRECTORY_VERSION);
+        assertThat(configuration.placeholderReplacement()).isFalse();
+    }
 
     @Test
     void backsOffCompletelyWhenDisabled() {

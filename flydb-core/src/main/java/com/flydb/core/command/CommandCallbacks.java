@@ -82,6 +82,7 @@ final class CommandCallbacks {
         public void handle(Event event, Context context) {
             try {
                 new SqlMigrationExecutor(script, sql, database.statementBuilderConfig(),
+                        context.configuration().placeholderReplacement(),
                         context.configuration().placeholderPrefix(),
                         context.configuration().placeholderSuffix(),
                         context.configuration().placeholders(),

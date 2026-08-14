@@ -28,7 +28,7 @@ public final class DryRunCommand {
             }
             return preview(runtime, PendingCalculator.compute(
                     MigrateCommand.executableMigrations(runtime.resolved()),
-                    applied, configuration.outOfOrder()));
+                    applied, configuration.outOfOrder(), configuration.versionSelection()));
         }
     }
 

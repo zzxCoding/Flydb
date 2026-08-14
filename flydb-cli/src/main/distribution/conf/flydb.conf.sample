@@ -1,12 +1,119 @@
 # Flydb CLI 配置示例（UTF-8 Properties）
 # 复制为 flydb.conf 后编辑。优先级：CLI > FLYDB_* 环境变量 > 本文件 > 默认值。
+# 修改本文件后，可执行 bin/flydb validate 检查配置与迁移脚本。
+
+# JDBC 连接地址（必填）。建议填写具体数据库名/服务名，不要把密码写进 URL。
 flydb.url=jdbc:mysql://127.0.0.1:3306/demo
+
+# 数据库用户名；如果数据库使用其他认证方式，可留空。
 flydb.user=flydb_user
-# 密码不要提交到版本库：使用 FLYDB_PASSWORD、${env:DB_PASSWORD} 或 flydb.password.file。
+
+# 数据库密码：以下方式任选一种；不要同时维护多个来源。
+# 1) 本地临时测试可直接填写明文（不要提交到版本库）：
+# flydb.password=你的明文密码
+# 2) 推荐通过环境变量间接引用：
+# flydb.password=${env:DB_PASSWORD}
+# 3) 容器/Kubernetes Secret 文件：
+# flydb.password.file=/run/secrets/db_password
+
+# JDBC Driver 类名；通常按 JDBC URL 自动推断。厂商 URL 无法推断时填写。
+# flydb.driver=com.vendor.jdbc.Driver
+
+# Flydb 按顺序查找 drivers/、运行时 classpath、Maven 本地仓库和 ~/.flydb/drivers；仍未找到时读取 Maven settings.xml 的私服、镜像、认证与代理后下载。
+# MySQL、PostgreSQL、Oracle 和 OceanBase 可按 URL 使用内置固定坐标；小众或厂商驱动请显式配置完整坐标。
+# flydb.driver-coordinate=com.vendor:vendor-jdbc:1.2.3
+# 默认读取 ~/.m2/settings.xml；企业环境使用其他文件时可指定绝对路径。
+# flydb.maven.settings=/opt/company/maven/settings.xml
+# Maven 本地仓库通常无需配置；会读取 maven.repo.local、settings.xml 的 localRepository，最后使用 ~/.m2/repository。
+# flydb.maven-local-repository=/data/maven/repository
+# 下载策略：auto（默认，允许按 Maven 有效仓库下载）或 never。
+flydb.driver-download=auto
+# 完全离线时设置 true；仍会检查 drivers/、classpath、本地仓库和 Flydb 缓存。
+flydb.offline=false
+# 下载成功的驱动默认缓存到 ~/.flydb/drivers；需要统一缓存目录时覆盖。
+# flydb.driver-cache=/data/flydb/drivers
+
+# 方言标识；留空时自动探测。兼容数据库建议显式填写 mysql/oracle 等家族名。
+# flydb.database-type=mysql
+
+# 迁移脚本位置；递归扫描子目录；filesystem: 支持相对或绝对路径；相对路径以执行 bin/flydb 的当前工作目录为基准；可用逗号分隔多个位置。
 flydb.locations=filesystem:db/migration
+
+# SQL 文件字符集；脚本含中文时保持 UTF-8。
 flydb.encoding=UTF-8
+
+# Schema 历史表名称；Flydb 用它记录版本、checksum、执行状态和锁信息。
 flydb.table=flydb_schema_history
+
+# baseline 写入的版本号；仅执行 baseline 时使用，默认从 1 开始。
+# flydb.baseline-version=1
+
+# 非空库首次 migrate 是否自动写入 baseline；默认 false，更安全。
+# flydb.baseline-on-migrate=false
+
+# migrate 前是否校验脚本、失败记录和 checksum；生产建议保持 true。
 flydb.validate-on-migrate=true
+
+# 是否允许补执行低于当前最高版本的迁移；默认 false，避免意外乱序。
 flydb.out-of-order=false
+
+# 版本选择只作用于 migrate/--dry-run migrate；显式选择时不执行 R__...sql。
+# 默认精确匹配文件版本：
+# flydb.target-version=3
+# 包含边界的版本范围；可只设置其中一端：
+# flydb.start-version=2
+# flydb.end-version=5
+
+# 高级版本规则：exact|range|family|family-range|regex；省略时根据上述参数自动推断。
+# flydb.version-selection=family
+# 版本来源：file（默认）或 directory。目录版本可将一个版本目录下的多个文件作为整体选择。
+# flydb.version-source=directory
+# regex 模式对规范化版本文本整串匹配：
+# flydb.version-regex=^2023(05|07)\\d{2}(\\.\\d+)?$
+
+# 路径过滤基于 location 下以 / 分隔的相对路径；不同维度取交集。
+# glob 支持 *、?、**；同一维度的 glob 与 regex 不可同时配置。
+# flydb.directory-glob=mysql/param/**
+# flydb.file-glob=V*__*.sql
+# flydb.path-glob=mysql/**/V*.sql
+# flydb.directory-regex=^mysql/(param|trans)/\\d{8}$
+# flydb.file-regex=^V2023\\d{4}\\.\\d+__.*\\.sql$
+# flydb.path-regex=^mysql/.*/V.*\\.sql$
+
+# 排序：version（默认）或 directory-version。
+# 目录版本模式会校验文件版本属于目录版本族，例如 20230531/V20230531.1__init.sql。
+# flydb.migration-order=directory-version
+# 默认提取最近的纯数字或点分数字目录；Properties 自定义正则中的反斜线需要写两次。
+# flydb.directory-version-regex=(?:^|/)(?<version>\\d+(?:\\.\\d+)*)(?=$|/)
+
+# SQL 占位符示例：脚本中的 ${schema} 可通过 -Dschema=app 或环境变量提供。
+# flydb.placeholders.schema=app
+
+# 是否替换 SQL 占位符；脚本需要把 ${...} 作为业务运行时模板原样入库时设置 false。
+flydb.placeholder-replacement=true
+
+# 占位符前缀；CLI: --placeholder-prefix；环境变量: FLYDB_PLACEHOLDER_PREFIX；默认识别 ${key}。
+# flydb.placeholder-prefix=${
+# 占位符后缀；CLI: --placeholder-suffix；环境变量: FLYDB_PLACEHOLDER_SUFFIX；默认识别 ${key}。
+# flydb.placeholder-suffix=}
+
+# 脚本命名示例：V1__init.sql、R__view.sql、U1__init.sql。
+# 版本化迁移前缀；CLI: --sql-migration-prefix；环境变量: FLYDB_SQL_MIGRATION_PREFIX；默认 V。
+# flydb.sql-migration-prefix=V
+# 可重复迁移前缀；CLI: --repeatable-migration-prefix；环境变量: FLYDB_REPEATABLE_MIGRATION_PREFIX；默认 R。
+# flydb.repeatable-migration-prefix=R
+# 撤销迁移前缀；CLI: --undo-migration-prefix；环境变量: FLYDB_UNDO_MIGRATION_PREFIX；默认 U。
+# flydb.undo-migration-prefix=U
+# 版本与描述的分隔符；CLI: --sql-migration-separator；环境变量: FLYDB_SQL_MIGRATION_SEPARATOR；默认 __。
+# flydb.sql-migration-separator=__
+# SQL 脚本文件后缀；CLI: --sql-migration-suffix；环境变量: FLYDB_SQL_MIGRATION_SUFFIX；默认 .sql。
+# flydb.sql-migration-suffix=.sql
+
+# 可选 Callback 类名，多个类用逗号分隔；类必须实现 Callback 接口。
+# flydb.callbacks=com.example.FlydbCallback
+
+# clean 安全开关；true 时禁止清空 schema，除非显式关闭并二次确认。
 flydb.clean-disabled=true
+
+# 获取迁移锁的最长等待时间（秒）；并发迁移时超时返回 FLYDB-3001。
 flydb.lock-timeout-seconds=60

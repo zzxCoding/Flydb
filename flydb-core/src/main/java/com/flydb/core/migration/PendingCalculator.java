@@ -38,6 +38,27 @@ public final class PendingCalculator {
     public static List<ResolvedMigration> compute(List<ResolvedMigration> resolved,
                                                   List<AppliedMigration> applied,
                                                   boolean outOfOrder) {
+        return compute(resolved, applied, outOfOrder, VersionSelection.all());
+    }
+
+    public static List<ResolvedMigration> compute(List<ResolvedMigration> resolved,
+                                                  List<AppliedMigration> applied,
+                                                  boolean outOfOrder,
+                                                  MigrationVersion targetVersion,
+                                                  MigrationVersion startVersion,
+                                                  MigrationVersion endVersion) {
+        VersionSelection selection = targetVersion != null
+                ? VersionSelection.exact(targetVersion, VersionSource.FILE)
+                : (startVersion != null || endVersion != null
+                ? VersionSelection.range(startVersion, endVersion, VersionSource.FILE)
+                : VersionSelection.all());
+        return compute(resolved, applied, outOfOrder, selection);
+    }
+
+    public static List<ResolvedMigration> compute(List<ResolvedMigration> resolved,
+                                                  List<AppliedMigration> applied,
+                                                  boolean outOfOrder,
+                                                  VersionSelection selection) {
         // 1) FAILED 阻断
         for (AppliedMigration record : applied) {
             if (!record.success()) {
@@ -46,6 +67,7 @@ public final class PendingCalculator {
                                 + "（修正脚本后执行 repair 清除失败记录，再重跑 migrate）");
             }
         }
+        selection.requireMatch(resolved);
 
         // 2) 索引：版本化记录按版本取最新（installedRank 最大）；可重复按 script 取最新；
         //    baseline 过滤版本取自历史表中的 BASELINE 记录（无则不过滤）。
@@ -84,6 +106,9 @@ public final class PendingCalculator {
         List<ResolvedMigration> pending = new ArrayList<ResolvedMigration>();
         for (ResolvedMigration migration : resolved) {
             if (migration.type() == MigrationType.UNDO_SQL) {
+                continue;
+            }
+            if (!selection.matches(migration)) {
                 continue;
             }
             if (migration.version() != null) {

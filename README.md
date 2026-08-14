@@ -4,7 +4,7 @@
 
 Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工具：内置主流数据库方言，以国产信创数据库支持为特色，并通过 `DatabaseType` SPI 扩展小众 JDBC 数据库。
 
-项目采用 Java 8 基线。`flydb-core` 保持零第三方运行时依赖；独立 CLI 从 `drivers/` 动态加载 JDBC 驱动，不把数据库厂商驱动捆绑进发行包。
+项目采用 Java 8 基线。`flydb-core` 保持零第三方运行时依赖；独立 CLI 不捆绑数据库厂商驱动，可从 `drivers/`、运行时 classpath、Maven 本地仓库和 Maven settings 配置的企业私服自动解析后动态加载。
 
 > Flydb 2.0 正在按 [实施计划](./docs/design/09-implementation-plan.md) 分阶段交付。当前代码已覆盖 core 命令、SQL 解析、历史仓储、锁与事务语义、主流与信创内置方言、独立 CLI，以及 Spring Boot 2/3 starter。数据库兼容状态以实际测试证据为准，不把方言实现等同于生产认证。
 
@@ -77,7 +77,7 @@ bin/flydb info
 bin/flydb validate
 ```
 
-密码也可通过 `flydb.password=${env:DB_PASSWORD}` 或 `flydb.password.file=/run/secrets/db_password` 提供。不要把明文密码提交到版本库。
+密码也可以直接写入 `flydb.password=明文密码`（仅建议本地临时测试），或通过 `flydb.password=${env:DB_PASSWORD}`、`flydb.password.file=/run/secrets/db_password` 提供。生产和共享环境不要把明文密码提交到版本库。
 
 ## 脚本命名
 
@@ -90,7 +90,7 @@ U1__create_user.sql       # 撤销最近一次已应用的 V1
 
 > **2.0 命名变更：** `R<版本>__...sql` 已被禁止并报 `FLYDB-2005`。回退脚本请使用 `U<版本>__...sql`；可重复迁移统一使用不带版本号的 `R__...sql`，不能通过配置关闭这项检查。
 
-默认位置为 `filesystem:db/migration`。SQL 支持 `${key}` 占位符；命令行用 `-Dkey=value` 传入。未定义占位符会在执行前报错并指出脚本行号。
+默认位置为 `filesystem:db/migration`，会递归扫描所有子目录；历史记录中的脚本名保留相对路径。`init` 生成的配置改用绝对位置，避免跨目录执行时受 CWD 影响。SQL 支持 `${key}` 占位符；命令行用 `-Dkey=value` 传入。未定义占位符会在执行前报错并指出脚本行号；业务运行时模板需要原样入库时设置 `flydb.placeholder-replacement=false`。
 
 ## 配置优先级
 
@@ -104,6 +104,10 @@ CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值
 
 ```bash
 bin/flydb migrate
+bin/flydb migrate --target-version 3
+bin/flydb migrate --start-version 2 --end-version 5
+bin/flydb migrate --version-source directory --target-version 20230531 \
+  --migration-order directory-version
 bin/flydb info --color=never
 bin/flydb validate
 bin/flydb baseline --baseline-version 5
@@ -113,6 +117,10 @@ bin/flydb undo
 # clean 默认禁用；非交互环境必须同时满足两道开关
 bin/flydb clean --clean-disabled=false --force
 ```
+
+默认 `--target-version` 仍精确匹配文件版本，起止范围包含边界。版本族、目录版本、路径 glob/regex 与目录版本排序是显式启用的高级规则；例如 `--version-source directory --target-version 20230531` 会选择目录版本 `20230531` 下的 `V20230531.1/.2/.3`。完整模式和安全约束见[配置项参考](./docs/reference/configuration.md#版本选择路径过滤与排序)。任何筛选都不会绕过校验或 `out-of-order` 保护。
+
+文件版本以数字开头，并支持点、下划线或连字符分隔的字母数字 token，例如 `V20260327-b06.4__data.sql`。疑似版本化 SQL 但命名无法解析时会报 `FLYDB-2001`，不会静默跳过。`clean` 会输出对象统计与逐对象删除进度。
 
 退出码：`0` 成功、`1` 一般错误、`2` 校验失败、`3` 锁冲突或超时、`4` 配置错误、`5` 用户中断。
 
@@ -127,6 +135,8 @@ Flydb flydb = Flydb.configure()
     .dataSource(dataSource)
     .databaseType("mysql") // 兼容家族或自定义方言建议显式指定
     .locations("classpath:db/migration")
+    // .targetVersion("3")
+    // .startVersion("2").endVersion("5")
     .load();
 
 flydb.migrate();
@@ -158,6 +168,9 @@ spring.datasource.password=${DB_PASSWORD}
 
 flydb.locations=classpath:db/migration
 flydb.database-type=mysql
+# flydb.target-version=3
+# flydb.start-version=2
+# flydb.end-version=5
 ```
 
 需要权限隔离时，额外设置 `flydb.url/user/password`：Flydb 使用独立的 DDL 账号迁移，应用仍使用低权限主 `DataSource`。设置 `flydb.enabled=false` 可完全关闭自动装配。两个 starter 均生成 `flydb.*` IDE 配置元数据，并将 core 日志桥接到 SLF4J。

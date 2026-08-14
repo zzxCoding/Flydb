@@ -9,6 +9,8 @@ import com.flydb.core.callback.Event;
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
 import com.flydb.core.lock.MigrationLock;
+import com.flydb.core.log.Log;
+import com.flydb.core.log.LogFactory;
 
 /** clean：默认禁用，显式开启后清理当前 schema 的表、视图和序列。 */
 public final class CleanCommand {
@@ -23,26 +25,31 @@ public final class CleanCommand {
             throw new FlydbException(ErrorCode.CLEAN_DISABLED,
                     "flydb.clean-disabled=true，未建立数据库连接");
         }
+        Log log = LogFactory.getLog(CleanCommand.class);
         try (CommandRuntime runtime = CommandRuntime.open(configuration, true);
              MigrationLock lock = runtime.database().createLock(configuration)) {
             lock.acquire();
             CommandCallbacks callbacks = CommandCallbacks.create(runtime);
             callbacks.fire(Event.BEFORE_CLEAN);
-            clean(runtime);
+            String schema = clean(runtime, log);
             callbacks.fire(Event.AFTER_CLEAN);
             lock.release();
-            dropBookkeepingTables(runtime);
+            dropBookkeepingTables(runtime, log);
+            log.info("clean 完成：schema " + schema);
         }
     }
 
-    private static void clean(CommandRuntime runtime) {
+    private static String clean(CommandRuntime runtime, Log log) {
         boolean transactional = runtime.database().supportsDdlTransactions();
         try {
+            String schema = runtime.database().currentSchema();
+            log.info("开始清理 schema " + schema);
             if (transactional) runtime.connection().setAutoCommit(false);
             runtime.database().cleanStrategy().clean(runtime.connection(),
-                    runtime.database().currentSchema(), Arrays.asList(
+                    schema, Arrays.asList(
                             configurationTable(runtime), lockTable(runtime)));
             if (transactional) runtime.connection().commit();
+            return schema;
         } catch (SQLException e) {
             if (transactional) rollback(runtime);
             throw new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
@@ -60,11 +67,13 @@ public final class CleanCommand {
         return com.flydb.core.history.SchemaHistory.lockTableName(configurationTable(runtime));
     }
 
-    private static void dropBookkeepingTables(CommandRuntime runtime) {
+    private static void dropBookkeepingTables(CommandRuntime runtime, Log log) {
         Statement statement = null;
         try {
             statement = runtime.connection().createStatement();
+            log.info("正在删除历史表: " + configurationTable(runtime));
             statement.execute("DROP TABLE " + runtime.database().quote(configurationTable(runtime)));
+            log.info("正在删除锁表: " + lockTable(runtime));
             statement.execute("DROP TABLE " + runtime.database().quote(lockTable(runtime)));
         } catch (SQLException e) {
             throw new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,

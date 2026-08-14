@@ -13,6 +13,9 @@ import javax.sql.DataSource;
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
 import com.flydb.core.migration.MigrationVersion;
+import com.flydb.core.migration.MigrationOrder;
+import com.flydb.core.migration.VersionSelection;
+import com.flydb.core.migration.VersionSource;
 import com.flydb.core.callback.Callback;
 import com.flydb.core.Flydb;
 
@@ -39,7 +42,20 @@ public final class FlydbConfiguration {
     private final boolean baselineOnMigrate;
     private final boolean validateOnMigrate;
     private final boolean outOfOrder;
+    private final MigrationVersion targetVersion;
+    private final MigrationVersion startVersion;
+    private final MigrationVersion endVersion;
+    private final VersionSelection versionSelection;
+    private final String directoryGlob;
+    private final String fileGlob;
+    private final String pathGlob;
+    private final String directoryRegex;
+    private final String fileRegex;
+    private final String pathRegex;
+    private final MigrationOrder migrationOrder;
+    private final String directoryVersionRegex;
     private final Map<String, String> placeholders;
+    private final boolean placeholderReplacement;
     private final String placeholderPrefix;
     private final String placeholderSuffix;
     private final boolean cleanDisabled;
@@ -65,7 +81,20 @@ public final class FlydbConfiguration {
         this.baselineOnMigrate = b.baselineOnMigrate;
         this.validateOnMigrate = b.validateOnMigrate;
         this.outOfOrder = b.outOfOrder;
+        this.targetVersion = b.targetVersion;
+        this.startVersion = b.startVersion;
+        this.endVersion = b.endVersion;
+        this.versionSelection = b.buildVersionSelection();
+        this.directoryGlob = b.directoryGlob;
+        this.fileGlob = b.fileGlob;
+        this.pathGlob = b.pathGlob;
+        this.directoryRegex = b.directoryRegex;
+        this.fileRegex = b.fileRegex;
+        this.pathRegex = b.pathRegex;
+        this.migrationOrder = b.migrationOrder;
+        this.directoryVersionRegex = b.directoryVersionRegex;
         this.placeholders = Collections.unmodifiableMap(new HashMap<String, String>(b.placeholders));
+        this.placeholderReplacement = b.placeholderReplacement;
         this.placeholderPrefix = b.placeholderPrefix;
         this.placeholderSuffix = b.placeholderSuffix;
         this.cleanDisabled = b.cleanDisabled;
@@ -95,7 +124,20 @@ public final class FlydbConfiguration {
     public boolean baselineOnMigrate() { return baselineOnMigrate; }
     public boolean validateOnMigrate() { return validateOnMigrate; }
     public boolean outOfOrder() { return outOfOrder; }
+    public MigrationVersion targetVersion() { return targetVersion; }
+    public MigrationVersion startVersion() { return startVersion; }
+    public MigrationVersion endVersion() { return endVersion; }
+    public VersionSelection versionSelection() { return versionSelection; }
+    public String directoryGlob() { return directoryGlob; }
+    public String fileGlob() { return fileGlob; }
+    public String pathGlob() { return pathGlob; }
+    public String directoryRegex() { return directoryRegex; }
+    public String fileRegex() { return fileRegex; }
+    public String pathRegex() { return pathRegex; }
+    public MigrationOrder migrationOrder() { return migrationOrder; }
+    public String directoryVersionRegex() { return directoryVersionRegex; }
     public Map<String, String> placeholders() { return placeholders; }
+    public boolean placeholderReplacement() { return placeholderReplacement; }
     public String placeholderPrefix() { return placeholderPrefix; }
     public String placeholderSuffix() { return placeholderSuffix; }
     public boolean cleanDisabled() { return cleanDisabled; }
@@ -125,7 +167,23 @@ public final class FlydbConfiguration {
         private boolean baselineOnMigrate = false;
         private boolean validateOnMigrate = true;
         private boolean outOfOrder = false;
+        private MigrationVersion targetVersion;
+        private MigrationVersion startVersion;
+        private MigrationVersion endVersion;
+        private VersionSelection.Mode requestedVersionSelection;
+        private VersionSource versionSource = VersionSource.FILE;
+        private String versionRegex;
+        private String directoryGlob;
+        private String fileGlob;
+        private String pathGlob;
+        private String directoryRegex;
+        private String fileRegex;
+        private String pathRegex;
+        private MigrationOrder migrationOrder = MigrationOrder.VERSION;
+        private String directoryVersionRegex =
+                "(?:^|/)(?<version>\\d+(?:\\.\\d+)*)(?=$|/)";
         private Map<String, String> placeholders = new HashMap<String, String>();
+        private boolean placeholderReplacement = true;
         private String placeholderPrefix = "${";
         private String placeholderSuffix = "}";
         private boolean cleanDisabled = true;
@@ -172,9 +230,89 @@ public final class FlydbConfiguration {
         public Builder baselineOnMigrate(boolean flag) { this.baselineOnMigrate = flag; return this; }
         public Builder validateOnMigrate(boolean flag) { this.validateOnMigrate = flag; return this; }
         public Builder outOfOrder(boolean flag) { this.outOfOrder = flag; return this; }
+        public Builder targetVersion(String version) {
+            this.targetVersion = version == null || version.isEmpty()
+                    ? null : MigrationVersion.parse(version);
+            return this;
+        }
+        public Builder startVersion(String version) {
+            this.startVersion = version == null || version.isEmpty()
+                    ? null : MigrationVersion.parse(version);
+            return this;
+        }
+        public Builder endVersion(String version) {
+            this.endVersion = version == null || version.isEmpty()
+                    ? null : MigrationVersion.parse(version);
+            return this;
+        }
+        public Builder versionSelection(String mode) {
+            if (mode == null || mode.trim().isEmpty()) {
+                this.requestedVersionSelection = null;
+                return this;
+            }
+            String normalized = mode.trim().toUpperCase(java.util.Locale.ROOT)
+                    .replace('-', '_');
+            try {
+                this.requestedVersionSelection = VersionSelection.Mode.valueOf(normalized);
+            } catch (IllegalArgumentException e) {
+                throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                        "flydb.version-selection 不支持: " + mode
+                                + "（可选 exact|range|family|family-range|regex）");
+            }
+            if (this.requestedVersionSelection == VersionSelection.Mode.ALL) {
+                throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                        "flydb.version-selection 不支持显式配置 all；不配置版本参数即可选择全部迁移");
+            }
+            return this;
+        }
+        public Builder versionSource(String source) {
+            if (source == null || source.trim().isEmpty()) {
+                this.versionSource = VersionSource.FILE;
+                return this;
+            }
+            try {
+                this.versionSource = VersionSource.valueOf(
+                        source.trim().toUpperCase(java.util.Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                        "flydb.version-source 不支持: " + source + "（可选 file|directory）");
+            }
+            return this;
+        }
+        public Builder versionRegex(String regex) { this.versionRegex = emptyToNull(regex); return this; }
+        public Builder directoryGlob(String value) { this.directoryGlob = emptyToNull(value); return this; }
+        public Builder fileGlob(String value) { this.fileGlob = emptyToNull(value); return this; }
+        public Builder pathGlob(String value) { this.pathGlob = emptyToNull(value); return this; }
+        public Builder directoryRegex(String value) { this.directoryRegex = emptyToNull(value); return this; }
+        public Builder fileRegex(String value) { this.fileRegex = emptyToNull(value); return this; }
+        public Builder pathRegex(String value) { this.pathRegex = emptyToNull(value); return this; }
+        public Builder migrationOrder(String value) {
+            if (value == null || value.trim().isEmpty()) {
+                this.migrationOrder = MigrationOrder.VERSION;
+                return this;
+            }
+            try {
+                this.migrationOrder = MigrationOrder.valueOf(value.trim()
+                        .toUpperCase(java.util.Locale.ROOT).replace('-', '_'));
+            } catch (IllegalArgumentException e) {
+                throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                        "flydb.migration-order 不支持: " + value
+                                + "（可选 version|directory-version）");
+            }
+            return this;
+        }
+        public Builder directoryVersionRegex(String value) {
+            this.directoryVersionRegex = emptyToNull(value);
+            return this;
+        }
 
         public Builder placeholders(Map<String, String> placeholders) {
             this.placeholders = new HashMap<String, String>(placeholders);
+            return this;
+        }
+
+        public Builder placeholderReplacement(boolean enabled) {
+            this.placeholderReplacement = enabled;
             return this;
         }
 
@@ -238,6 +376,124 @@ public final class FlydbConfiguration {
                 throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
                         "flydb.lock-timeout-seconds 不可为负数: " + lockTimeoutSeconds);
             }
+            if (startVersion != null && endVersion != null
+                    && startVersion.compareTo(endVersion) > 0) {
+                throw new FlydbException(ErrorCode.INVALID_VERSION,
+                        "flydb.start-version " + startVersion
+                                + " 不可大于 flydb.end-version " + endVersion);
+            }
+            validateVersionSelection();
+            validatePathRules();
+        }
+
+        private void validatePathRules() {
+            validateExclusive("directory", directoryGlob, directoryRegex);
+            validateExclusive("file", fileGlob, fileRegex);
+            validateExclusive("path", pathGlob, pathRegex);
+            validateRegex("flydb.directory-regex", directoryRegex);
+            validateRegex("flydb.file-regex", fileRegex);
+            validateRegex("flydb.path-regex", pathRegex);
+            if (versionSource == VersionSource.DIRECTORY
+                    || migrationOrder == MigrationOrder.DIRECTORY_VERSION) {
+                if (directoryVersionRegex == null) {
+                    throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                            "使用目录版本时 flydb.directory-version-regex 不能为空");
+                }
+                validateRegex("flydb.directory-version-regex", directoryVersionRegex);
+            }
+        }
+
+        private static void validateExclusive(String dimension, String glob, String regex) {
+            if (glob != null && regex != null) {
+                throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                        "flydb." + dimension + "-glob 与 flydb." + dimension
+                                + "-regex 不可同时配置");
+            }
+        }
+
+        private static void validateRegex(String key, String value) {
+            if (value == null) return;
+            try {
+                java.util.regex.Pattern.compile(value);
+            } catch (java.util.regex.PatternSyntaxException e) {
+                throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                        key + " 不是合法正则: " + e.getDescription(), e);
+            }
+        }
+
+        private void validateVersionSelection() {
+            VersionSelection.Mode mode = effectiveVersionSelectionMode();
+            boolean hasTarget = targetVersion != null;
+            boolean hasRange = startVersion != null || endVersion != null;
+            boolean hasRegex = versionRegex != null;
+            switch (mode) {
+                case ALL:
+                    if (hasRegex) {
+                        throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                                "配置 flydb.version-regex 时必须设置 flydb.version-selection=regex");
+                    }
+                    return;
+                case EXACT:
+                case FAMILY:
+                    if (!hasTarget || hasRange || hasRegex) {
+                        throw incompatibleVersionSelection(mode,
+                                "必须且只能配置 flydb.target-version");
+                    }
+                    return;
+                case RANGE:
+                case FAMILY_RANGE:
+                    if (hasTarget || !hasRange || hasRegex) {
+                        throw incompatibleVersionSelection(mode,
+                                "必须配置 start-version/end-version 中至少一个，且不可配置 target-version");
+                    }
+                    return;
+                case REGEX:
+                    if (!hasRegex || hasTarget || hasRange) {
+                        throw incompatibleVersionSelection(mode,
+                                "必须且只能配置 flydb.version-regex");
+                    }
+                    return;
+                default:
+                    throw new IllegalStateException("未知版本筛选模式: " + mode);
+            }
+        }
+
+        private VersionSelection buildVersionSelection() {
+            VersionSelection.Mode mode = effectiveVersionSelectionMode();
+            switch (mode) {
+                case ALL: return VersionSelection.all(versionSource);
+                case EXACT: return VersionSelection.exact(targetVersion, versionSource);
+                case RANGE: return VersionSelection.range(startVersion, endVersion, versionSource);
+                case FAMILY: return VersionSelection.family(targetVersion, versionSource);
+                case FAMILY_RANGE:
+                    return VersionSelection.familyRange(startVersion, endVersion, versionSource);
+                case REGEX: return VersionSelection.regex(versionRegex, versionSource);
+                default: throw new IllegalStateException("未知版本筛选模式: " + mode);
+            }
+        }
+
+        private VersionSelection.Mode effectiveVersionSelectionMode() {
+            if (requestedVersionSelection != null) {
+                return requestedVersionSelection;
+            }
+            if (targetVersion != null) {
+                return VersionSelection.Mode.EXACT;
+            }
+            if (startVersion != null || endVersion != null) {
+                return VersionSelection.Mode.RANGE;
+            }
+            return VersionSelection.Mode.ALL;
+        }
+
+        private static FlydbException incompatibleVersionSelection(VersionSelection.Mode mode,
+                                                                   String requirement) {
+            return new FlydbException(ErrorCode.INVALID_VERSION,
+                    "flydb.version-selection=" + mode.name().toLowerCase(java.util.Locale.ROOT)
+                            .replace('_', '-') + " 时" + requirement);
+        }
+
+        private static String emptyToNull(String value) {
+            return value == null || value.trim().isEmpty() ? null : value.trim();
         }
 
         private static void requireNonEmpty(String value, String key) {

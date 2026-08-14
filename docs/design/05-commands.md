@@ -36,6 +36,8 @@
 3. **outOfOrder**：`false`（默认）时发现版本低于已应用最高版本的未应用迁移 → `FLYDB-2006` 报错（拒绝静默跳过或乱序执行）；`true` 时按版本序插入执行。
 4. **可重复迁移**：checksum 与最近一次应用不同（或从未应用）→ 加入 pending，排在所有版本化迁移之后，按 description 排序。
 5. **UNDONE 版本**：某版本最新记录为 UNDO 且本地 V 文件仍在 → 重新视为 pending。
+6. **版本选择**：`VersionSelection` 统一承载 `exact`、`range`、`family`、`family-range`、`regex`，版本坐标可来自文件或目录。未指定模式时 `targetVersion` 仍推断为精确文件版本，起止参数推断为普通范围，保持兼容。显式选择排除无版本号的可重复迁移，但不绕过 FAILED、baseline、outOfOrder 或 checksum 规则。
+7. **排序安全**：默认按文件版本的数字/字母 token 自然顺序。目录排序只有在目录版本可提取且文件版本属于目录版本族时成立，因此现有 baseline、最高版本、outOfOrder 和 undo 仍使用同一文件版本顺序；不提供会让这些语义分裂的任意路径 Comparator。
 
 ### 1.2 `baselineOnMigrate`
 
@@ -77,6 +79,7 @@
 - `cleanDisabled=true`（默认）→ `FLYDB-4003` 直接拒绝。必须显式配置 `cleanDisabled=false` 才可用（CLI 上还需 `--i-know-what-i-am-doing` 式二次确认，见 [06 §4](06-config-cli.md)）。
 - **MVP 范围（明确缩减）**：删除当前 schema 中的表（含历史表/锁表）、视图、序列——按外键依赖拓扑排序删除（或按方言使用 CASCADE）。存储过程/触发器/自定义类型的清理列为二期增强。各内置方言全对等 Flyway clean 的工作量不应隐性打包进 MVP。
 - `CleanStrategy` 由各家族提供实现（[03 §2](03-dialects.md)）。
+- 通过 core 日志抽象输出 schema、对象总数、逐对象删除进度、历史表/锁表删除和完成状态；CLI 默认可见，starter 通过 SLF4J 接收，避免大 schema 清理期间只有最终一行结果。
 
 ## 7. `undo`（加锁，"尽力而为"定位）
 

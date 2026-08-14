@@ -49,6 +49,65 @@ class ConfigLoaderTest {
     }
 
     @Test
+    @DisplayName("版本范围支持配置文件、环境变量和 CLI 覆盖")
+    void mergesVersionSelectionAcrossConfigurationLayers() throws Exception {
+        Files.write(temporaryDirectory.resolve("flydb.conf"), (
+                "flydb.url=jdbc:mysql://file/db\n"
+                        + "flydb.start-version=2\n"
+                        + "flydb.end-version=8\n")
+                .getBytes(StandardCharsets.UTF_8));
+        Map<String, String> environment = new HashMap<String, String>();
+        environment.put("FLYDB_END_VERSION", "6");
+        Map<String, String> cli = Collections.singletonMap(
+                "flydb.start-version", "3");
+
+        CliConfiguration configuration = new ConfigLoader().load(
+                null, temporaryDirectory, temporaryDirectory.resolve("install"), environment, cli);
+
+        assertThat(configuration.targetVersion()).isNull();
+        assertThat(configuration.startVersion()).isEqualTo("3");
+        assertThat(configuration.endVersion()).isEqualTo("6");
+    }
+
+    @Test
+    @DisplayName("版本规则、路径过滤和排序规则贯通配置文件、环境变量与 CLI")
+    void mergesAdvancedMigrationRulesAcrossConfigurationLayers() throws Exception {
+        Files.write(temporaryDirectory.resolve("flydb.conf"), (
+                "flydb.url=jdbc:mysql://file/db\n"
+                        + "flydb.version-selection=family\n"
+                        + "flydb.version-source=directory\n"
+                        + "flydb.target-version=20230531\n"
+                        + "flydb.directory-glob=mysql/param/**\n")
+                .getBytes(StandardCharsets.UTF_8));
+        Map<String, String> environment = new HashMap<String, String>();
+        environment.put("FLYDB_FILE_GLOB", "V*__*.sql");
+        Map<String, String> cli = Collections.singletonMap(
+                "flydb.migration-order", "directory-version");
+
+        CliConfiguration configuration = new ConfigLoader().load(
+                null, temporaryDirectory, temporaryDirectory.resolve("install"), environment, cli);
+
+        assertThat(configuration.versionSelection()).isEqualTo("family");
+        assertThat(configuration.versionSource()).isEqualTo("directory");
+        assertThat(configuration.directoryGlob()).isEqualTo("mysql/param/**");
+        assertThat(configuration.fileGlob()).isEqualTo("V*__*.sql");
+        assertThat(configuration.migrationOrder()).isEqualTo("directory-version");
+    }
+
+    @Test
+    @DisplayName("占位符替换总开关支持环境变量覆盖且默认开启")
+    void mergesPlaceholderReplacementSwitch() {
+        Map<String, String> environment = Collections.singletonMap(
+                "FLYDB_PLACEHOLDER_REPLACEMENT", "false");
+
+        CliConfiguration configuration = new ConfigLoader().load(
+                null, temporaryDirectory, temporaryDirectory.resolve("install"), environment,
+                Collections.singletonMap("flydb.url", "jdbc:mysql://localhost/db"));
+
+        assertThat(configuration.placeholderReplacement()).isFalse();
+    }
+
+    @Test
     @DisplayName("配置文件包含未知 flydb 键时列出键名和最接近的建议")
     void rejectsUnknownFlydbKeyWithSuggestion() throws Exception {
         Files.write(temporaryDirectory.resolve("flydb.conf"), (

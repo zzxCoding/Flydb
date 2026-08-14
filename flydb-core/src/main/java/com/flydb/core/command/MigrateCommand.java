@@ -53,7 +53,8 @@ public final class MigrateCommand {
                 validate(runtime, applied);
             }
             List<ResolvedMigration> pending = PendingCalculator.compute(
-                    migrations, applied, configuration.outOfOrder());
+                    migrations, applied, configuration.outOfOrder(),
+                    configuration.versionSelection());
             List<String> executed = new ArrayList<String>();
             CommandCallbacks callbacks = CommandCallbacks.create(runtime);
             callbacks.fire(Event.BEFORE_MIGRATE);

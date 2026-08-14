@@ -34,6 +34,12 @@ class PendingCalculatorTest {
         return ResolvedMigration.of(version, desc, script, checksum, MigrationType.SQL);
     }
 
+    private static ResolvedMigration directorySql(String version, String directoryVersion,
+                                                  String script, int checksum) {
+        return ResolvedMigration.of(v(version), v(directoryVersion), script, script,
+                checksum, MigrationType.SQL);
+    }
+
     /** 版本化 SQL 已成功应用记录。 */
     private static AppliedMigration applied(int rank, String version, String script, int checksum) {
         return AppliedMigration.of(rank, version == null ? null : v(version), script.split("__", 2)[0],
@@ -232,6 +238,85 @@ class PendingCalculatorTest {
             // V2 被撤销后 latestSuccessfulVersion 仅来自成功非 UNDO 记录 → V2 > null 视为待执行
             assertThat(pending).extracting(ResolvedMigration::script)
                     .containsExactly("V1__one.sql", "V2__two.sql");
+        }
+    }
+
+    @Nested
+    @DisplayName("版本筛选规则")
+    class VersionSelectionRules {
+
+        @Test
+        @DisplayName("family 精确按数字段选择一个版本族，不把相似字符串当成子版本")
+        void selectsACompleteVersionFamilyByNumericSegments() {
+            java.util.List<ResolvedMigration> resolved = Arrays.asList(
+                    sql(v("20230531.1"), "one", "V20230531.1__one.sql", 1),
+                    sql(v("20230531.2"), "two", "V20230531.2__two.sql", 2),
+                    sql(v("202305310.1"), "similar", "V202305310.1__similar.sql", 3),
+                    sql(v("20230727.1"), "next", "V20230727.1__next.sql", 4));
+
+            java.util.List<ResolvedMigration> pending = PendingCalculator.compute(
+                    resolved, Collections.<AppliedMigration>emptyList(), false,
+                    VersionSelection.family(v("20230531"), VersionSource.FILE));
+
+            assertThat(pending).extracting(ResolvedMigration::script)
+                    .containsExactly("V20230531.1__one.sql", "V20230531.2__two.sql");
+        }
+
+        @Test
+        @DisplayName("family-range 包含结束版本族的所有子版本")
+        void familyRangeIncludesDescendantsOfTheEndBoundary() {
+            java.util.List<ResolvedMigration> resolved = Arrays.asList(
+                    sql(v("20230531.1"), "first", "V20230531.1__first.sql", 1),
+                    sql(v("20230727.1"), "end-one", "V20230727.1__end_one.sql", 2),
+                    sql(v("20230727.9"), "end-nine", "V20230727.9__end_nine.sql", 3),
+                    sql(v("20230801.1"), "later", "V20230801.1__later.sql", 4));
+
+            java.util.List<ResolvedMigration> pending = PendingCalculator.compute(
+                    resolved, Collections.<AppliedMigration>emptyList(), false,
+                    VersionSelection.familyRange(v("20230531"), v("20230727"),
+                            VersionSource.FILE));
+
+            assertThat(pending).extracting(ResolvedMigration::script).containsExactly(
+                    "V20230531.1__first.sql", "V20230727.1__end_one.sql",
+                    "V20230727.9__end_nine.sql");
+        }
+
+        @Test
+        @DisplayName("exact 可以改用目录版本并一次选择目录内多个文件版本")
+        void exactSelectionCanUseDirectoryVersionAsItsCoordinate() {
+            java.util.List<ResolvedMigration> resolved = Arrays.asList(
+                    directorySql("20230531.1", "20230531", "20230531/V20230531.1__one.sql", 1),
+                    directorySql("20230531.2", "20230531", "20230531/V20230531.2__two.sql", 2),
+                    directorySql("20230727.1", "20230727", "20230727/V20230727.1__next.sql", 3));
+
+            java.util.List<ResolvedMigration> pending = PendingCalculator.compute(
+                    resolved, Collections.<AppliedMigration>emptyList(), false,
+                    VersionSelection.exact(v("20230531"), VersionSource.DIRECTORY));
+
+            assertThat(pending).extracting(ResolvedMigration::script).containsExactly(
+                    "20230531/V20230531.1__one.sql",
+                    "20230531/V20230531.2__two.sql");
+        }
+
+        @Test
+        @DisplayName("regex 对规范化版本文本整串匹配且无命中时报错")
+        void regexUsesFullVersionMatchingAndRejectsNoMatch() {
+            java.util.List<ResolvedMigration> resolved = Arrays.asList(
+                    sql(v("20230531.1"), "one", "V20230531.1__one.sql", 1),
+                    sql(v("20230727.1"), "two", "V20230727.1__two.sql", 2));
+
+            java.util.List<ResolvedMigration> pending = PendingCalculator.compute(
+                    resolved, Collections.<AppliedMigration>emptyList(), false,
+                    VersionSelection.regex("^20230531\\.\\d+$", VersionSource.FILE));
+            assertThat(pending).extracting(ResolvedMigration::script)
+                    .containsExactly("V20230531.1__one.sql");
+
+            assertThatThrownBy(() -> PendingCalculator.compute(
+                    resolved, Collections.<AppliedMigration>emptyList(), false,
+                    VersionSelection.regex("^1999.*$", VersionSource.FILE)))
+                    .isInstanceOf(FlydbException.class)
+                    .satisfies(error -> assertThat(((FlydbException) error).errorCode())
+                            .isEqualTo(ErrorCode.INVALID_VERSION));
         }
     }
 }

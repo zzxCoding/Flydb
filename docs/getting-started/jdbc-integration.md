@@ -27,7 +27,7 @@
 
 ## 2. CLI：驱动 JAR + 显式方言
 
-CLI 不捆绑厂商驱动，启动时会扫描安装目录下的 `drivers/*.jar`。对标准 URL，Flydb 可以尝试推断驱动类；厂商 URL 通常应显式指定 `--driver`。
+CLI 不捆绑厂商驱动。启动时先扫描安装目录下的 `drivers/*.jar`，再检查运行时 classpath、Maven 本地仓库和 `~/.flydb/drivers` 缓存；仍未找到时，按 `~/.m2/settings.xml` 的 mirror、激活 Profile 仓库、server 认证和 proxy 下载。对标准 URL，Flydb 可以推断驱动类和已登记的固定坐标；厂商 URL 通常应显式指定 `--driver` 和 `--driver-coordinate`。
 
 ### 2.1 复用 MySQL/Oracle 家族
 
@@ -52,7 +52,16 @@ bin/flydb --dry-run migrate
 bin/flydb migrate
 ```
 
-`init --driver` 会把 `flydb.driver` 写入当前目录的 `flydb.conf`，后续命令无需重复传参。密码不要写入配置文件，可使用 `FLYDB_PASSWORD`、`${env:DB_PASSWORD}` 或 `flydb.password.file`。
+如果驱动已经发布到公司 Maven 私服，可以省略 `cp`。确认 `settings.xml` 已配置 mirror/server 后，在生成的配置中填写私服坐标：
+
+```properties
+flydb.driver=vendor.jdbc.Driver
+flydb.driver-coordinate=com.company.jdbc:vendor-driver:3.2.1
+```
+
+内网完全禁止联网时设置 `flydb.offline=true`；Flydb 仍会读取 Maven 本地仓库和已有缓存。`mirrorOf=*` 会接管 Central，Flydb 不会绕过公司私服直连公网。
+
+`init --driver` 会把 `flydb.driver` 写入当前目录的 `flydb.conf`，后续命令无需重复传参。密码可以直接写入 `flydb.password`（仅建议本地临时测试），生产和共享环境使用 `FLYDB_PASSWORD`、`${env:DB_PASSWORD}` 或 `flydb.password.file`。
 
 Oracle 兼容数据库的命令只需把方言换成 `oracle`：
 
@@ -78,7 +87,7 @@ bin/flydb init --url 'jdbc:oceanbase://db.example.com:2883/app' \
   --database-type oceanbase --yes
 ```
 
-标准 URL 的驱动类可以省略（例如 `jdbc:mysql:`、`jdbc:postgresql:`、`jdbc:oracle:`），但驱动 JAR 仍必须放入 `drivers/`。无法推断的 URL 若未指定 `--driver`，会报 `FLYDB-1003`。
+标准 URL 的驱动类可以省略（例如 `jdbc:mysql:`、`jdbc:postgresql:`、`jdbc:oracle:`）；Flydb 会优先复用本地 Maven 仓库，必要时按 Maven 有效私服/镜像获取。无法推断的 URL 若未指定 `--driver`，或小众驱动没有提供 `--driver-coordinate` 且本地也找不到，会报带完整解析轨迹的 `FLYDB-1003`。
 
 ### 2.2 CLI 加载自定义方言
 

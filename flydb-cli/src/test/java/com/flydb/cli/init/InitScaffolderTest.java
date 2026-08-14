@@ -32,10 +32,34 @@ class InitScaffolderTest {
                 temporaryDirectory.resolve("db/migration/V1__init.sql"),
                 temporaryDirectory.resolve("drivers/README.md"));
         assertThat(read(temporaryDirectory.resolve("flydb.conf")))
-                .contains("# Flydb 2.0 配置", "flydb.url=jdbc:mysql://localhost:3306/app",
+                .contains("# Flydb 2.0 配置", "JDBC 连接地址（必填）",
+                        "flydb.password=你的明文密码", "flydb.password=${env:DB_PASSWORD}",
+                        "flydb.password.file=/run/secrets/db_password",
+                        "flydb.url=jdbc:mysql://localhost:3306/app",
                         "flydb.user=app_user", "flydb.database-type=mysql",
-                        "flydb.locations=filesystem:db/migration")
-                .doesNotContain("flydb.password=");
+                        "flydb.locations=filesystem:"
+                                + temporaryDirectory.resolve("db/migration").toAbsolutePath().normalize(),
+                        "flydb.baseline-version=1",
+                        "flydb.baseline-on-migrate=false",
+                        "flydb.validate-on-migrate=true",
+                        "flydb.out-of-order=false",
+                        "flydb.target-version=3",
+                        "flydb.start-version=2",
+                        "flydb.end-version=5",
+                        "flydb.version-selection=family",
+                        "flydb.version-source=directory",
+                        "flydb.directory-glob=mysql/param/**",
+                        "flydb.file-glob=V*__*.sql",
+                        "flydb.migration-order=directory-version",
+                        "flydb.directory-version-regex=(?:^|/)(?<version>\\\\d+",
+                        "flydb.placeholder-replacement=true",
+                        "flydb.placeholder-prefix=${",
+                        "flydb.sql-migration-prefix=V",
+                        "flydb.repeatable-migration-prefix=R",
+                        "flydb.undo-migration-prefix=U",
+                        "flydb.clean-disabled=true",
+                        "flydb.lock-timeout-seconds=60")
+                .doesNotContain("\nflydb.password=");
         assertThat(read(temporaryDirectory.resolve("drivers/README.md")))
                 .contains("MySQL", "PostgreSQL", "Oracle", "达梦 DM8", "KingbaseES", "openGauss");
         assertThatThrownBy(() -> new InitScaffolder().create(temporaryDirectory,

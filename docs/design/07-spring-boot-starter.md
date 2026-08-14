@@ -27,6 +27,21 @@ flydb:
   baseline-on-migrate: false
   validate-on-migrate: true
   out-of-order: false
+  target-version:               # 可选：默认精确文件版本
+  start-version:                # 可选：包含边界
+  end-version:                  # 可选：包含边界
+  version-selection:            # exact|range|family|family-range|regex
+  version-source: file          # file|directory
+  version-regex:
+  directory-glob:
+  file-glob:
+  path-glob:
+  directory-regex:
+  file-regex:
+  path-regex:
+  migration-order: version      # version|directory-version
+  directory-version-regex: '(?:^|/)(?<version>\d+(?:\.\d+)*)(?=$|/)'
+  placeholder-replacement: true
   clean-disabled: true
   lock-timeout-seconds: 60
   database-type:                 # 可选，跳过自动探测

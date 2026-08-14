@@ -44,8 +44,30 @@ public final class CliConfiguration {
         return values.get("flydb.driver");
     }
 
+    public String driverCoordinate() { return values.get("flydb.driver-coordinate"); }
+    public String driverDownload() { return values.get("flydb.driver-download"); }
+    public String driverCache() { return values.get("flydb.driver-cache"); }
+    public String mavenSettings() { return values.get("flydb.maven-settings"); }
+    public String mavenLocalRepository() { return values.get("flydb.maven-local-repository"); }
+    public boolean offline() { return booleanValue("flydb.offline"); }
+
     public String databaseType() { return values.get("flydb.database-type"); }
     public String baselineVersion() { return values.get("flydb.baseline-version"); }
+    public String targetVersion() { return values.get("flydb.target-version"); }
+    public String startVersion() { return values.get("flydb.start-version"); }
+    public String endVersion() { return values.get("flydb.end-version"); }
+    public String versionSelection() { return values.get("flydb.version-selection"); }
+    public String versionSource() { return values.get("flydb.version-source"); }
+    public String versionRegex() { return values.get("flydb.version-regex"); }
+    public String directoryGlob() { return values.get("flydb.directory-glob"); }
+    public String fileGlob() { return values.get("flydb.file-glob"); }
+    public String pathGlob() { return values.get("flydb.path-glob"); }
+    public String directoryRegex() { return values.get("flydb.directory-regex"); }
+    public String fileRegex() { return values.get("flydb.file-regex"); }
+    public String pathRegex() { return values.get("flydb.path-regex"); }
+    public String migrationOrder() { return values.get("flydb.migration-order"); }
+    public String directoryVersionRegex() { return values.get("flydb.directory-version-regex"); }
+    public boolean placeholderReplacement() { return booleanValue("flydb.placeholder-replacement"); }
     public String placeholderPrefix() { return values.get("flydb.placeholder-prefix"); }
     public String placeholderSuffix() { return values.get("flydb.placeholder-suffix"); }
     public String sqlMigrationPrefix() { return values.get("flydb.sql-migration-prefix"); }
@@ -98,7 +120,14 @@ public final class CliConfiguration {
                 .encoding(encoding()).table(table()).baselineVersion(baselineVersion())
                 .baselineOnMigrate(baselineOnMigrate())
                 .validateOnMigrate(validateOnMigrate()).outOfOrder(outOfOrder())
-                .placeholders(placeholders()).placeholderPrefix(placeholderPrefix())
+                .targetVersion(targetVersion()).startVersion(startVersion()).endVersion(endVersion())
+                .versionSelection(versionSelection()).versionSource(versionSource())
+                .versionRegex(versionRegex()).directoryGlob(directoryGlob())
+                .fileGlob(fileGlob()).pathGlob(pathGlob())
+                .directoryRegex(directoryRegex()).fileRegex(fileRegex()).pathRegex(pathRegex())
+                .migrationOrder(migrationOrder()).directoryVersionRegex(directoryVersionRegex())
+                .placeholders(placeholders()).placeholderReplacement(placeholderReplacement())
+                .placeholderPrefix(placeholderPrefix())
                 .placeholderSuffix(placeholderSuffix()).cleanDisabled(cleanDisabled())
                 .lockTimeoutSeconds(lockTimeoutSeconds()).databaseType(databaseType())
                 .classLoader(classLoader).callbacks(callbacks(classLoader))

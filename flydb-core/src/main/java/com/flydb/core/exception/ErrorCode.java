@@ -14,19 +14,19 @@ public enum ErrorCode {
 
     // ---------------- 1xxx 连接与探测 ----------------
     CONNECT_FAILED("FLYDB-1001", "连接失败", "Connection failed",
-            "JDBC URL/账号/密码不正确；数据库未启动；网络不可达；对应 JDBC 驱动未放入 drivers/ 目录。",
-            "核对 flydb.conf 中 flydb.url/flydb.user/flydb.password；确认数据库进程在运行；将 JDBC 驱动 jar 放入 drivers/ 目录后重试。"),
+            "JDBC URL/账号/密码不正确；数据库未启动；或数据库网络不可达。",
+            "核对 flydb.conf 中 flydb.url/flydb.user/flydb.password，并确认数据库进程、地址、端口和网络策略。"),
     UNRECOGNIZED_DATABASE_TYPE("FLYDB-1002", "无法识别数据库类型", "Unrecognized database type",
             "JDBC URL 前缀无法映射到已知方言；或数据库产品名探测结果不在支持矩阵内。",
             "用 --database-type 显式指定方言（见支持矩阵）；或检查 URL 前缀拼写。"),
     DRIVER_NOT_FOUND("FLYDB-1003", "JDBC 驱动未找到", "JDBC driver not found",
-            "drivers/ 目录缺少对应数据库的驱动 jar；或 --driver 指定的类名有误。",
-            "将对应 JDBC 驱动 jar 放入 <安装目录>/drivers/（坐标见 drivers/README），或用 --driver 指定正确类名。"),
+            "本地来源没有对应驱动；驱动坐标/类名有误；或 Maven 私服认证、代理和网络失败。",
+            "按详情中的解析轨迹修正 Maven settings/坐标，或将驱动 jar 放入提示的 <安装目录>/drivers/。"),
 
     // ---------------- 2xxx 迁移与校验 ----------------
     INVALID_VERSION("FLYDB-2001", "非法版本号", "Invalid version number",
-            "迁移脚本版本号不符合「一段或多段非负整数、以点分隔」的规范。",
-            "将脚本重命名为 V<数字>__<描述>.sql，例如 V1__init.sql 或 V1.2__add_index.sql。"),
+            "迁移脚本版本号未以数字开头，含空段/非法字符，或文件名不符合版本化迁移规范。",
+            "使用 V<版本>__<描述>.sql；版本可含字母数字段，并用点、下划线或连字符分隔。"),
     DUPLICATE_VERSION("FLYDB-2002", "重复版本", "Duplicate version",
             "两个或多个迁移脚本解析出相同的版本号。",
             "为冲突脚本分配互不相同的版本号（详情列出冲突文件）。"),

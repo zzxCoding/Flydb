@@ -23,6 +23,7 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
     private final String scriptName;
     private final String sql;
     private final SqlStatementBuilderConfig parserConfig;
+    private final boolean placeholderReplacement;
     private final String placeholderPrefix;
     private final String placeholderSuffix;
     private final Map<String, String> placeholders;
@@ -33,9 +34,20 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
                                 String placeholderPrefix, String placeholderSuffix,
                                 Map<String, String> placeholders,
                                 Map<String, String> builtIns) {
+        this(scriptName, sql, parserConfig, true, placeholderPrefix, placeholderSuffix,
+                placeholders, builtIns);
+    }
+
+    public SqlMigrationExecutor(String scriptName, String sql,
+                                SqlStatementBuilderConfig parserConfig,
+                                boolean placeholderReplacement,
+                                String placeholderPrefix, String placeholderSuffix,
+                                Map<String, String> placeholders,
+                                Map<String, String> builtIns) {
         this.scriptName = scriptName;
         this.sql = sql;
         this.parserConfig = parserConfig;
+        this.placeholderReplacement = placeholderReplacement;
         this.placeholderPrefix = placeholderPrefix;
         this.placeholderSuffix = placeholderSuffix;
         this.placeholders = placeholders;
@@ -73,8 +85,10 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
     /** 完成与真实执行一致的占位符替换和词法解析，但不触碰 JDBC。 */
     public List<SqlStatement> statements() {
         // 1) 占位符替换
-        String resolved = PlaceholderReplacer.replace(sql, scriptName,
-                placeholderPrefix, placeholderSuffix, placeholders, builtIns);
+        String resolved = placeholderReplacement
+                ? PlaceholderReplacer.replace(sql, scriptName,
+                        placeholderPrefix, placeholderSuffix, placeholders, builtIns)
+                : sql;
 
         // 2) 词法解析
         SqlScriptParser parser = new SqlScriptParser(parserConfig);

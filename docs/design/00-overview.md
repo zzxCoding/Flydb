@@ -40,7 +40,7 @@ Flyway Community 采用 Apache 2.0 许可，且其官方支持矩阵**已包含 
 | 3 | 失败迁移记录写入历史表但查询"当前版本"不过滤 `success` | 失败版本被误判为当前版本，后续迁移被错误跳过 | 历史仓储查询显式 `WHERE success = true`；FAILED 记录阻塞 migrate、走 repair 流程 | [02 §6](02-domain-api.md)、[05 §5](05-commands.md) |
 | 4 | 整个 SQL 文件塞进单条 `PreparedStatement.execute()` | 多语句脚本在多数驱动下直接失败 | 字符级状态机把脚本切分为语句列表，逐条执行 | [04 §1](04-parser-lock-tx.md) |
 | 5 | 同一数据库并发迁移无任何锁保护 | 两个进程同时 migrate 产生竞态、重复执行 | 每个方言强制提供 `MigrationLock`，migrate/baseline/repair/clean 全程持锁 | [04 §2](04-parser-lock-tx.md) |
-| 6 | 版本号仅支持纯整数（`Integer.parseInt`） | 不支持 `1.2`、`20260812.1` 等常用版本风格 | `MigrationVersion` 支持任意段数点分数字（BigInteger） | [02 §3](02-domain-api.md) |
+| 6 | 版本号仅支持纯整数（`Integer.parseInt`） | 不支持 `1.2`、`20260812.1`、`20260327-b06.4` 等常用版本风格 | `MigrationVersion` 支持数字/字母 token，自然排序且数字使用 BigInteger | [02 §3](02-domain-api.md) |
 
 此外的工程性问题（无测试、God Class、硬编码 root/root 凭据、SQL 字符串拼接、配置项声明了但代码不读）在新设计中分别由测试策略（[08](08-testing-roadmap.md)）、模块划分（[01](01-modules.md)）、配置体系（[06](06-config-cli.md)）系统性解决。
 
@@ -94,7 +94,7 @@ Flyway Community 采用 Apache 2.0 许可，且其官方支持矩阵**已包含 
 | `R` | `R__{description}.sql`（**不带版本号**） | 可重复迁移：内容 checksum 变化时重新执行，在所有 pending 版本化迁移之后按描述排序执行。典型用途：视图、存储过程、权限脚本 | `R__user_summary_view.sql` |
 | `U` | `U{version}__{description}.sql` | 撤销迁移：撤销对应版本的 `V` 迁移，MVP 仅支持撤销最近一次（见 [05 §7](05-commands.md)） | `U1.2__add_user_index.sql` |
 
-版本号：一段或多段非负整数，`.` 分隔（`1`、`1.2`、`20260812.1`）；分隔符 `__`（两个下划线）；描述中的下划线在展示时转为空格。前缀/分隔符/后缀均可通过配置修改（见 [06 §2](06-config-cli.md)）。
+版本号：以数字开头，字母数字 token 可用 `.`、`_`、`-` 分隔（`1`、`1.2`、`20260812.1`、`20260327-b06.4`）；版本与描述的默认分隔符是 `__`（两个下划线）。前缀/分隔符/后缀均可通过配置修改（见 [06 §2](06-config-cli.md)）。
 
 ### 4.1 ⚠️ 破坏性变更：`R` 前缀语义变化
 

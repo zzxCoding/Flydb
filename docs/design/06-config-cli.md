@@ -24,14 +24,25 @@ CLI 参数  >  环境变量 FLYDB_*  >  配置文件 flydb.conf  >  内置默认
 | `flydb.password` | `FLYDB_PASSWORD` | `-p, --password` | 无 | 支持 `${env:VAR}` 间接引用（§3） |
 | `flydb.driver` | `FLYDB_DRIVER` | `--driver` | 按 URL 前缀推断 | 显式驱动类名 |
 | `flydb.database-type` | `FLYDB_DATABASE_TYPE` | `--database-type` | 自动探测 | 方言名（[03 §1](03-dialects.md) 逃生舱） |
-| `flydb.locations` | `FLYDB_LOCATIONS` | `-l, --locations` | `filesystem:db/migration`（CLI）/ `classpath:db/migration`(API) | 逗号分隔多值 |
+| `flydb.locations` | `FLYDB_LOCATIONS` | `-l, --locations` | `filesystem:db/migration`（CLI）/ `classpath:db/migration`(API) | 逗号分隔多值；递归扫描子目录；`filesystem:` 支持相对或绝对路径，相对路径以 CLI 当前工作目录为基准 |
 | `flydb.encoding` | `FLYDB_ENCODING` | `--encoding` | `UTF-8` | 脚本编码 |
 | `flydb.table` | `FLYDB_TABLE` | `--table` | `flydb_schema_history` | 历史表名 |
 | `flydb.baseline-version` | `FLYDB_BASELINE_VERSION` | `--baseline-version` | `1` | |
 | `flydb.baseline-on-migrate` | `FLYDB_BASELINE_ON_MIGRATE` | `--baseline-on-migrate` | `false` | |
 | `flydb.validate-on-migrate` | `FLYDB_VALIDATE_ON_MIGRATE` | `--validate-on-migrate` | `true` | |
 | `flydb.out-of-order` | `FLYDB_OUT_OF_ORDER` | `--out-of-order` | `false` | |
+| `flydb.target-version` | `FLYDB_TARGET_VERSION` | `--target-version` | 无 | 精确执行版本；与范围互斥 |
+| `flydb.start-version` | `FLYDB_START_VERSION` | `--start-version` | 无 | 包含边界的起始版本 |
+| `flydb.end-version` | `FLYDB_END_VERSION` | `--end-version` | 无 | 包含边界的结束版本 |
+| `flydb.version-selection` | `FLYDB_VERSION_SELECTION` | `--version-selection` | 自动推断 | `exact\|range\|family\|family-range\|regex` |
+| `flydb.version-source` | `FLYDB_VERSION_SOURCE` | `--version-source` | `file` | `file\|directory` |
+| `flydb.version-regex` | `FLYDB_VERSION_REGEX` | `--version-regex` | 无 | 版本整串正则 |
+| `flydb.directory/file/path-glob` | 对应 `FLYDB_*_GLOB` | 对应 `--*-glob` | 无 | 相对路径发现过滤 |
+| `flydb.directory/file/path-regex` | 对应 `FLYDB_*_REGEX` | 对应 `--*-regex` | 无 | 相对路径整串正则过滤 |
+| `flydb.migration-order` | `FLYDB_MIGRATION_ORDER` | `--migration-order` | `version` | `version\|directory-version` |
+| `flydb.directory-version-regex` | `FLYDB_DIRECTORY_VERSION_REGEX` | `--directory-version-regex` | 最近的数字目录 | `version` 命名组或第一个捕获组 |
 | `flydb.placeholders.<k>` | `FLYDB_PLACEHOLDERS_<K>` | `-D<k>=<v>` | 空 | 用户占位符 |
+| `flydb.placeholder-replacement` | `FLYDB_PLACEHOLDER_REPLACEMENT` | `--placeholder-replacement` | `true` | `false` 时 `${...}` 业务模板原样保留 |
 | `flydb.placeholder-prefix` | `FLYDB_PLACEHOLDER_PREFIX` | `--placeholder-prefix` | `${` | |
 | `flydb.placeholder-suffix` | `FLYDB_PLACEHOLDER_SUFFIX` | `--placeholder-suffix` | `}` | |
 | `flydb.sql-migration-prefix` | `FLYDB_SQL_MIGRATION_PREFIX` | `--sql-migration-prefix` | `V` | 版本化迁移前缀 |
@@ -45,10 +56,11 @@ CLI 参数  >  环境变量 FLYDB_*  >  配置文件 flydb.conf  >  内置默认
 
 ## 3. 敏感信息处理
 
-1. **环境变量间接引用**：`flydb.password=${env:DB_PASSWORD}`——配置装载时解析，不落盘、不进日志。
-2. **密码文件**：`flydb.password.file=/run/secrets/db_password`（K8s/容器 Secret 挂载场景）。
-3. **交互输入**：CLI 检测到密码缺失且连接 TTY → `System.console().readPassword()` 遮罩读取；非 TTY 则报 `FLYDB-4002` 提示三种提供方式。
-4. **统一脱敏**：日志、异常消息、`--dry-run` 输出中，密码一律 `****`；URL 中的内嵌凭据（`user:pass@host`）同样脱敏。
+1. **配置文件明文**：`flydb.password=明文密码`——功能上支持，适合本地临时测试；不要提交到版本库或用于共享/生产环境。
+2. **环境变量间接引用**：`flydb.password=${env:DB_PASSWORD}`——配置装载时解析，密码本身不落盘、不进日志。
+3. **密码文件**：`flydb.password.file=/run/secrets/db_password`（K8s/容器 Secret 挂载场景）。
+4. **交互输入**：CLI 检测到密码缺失且连接 TTY → `System.console().readPassword()` 遮罩读取；非 TTY 则报 `FLYDB-4002` 提示可用来源。
+5. **统一脱敏**：日志、异常消息、`--dry-run` 输出中，密码一律 `****`；URL 中的内嵌凭据（`user:pass@host`）同样脱敏。
 
 ## 4. CLI 命令设计
 
@@ -63,9 +75,13 @@ flydb [全局选项] <命令> [命令选项]
   version    输出 flydb 自身版本
 ```
 
-全局选项：`-c/--config <file>`、`-u/--url`、`--user`、`-p/--password`、`-l/--locations`、`-X/--debug`（完整堆栈）、`-q/--quiet`、`--color=auto|always|never`、`-n/--dry-run`。
+全局选项：`-c/--config <file>`、`-u/--url`、`--user`、`-p/--password`、`-l/--locations`、版本选择/来源、路径 glob/regex、迁移排序、`-X/--debug`（完整堆栈）、`-q/--quiet`、`--color=auto|always|never`、`-n/--dry-run`。完整名称以[命令参考](../reference/commands.md)为准。
 
 - **`--dry-run`**（migrate/undo）：完整执行探测/校验/解析/pending 计算，对每条将执行的语句**只打印不执行**——上线评审的刚需。
+- **版本选择**（migrate）：默认目标为精确文件版本；显式支持版本族、版本族范围、正则与目录版本来源。显式选择排除 repeatable，且继续服从校验和 `out-of-order`。
+- **路径发现过滤**：directory/file/path 三个维度取交集，同一维度 glob/regex 互斥；规则影响所有读取本地迁移的命令。
+- **排序**：只提供与版本历史语义一致的 `version` 与 `directory-version`，后者强制校验目录/文件版本族关系。
+- **占位符总开关**：`placeholder-replacement=false` 时真实迁移与 dry-run 都跳过替换，允许把 `${...}` 业务运行时模板原样写入数据库。
 - **`clean` 双保险**：`cleanDisabled=false` 之外，交互式终端还需输入目标库名确认；非交互需 `--force`。
 - **Ctrl+C**：注册 shutdown hook 释放锁连接，退出码 5。
 
@@ -81,6 +97,7 @@ flydb [全局选项] <命令> [命令选项]
 
 非交互：`flydb init --url jdbc:dm://localhost:5236 --driver dm.jdbc.driver.DmDriver --database-type dm --yes`。
 其中 `--driver` 和 `--database-type` 会写入生成的 `flydb.conf`；标准 URL 的驱动类可留空自动推断，厂商 URL 应显式提供。
+生成的 `flydb.locations` 使用 `db/migration` 的绝对路径；手工配置相对 `filesystem:` 路径时仍以 CLI 当前工作目录为基准。
 
 ### 4.2 `info` 表格输出（中文友好）
 
@@ -126,10 +143,12 @@ flydb 2.0.0 · 达梦 DM8 · jdbc:dm://10.0.0.1:5236 · 历史表: flydb_schema_
 | 4 | 配置错误 |
 | 5 | 用户中断（SIGINT） |
 
-## 6. drivers/ 目录动态驱动加载
+## 6. JDBC 驱动解析与动态加载
 
 - CLI fat jar **不内置任何 JDBC 驱动**：① 许可证隔离（MySQL Connector/J 为 GPL+FOSS 例外、OceanBase 客户端为 LGPL，与 flydb 的 Apache-2.0 分发解耦）；② 信创现实（达梦/金仓驱动经企业内网制品库分发，不能假设可访问公网）。
-- 启动时扫描 `<安装目录>/drivers/*.jar` 构建子 URLClassLoader；**不走 `DriverManager`**（对非系统类加载器加载的驱动有可见性限制），而是反射实例化 `java.sql.Driver` 后由内置 `DriverDataSource` 直接持有调用 `driver.connect(url, props)`——DBeaver 等工具的标准做法。
+- `DriverResolver` 依次检查 `<安装目录>/drivers/*.jar`、运行时 classpath、Maven 本地仓库、`~/.flydb/drivers` 缓存；仍未找到时读取 Maven settings 的 mirror、激活 Profile 仓库、server 认证和 proxy，并通过有效镜像解析 Central。`mirrorOf=*` 存在时不得绕过私服。
+- 下载的 JAR 写入 Flydb 独立缓存，不修改 Maven 本地仓库；`flydb.offline=true` 或 `flydb.driver-download=never` 可禁止联网。CLI 仍然**不捆绑任何 JDBC 驱动**。
+- 解析结果构建子 URLClassLoader；**不走 `DriverManager`**（对非系统类加载器加载的驱动有可见性限制），而是反射实例化 `java.sql.Driver` 后由内置 `DriverDataSource` 直接持有调用 `driver.connect(url, props)`。
 - 驱动类名按 URL 前缀内置映射（`jdbc:dm://` → `dm.jdbc.driver.DmDriver` 等），`--driver` 可覆盖；映射表维护在 `DatabaseType` 各实现内。
 - 二期外部方言 jar（[01 §2.1](01-modules.md)）同样放 `drivers/` 目录，一并进入 SPI 扫描路径。
 

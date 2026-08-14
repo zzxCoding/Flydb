@@ -3,6 +3,9 @@ package com.flydb.core.resolver;
 import java.nio.charset.Charset;
 import java.util.List;
 
+import com.flydb.core.migration.MigrationOrder;
+import com.flydb.core.migration.VersionSource;
+
 /**
  * 解析器上下文（设计 02 §5）。
  *
@@ -33,4 +36,17 @@ public interface ResolverContext {
 
     /** 类加载器（用于 classpath 扫描）。 */
     ClassLoader classLoader();
+
+    /** 以下高级发现规则均为可选；默认实现保持第三方 ResolverContext 二进制/源码兼容。 */
+    default String directoryGlob() { return null; }
+    default String fileGlob() { return null; }
+    default String pathGlob() { return null; }
+    default String directoryRegex() { return null; }
+    default String fileRegex() { return null; }
+    default String pathRegex() { return null; }
+    default MigrationOrder migrationOrder() { return MigrationOrder.VERSION; }
+    default VersionSource versionSource() { return VersionSource.FILE; }
+    default String directoryVersionRegex() {
+        return "(?:^|/)(?<version>\\d+(?:\\.\\d+)*)(?=$|/)";
+    }
 }

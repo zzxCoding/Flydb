@@ -52,7 +52,11 @@ public final class FlydbConfiguration {
     private final boolean baselineOnMigrate;       // 默认 false
     private final boolean validateOnMigrate;       // 默认 true
     private final boolean outOfOrder;              // 默认 false
+    private final MigrationVersion targetVersion; // 默认 null，精确选择
+    private final MigrationVersion startVersion;  // 默认 null，包含边界
+    private final MigrationVersion endVersion;    // 默认 null，包含边界
     private final Map<String, String> placeholders;
+    private final boolean placeholderReplacement; // 默认 true
     private final String placeholderPrefix;        // 默认 "${"
     private final String placeholderSuffix;        // 默认 "}"
     private final List<Callback> callbacks;
@@ -77,7 +81,11 @@ public final class FlydbConfiguration {
         public Builder baselineOnMigrate(boolean flag) { ... }
         public Builder validateOnMigrate(boolean flag) { ... }
         public Builder outOfOrder(boolean flag) { ... }
+        public Builder targetVersion(String version) { ... }
+        public Builder startVersion(String version) { ... }
+        public Builder endVersion(String version) { ... }
         public Builder placeholders(Map<String, String> placeholders) { ... }
+        public Builder placeholderReplacement(boolean enabled) { ... }
         public Builder callbacks(Callback... callbacks) { ... }
         public Builder cleanDisabled(boolean flag) { ... }
         public Builder lockTimeoutSeconds(int seconds) { ... }
@@ -99,12 +107,12 @@ public final class FlydbConfiguration {
 ```java
 public final class MigrationVersion implements Comparable<MigrationVersion> {
 
-    private final List<BigInteger> parts;   // 不可变
+    private final List<Part> parts;         // 数字 BigInteger / 小写字母 token，不可变
     private final String rawValue;
 
     public static MigrationVersion parse(String versionText) {
-        // 拆 "." 分段；每段必须匹配 \d+，否则 FlydbException(FLYDB-2001)
-        // 用 BigInteger 存段值：不对数值范围做隐藏假设（支持 20260812.1 这类日期式版本）
+        // 以数字开头；字母数字 token 可由 .、_、- 分隔，否则 FLYDB-2001
+        // 数字 token 用 BigInteger，不对范围做隐藏假设；字母 token 不区分大小写比较
     }
 
     @Override public int compareTo(MigrationVersion other) {
@@ -116,7 +124,9 @@ public final class MigrationVersion implements Comparable<MigrationVersion> {
 }
 ```
 
-**设计取舍（明示）**：`1.2` ≡ `1.2.0`（末尾补零不改变语义）；`equals`/`hashCode`/`compareTo` 三者严格一致，避免"放入 HashSet 判重失败"的经典缺陷。MVP 不支持字母/下划线版本段（Flyway 也不支持），解析失败给出明确错误。
+`V20260327-b06.4__data.sql` 这类版本按 token 自然顺序参与范围、版本族、`out-of-order` 和重复检测。扫描到以版本化/撤销前缀开头且后缀匹配、但整体命名无法解析的候选文件时必须报 `FLYDB-2001`，不得静默忽略。
+
+**设计取舍（明示）**：`1.2` ≡ `1.2.0`（末尾补零不改变语义）；`equals`/`hashCode`/`compareTo` 三者严格一致，避免"放入 HashSet 判重失败"的经典缺陷。字母数字 token 可由点、下划线或连字符分隔；数字优先按 BigInteger 比较，字母不区分大小写比较，保证日期前缀范围和同日前缀版本顺序稳定。
 
 ## 4. 迁移元数据
 
@@ -164,13 +174,16 @@ public interface ResolverContext {
     String sqlMigrationSeparator();       // "__"
     String sqlMigrationSuffix();          // ".sql"
     ClassLoader classLoader();
+    // 可选高级发现规则通过 Java 8 default 方法提供：directory/file/path glob/regex、
+    // versionSource、migrationOrder、directoryVersionRegex。
 }
 ```
 
 内置两个 Resolver：
 
-1. **SqlMigrationResolver**：扫描 `locations`（支持 `classpath:` 与 `filesystem:` 两种前缀），按命名规范解析出版本/描述/类型，读取内容计算 checksum。
-   - **强制排序**：输出前按 `MigrationVersion` 升序（版本化）与 description 升序（可重复）排序——修复旧原型缺陷 #1。
+1. **SqlMigrationResolver**：递归扫描 `locations`（支持普通目录、JAR 内 `classpath:` 与 `filesystem:`），先按规范化相对路径执行 glob/regex 发现过滤，再按命名规范解析版本/描述/类型并计算 checksum；`script` 保留相对 location 的路径。
+   - **确定性排序**：默认按文件 `MigrationVersion`；显式 `directory-version` 时按提取的目录版本、文件版本、相对路径排序。目录版本模式要求文件版本属于目录版本族，避免排序规则与历史版本语义分裂。
+   - **版本来源**：筛选坐标可来自文件版本或目录版本；目录版本只用于发现/筛选/排序，历史表仍记录文件的完整版本和相对脚本路径。
    - **重复版本检测**：两个文件解析出相同版本号 → `FLYDB-2002` 报错（列出冲突文件路径）。
    - **旧式命名阻断**：发现 `R\d+__*.sql` → `FLYDB-2005` 报错并给出重命名指引（见 [00 §4.1](00-overview.md)），不提供关闭开关。
 2. **JavaMigrationResolver**：从配置的包路径扫描/显式注册 `JavaMigration` 实现。

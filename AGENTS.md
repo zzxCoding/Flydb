@@ -80,7 +80,7 @@ For a Flydb CLI task:
 
 1. Confirm the repository or distribution path. A source checkout is not an
    installed CLI; use `bin/flydb` from a built distribution when available.
-2. Read the command and configuration references required by the task.
+2. Read the command and configuration references required by the task. The CLI resolves drivers from `drivers/`, the runtime classpath, Maven local repository, Flydb cache, then Maven effective mirrors/private repositories; use `flydb.offline=true` when network access is forbidden.
 3. Run `bin/flydb version` before database work.
 4. For a migration, run `validate` and then `--dry-run migrate` first.
 5. Ask for explicit authorization before `migrate`, `baseline`, `repair`,
@@ -89,7 +89,8 @@ For a Flydb CLI task:
 6. Report the CLI path, redacted database target, command, dry-run/write
    status, exit code, and verification result.
 
-Use `FLYDB_PASSWORD`, `${env:VAR}`, or `flydb.password.file` for credentials.
+`flydb.password` 支持直接配置明文值（仅建议本地临时测试）；生产和共享环境使用
+`FLYDB_PASSWORD`、`${env:VAR}` 或 `flydb.password.file`。
 Never put passwords in command arguments, logs, Skill output, or SQL files.
 
 ## 4. New JDBC and Xinchuang databases

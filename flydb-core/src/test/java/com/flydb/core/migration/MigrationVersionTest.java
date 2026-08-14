@@ -17,7 +17,7 @@ import com.flydb.core.exception.FlydbException;
  * MigrationVersion 表驱动测试（设计 02 §3、08 §1）。
  *
  * <p>核心不变量：{@code 1.2 ≡ 1.2.0}（末尾补零不改语义）；{@code equals}/{@code hashCode}/
- * {@code compareTo} 三者严格一致；段值按数值比较（故 2 &lt; 10，而非字典序）；非法输入报 FLYDB-2001。
+ * {@code compareTo} 三者严格一致；数字 token 按数值比较，字母 token 稳定排序；非法输入报 FLYDB-2001。
  */
 class MigrationVersionTest {
 
@@ -40,6 +40,14 @@ class MigrationVersionTest {
         // 旧原型用 Integer.parseInt 会溢出；BigInteger 不对数值范围做隐藏假设（设计 02 §3）。
         MigrationVersion huge = MigrationVersion.parse("99999999999999999999.1");
         assertThat(huge.toString()).isEqualTo("99999999999999999999.1");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "20260327-b06.4", "20260327-b07.5"
+    })
+    void alphanumeric_hyphen_versions_round_trip(String version) {
+        assertThat(MigrationVersion.parse(version).toString()).isEqualTo(version);
     }
 
     // ---- 末尾补零等价性：1.2 ≡ 1.2.0 ----
@@ -91,6 +99,16 @@ class MigrationVersionTest {
     }
 
     @Test
+    void alphanumeric_hyphen_versions_use_stable_natural_order() {
+        assertThat(MigrationVersion.parse("20260327-b06.4"))
+                .isLessThan(MigrationVersion.parse("20260327-b07.5"));
+        assertThat(MigrationVersion.parse("20260327-b07.5"))
+                .isLessThan(MigrationVersion.parse("20260328"));
+        assertThat(MigrationVersion.parse("20260327-b06.4")
+                .isSameOrDescendantOf(MigrationVersion.parse("20260327"))).isTrue();
+    }
+
+    @Test
     void equals_consistent_with_compareTo() {
         MigrationVersion a = MigrationVersion.parse("1.0");
         MigrationVersion b = MigrationVersion.parse("1");
@@ -102,8 +120,8 @@ class MigrationVersionTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-            "", " ", "1.", ".1", "1..2", "1.a", "a", "1.2.x", "-1", "1 2",
-            "1,2", "v1", "1.2-3", "+1"
+            "", " ", "1.", ".1", "1..2", "a", "-1", "1 2",
+            "1,2", "v1", "1--b", "+1"
     })
     void invalid_versions_throw_flydb_2001(String invalid) {
         assertThatThrownBy(() -> MigrationVersion.parse(invalid))

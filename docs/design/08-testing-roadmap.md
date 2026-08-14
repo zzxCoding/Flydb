@@ -8,7 +8,7 @@ TDD 强制（先写测试再实现，见 [09 §2](09-implementation-plan.md)）�
 
 | 测试类 | 覆盖内容 |
 |---|---|
-| `MigrationVersionTest` | 表驱动比较：`1.2` vs `1.2.0` 相等、多段长短不一、BigInteger 大数版本（`20260812.1`）、非法输入报 FLYDB-2001、equals/hashCode/compareTo 三者一致性 |
+| `MigrationVersionTest` | 表驱动比较：`1.2` vs `1.2.0` 相等、多段长短不一、BigInteger 大数版本（`20260812.1`）、字母连字符版本（`20260327-b06.4`）、非法输入报 FLYDB-2001、equals/hashCode/compareTo 三者一致性 |
 | `SqlScriptLexerTest` | 按家族 fixture：`--`/`/* */`/`#` 注释、`''` 与 `\'` 转义、`$$`/`$tag$` dollar-quoting、PL/SQL 块（`CREATE TRIGGER`、裸 `DECLARE`/`BEGIN`、`/` 终止）、`DELIMITER` 指令存储过程、CRLF 文件、最后一条语句无分号、语句起始行号正确性、Unicode 内容 |
 | `ChecksumCalculatorTest` | CRLF→LF 归一化前后一致、UTF-8 BOM 剥离、同内容跨平台稳定 |
 | `MigrationInfoStateTest` | [02 §6](02-domain-api.md) 状态推导真值表逐行覆盖（含 UNDONE、FUTURE、OUTDATED 分支） |

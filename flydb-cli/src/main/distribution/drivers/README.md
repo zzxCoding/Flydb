@@ -1,6 +1,6 @@
 # JDBC 驱动目录
 
-Flydb 发行包不捆绑 JDBC 驱动。请将目标数据库的 Java 8 兼容驱动 jar 直接放入本目录；小众数据库还可把实现 `DatabaseType` SPI 的方言 jar 放在这里。
+Flydb 发行包不捆绑 JDBC 驱动。CLI 会优先复用本目录、运行时 classpath、Maven 本地仓库和 `~/.flydb/drivers`，必要时遵循 `~/.m2/settings.xml` 的私服、镜像、认证和代理获取驱动。完全离线可设置 `flydb.offline=true`。你仍可将 Java 8 兼容驱动 jar 直接放入本目录；小众数据库还可把实现 `DatabaseType` SPI 的方言 jar 放在这里。
 
 | 数据库 | 驱动类 | 常见获取方式 |
 |---|---|---|
