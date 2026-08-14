@@ -59,6 +59,19 @@ class DatabaseCapabilitiesTest {
     }
 
     @Test
+    @DisplayName("Oracle 家族 clean 使用 PURGE 与 user_sequences 的专用策略")
+    void oracleFamilyUsesOracleCleanStrategy() throws Exception {
+        Connection execution = JdbcFakes.recordingConnection(JdbcFakes.newCapture());
+
+        assertThat(new OracleDatabaseType().createDatabase(execution, null).cleanStrategy())
+                .isInstanceOf(OracleCleanStrategy.class);
+        assertThat(new OceanBaseOracleDatabase(execution).cleanStrategy())
+                .isInstanceOf(OracleCleanStrategy.class);
+        assertThat(new DmDatabase(execution, false).cleanStrategy())
+                .isInstanceOf(OracleCleanStrategy.class);
+    }
+
+    @Test
     @DisplayName("KingbaseES 不支持 advisory lock 时降级锁表并给出警告")
     void kingbaseFallsBackToTableLockWithWarning() {
         Connection execution = unsupportedAdvisoryConnection();

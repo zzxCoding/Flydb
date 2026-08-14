@@ -1,7 +1,6 @@
 package com.flydb.core.command;
 
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Arrays;
 
 import com.flydb.core.api.FlydbConfiguration;
@@ -68,21 +67,10 @@ public final class CleanCommand {
     }
 
     private static void dropBookkeepingTables(CommandRuntime runtime, Log log) {
-        Statement statement = null;
-        try {
-            statement = runtime.connection().createStatement();
-            log.info("正在删除历史表: " + configurationTable(runtime));
-            statement.execute("DROP TABLE " + runtime.database().quote(configurationTable(runtime)));
-            log.info("正在删除锁表: " + lockTable(runtime));
-            statement.execute("DROP TABLE " + runtime.database().quote(lockTable(runtime)));
-        } catch (SQLException e) {
-            throw new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
-                    "删除 clean 记账表失败: " + e.getMessage(), e);
-        } finally {
-            if (statement != null) {
-                try { statement.close(); } catch (SQLException ignored) { }
-            }
-        }
+        log.info("正在删除历史表: " + configurationTable(runtime));
+        runtime.history().dropHistoryTable();
+        log.info("正在删除锁表: " + lockTable(runtime));
+        runtime.history().dropLockTable();
     }
 
     private static void rollback(CommandRuntime runtime) {

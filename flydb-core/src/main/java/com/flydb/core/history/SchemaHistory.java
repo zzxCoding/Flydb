@@ -52,6 +52,16 @@ public final class SchemaHistory {
                 : historyTable + "_lock";
     }
 
+    /** 删除历史表（clean 收尾）；表名与建表 DDL 使用同一标识符形式，避免引用形式不一致删错对象。 */
+    public void dropHistoryTable() {
+        executeDropTable(ddl.dropTableSql(historyTable()));
+    }
+
+    /** 删除锁表（clean 收尾）；表名与建表 DDL 使用同一标识符形式。 */
+    public void dropLockTable() {
+        executeDropTable(ddl.dropTableSql(lockTable()));
+    }
+
     private void ensureLockRow() {
         String sql = "INSERT INTO " + lockTable() + " (lock_id) VALUES (?)";
         PreparedStatement statement = null;
@@ -81,6 +91,24 @@ public final class SchemaHistory {
                 throw new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
                         "建表失败: " + e.getMessage(), e);
             }
+        } finally {
+            if (stmt != null) {
+                try {
+                    stmt.close();
+                } catch (SQLException ignored) {
+                }
+            }
+        }
+    }
+
+    private void executeDropTable(String sql) {
+        Statement stmt = null;
+        try {
+            stmt = connection.createStatement();
+            stmt.execute(sql);
+        } catch (SQLException e) {
+            throw new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
+                    "删除表失败: " + e.getMessage(), e);
         } finally {
             if (stmt != null) {
                 try {

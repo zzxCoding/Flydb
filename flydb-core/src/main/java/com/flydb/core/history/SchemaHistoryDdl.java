@@ -29,6 +29,14 @@ public interface SchemaHistoryDdl {
      */
     String createLockTableSql(String lockTableName);
 
+    /**
+     * 返回删表 SQL；{@code tableName} 应与建表使用同一标识符形式。
+     * 默认普通 {@code DROP TABLE}，Oracle 家族覆写追加 {@code PURGE} 避免回收站残留。
+     */
+    default String dropTableSql(String tableName) {
+        return "DROP TABLE " + tableName;
+    }
+
     /** PostgreSQL 家族：{@code BOOLEAN}、{@code DEFAULT now()}。 */
     static SchemaHistoryDdl postgresql() {
         return new PostgresqlSchemaHistoryDdl();
@@ -129,6 +137,11 @@ public interface SchemaHistoryDdl {
                     + "    locked_by VARCHAR(200),\n"
                     + "    locked_at TIMESTAMP\n"
                     + ")";
+        }
+
+        @Override
+        public String dropTableSql(String tableName) {
+            return "DROP TABLE " + tableName + " PURGE";
         }
     }
 }

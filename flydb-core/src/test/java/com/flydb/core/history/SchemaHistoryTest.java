@@ -126,6 +126,17 @@ class SchemaHistoryTest {
         }
 
         @Test
+        @DisplayName("删表 SQL 默认普通 DROP，Oracle 系追加 PURGE 防回收站残留")
+        void dropTableSqlMatchesFamilyRecyclebinSemantics() {
+            assertThat(SchemaHistoryDdl.postgresql().dropTableSql(TABLE))
+                    .isEqualTo("DROP TABLE " + TABLE);
+            assertThat(SchemaHistoryDdl.mysql().dropTableSql(TABLE))
+                    .isEqualTo("DROP TABLE " + TABLE);
+            assertThat(SchemaHistoryDdl.oracle().dropTableSql(TABLE))
+                    .isEqualTo("DROP TABLE " + TABLE + " PURGE");
+        }
+
+        @Test
         @DisplayName("锁表模板包含 INT PRIMARY KEY")
         void lockTableDdl() {
             String ddl = SchemaHistoryDdl.postgresql().createLockTableSql(TABLE.replace("history", "lock"));

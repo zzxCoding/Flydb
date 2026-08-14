@@ -94,7 +94,7 @@ public abstract class OracleFamilyDatabase implements Database {
 
     @Override
     public CleanStrategy cleanStrategy() {
-        return new MetadataCleanStrategy('"', false, false, false);
+        return new OracleCleanStrategy();
     }
 
     @Override

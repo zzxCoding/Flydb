@@ -93,7 +93,7 @@ FLYDB_PASSWORD='...' bin/flydb validate
 bin/flydb clean --clean-disabled=false --force
 ```
 
-执行 `clean` 时会先报告 schema 和待删除对象统计，再输出表、视图、序列及 Flydb 记账表的逐项进度，便于判断长时间清理是否仍在推进。
+执行 `clean` 时会先报告 schema 和待删除对象统计，再输出表、视图、序列及 Flydb 记账表的逐项进度，便于判断长时间清理是否仍在推进。Oracle 家族（Oracle/达梦/OceanBase-Oracle）会跳过随表生存的 identity 序列（`ISEQ$$_`），删除表时带 `PURGE` 并在收尾清空回收站，避免残留对象占用名称。
 
 `init` 只会创建不存在的 `flydb.conf`、`db/migration/V1__init.sql` 和缺失的驱动说明；生成配置中的 `flydb.locations` 使用绝对路径，跨目录执行不会随 CWD 漂移。它不会覆盖已有配置或迁移文件，冲突时返回 `FLYDB-4004`。所有子命令均支持 `--help`，例如 `bin/flydb init --help`。
 
