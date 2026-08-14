@@ -139,7 +139,7 @@ bin/flydb undo
 bin/flydb clean --clean-disabled=false --force   # clean 默认禁用；非交互环境需双开关
 ```
 
-版本族、目录版本、路径 glob/regex 过滤与目录版本排序是显式启用的高级规则，任何筛选都不会绕过校验或 `out-of-order` 保护；完整模式与安全约束见[配置项参考](./docs/reference/configuration.md#版本选择路径过滤与排序)。命令语义见[命令参考](./docs/reference/commands.md)，错误码见[错误码参考](./docs/reference/errors.md)。
+版本族、目录版本、路径 glob/regex 过滤与目录版本排序是显式启用的高级规则，任何筛选都不会绕过校验或 `out-of-order` 保护；完整模式与安全约束见[配置项参考](./docs/reference/configuration.md#版本选择路径过滤与排序)。命令语义见[命令参考](./docs/reference/commands.md)，错误码见[错误码参考](./docs/reference/errors.md)。多数据库、多套测试与生产环境的自动化组织方式见[多环境自动化指南](./docs/getting-started/multi-environment.md)。
 
 ## 从源码构建
 

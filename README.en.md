@@ -139,7 +139,7 @@ bin/flydb undo
 bin/flydb clean --clean-disabled=false --force   # clean is disabled by default; double opt-in for non-interactive use
 ```
 
-Version families, directory versions, path glob/regex filtering, and directory-version ordering are explicitly enabled advanced rules; no filtering bypasses validation or `out-of-order` protection. See the [configuration reference](./docs/reference/configuration.md) (in Chinese) for full patterns and safety constraints, the [command reference](./docs/reference/commands.md), and the [error-code reference](./docs/reference/errors.md).
+Version families, directory versions, path glob/regex filtering, and directory-version ordering are explicitly enabled advanced rules; no filtering bypasses validation or `out-of-order` protection. See the [configuration reference](./docs/reference/configuration.md) (in Chinese) for full patterns and safety constraints, the [command reference](./docs/reference/commands.md), and the [error-code reference](./docs/reference/errors.md). For organizing automation across multiple databases and multiple test/production environments, see the [multi-environment guide](./docs/getting-started/multi-environment.md) (in Chinese).
 
 ## Build from source
 

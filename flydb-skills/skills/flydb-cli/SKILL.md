@@ -16,6 +16,7 @@ compatibility: Flydb CLI 0.2，Java 8 或更高版本；需要 Flydb CLI 发行�
 3. 根据任务读取：
    - 配置或环境变量：[`docs/reference/configuration.md`](../../../docs/reference/configuration.md)
    - 错误或退出码：[`docs/reference/errors.md`](../../../docs/reference/errors.md)
+   - 多数据库、多测试/生产环境的自动化与 CI 组织：[`docs/getting-started/multi-environment.md`](../../../docs/getting-started/multi-environment.md)
    - 信创/新型 JDBC 数据库、驱动或方言：[`docs/getting-started/jdbc-integration.md`](../../../docs/getting-started/jdbc-integration.md)
    - 某个内置数据库：[`docs/getting-started/README.md`](../../../docs/getting-started/README.md) 及对应页面
    - CLI 发行包、动态驱动和设计约束：[`docs/design/06-config-cli.md`](../../../docs/design/06-config-cli.md)
