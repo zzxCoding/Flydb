@@ -35,8 +35,9 @@ public final class SqlStatementBuilderConfig {          // 不可变；每家族
 
 public interface PlsqlBlockDetector {
     // 输入：当前语句已累积文本（去注释、大写、trim）
-    // 判定是否进入 PL/SQL 块：CREATE [OR REPLACE] PROCEDURE/FUNCTION/PACKAGE[ BODY]/
-    // TRIGGER/TYPE，或裸 DECLARE / BEGIN 开头
+    // 判定是否进入 PL/SQL 块：CREATE [OR REPLACE] [EDITIONABLE|NONEDITIONABLE]
+    // PROCEDURE/FUNCTION/PACKAGE[ BODY]/TRIGGER/TYPE，或裸 DECLARE / BEGIN 开头
+    // （EDITIONABLE VIEW/SYNONYM 是普通单语句，按分号切分，不进块状态）
     boolean startsPlsqlBlock(String statementSoFarUpperTrimmed);
 }
 ```

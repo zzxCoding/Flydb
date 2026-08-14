@@ -90,9 +90,10 @@ public interface Database extends AutoCloseable {
 |---|---|
 | `supportsDdlTransactions()` | `false` |
 | 标识符引用 | 双引号（引用即大小写敏感） |
-| 语句切分 | 识别 PL/SQL 块（`CREATE PROCEDURE/FUNCTION/TRIGGER/PACKAGE/TYPE`、裸 `DECLARE`/`BEGIN`），块终止符为独占一行的 `/` |
+| 语句切分 | 识别 PL/SQL 块（`CREATE [OR REPLACE] [EDITIONABLE\|NONEDITIONABLE] PROCEDURE/FUNCTION/TRIGGER/PACKAGE/TYPE`、裸 `DECLARE`/`BEGIN`），块终止符为独占一行的 `/`；`EDITIONABLE VIEW/SYNONYM` 仍是普通单语句 |
 | 锁 | 通用锁表方案（家族默认）；OceanBase-Oracle 覆写为 `DBMS_LOCK` |
 | 历史表 DDL | 无 `IF NOT EXISTS` → "先查系统目录后建 + 建表异常兜底"的幂等策略；`success` 用 `NUMBER(1)`；`installed_on TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL`——Oracle 列定义要求 `DEFAULT` 在 `NOT NULL` 之前，反序报 `ORA-00907` |
+| clean | 专用 `OracleCleanStrategy`：序列查 `user_sequences`（跳过 `ISEQ$$_`/`BIN$`）——JDBC `getTables` 不返回序列且无 `information_schema`；`DROP TABLE ... PURGE` 并收尾 `PURGE RECYCLEBIN`（失败降级警告），避免回收站残留的表/LOB 段/索引占名导致 `CREATE` 撞名；记账表排除忽略大小写（非引用名大写存储） |
 | currentSchema | 查询会话当前 schema（达梦：`SELECT SYS_CONTEXT('USERENV','CURRENT_SCHEMA') FROM dual`，实施时确认） |
 
 > Oracle 官方方言、达梦 DM8 和 OceanBase-Oracle 共用 Oracle 家族的 SQL/DDL 基线；产品专有差异仍由各自 `DatabaseType` 或 `Database` 子类承担。

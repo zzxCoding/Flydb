@@ -7,7 +7,8 @@ import java.util.regex.Pattern;
  *
  * <p>识别以下开头（大小写不敏感，作用于去注释+大写+trim 后的语句文本）：
  * <ul>
- *   <li>{@code CREATE [OR REPLACE] PROCEDURE|FUNCTION|PACKAGE[ BODY]|TRIGGER|TYPE}</li>
+ *   <li>{@code CREATE [OR REPLACE] [EDITIONABLE|NONEDITIONABLE]
+ *       PROCEDURE|FUNCTION|PACKAGE[ BODY]|TRIGGER|TYPE}</li>
  *   <li>裸 {@code DECLARE} / {@code BEGIN}</li>
  * </ul>
  *
@@ -22,7 +23,11 @@ public final class OraclePlsqlBlockDetector implements PlsqlBlockDetector {
 
     private static final Pattern PLSQL_START = Pattern.compile(
             "^("
-                    + "CREATE(?:\\s+OR\\s+REPLACE)?\\s+"
+                    + "CREATE(?:\\s+OR\\s+REPLACE)?"
+                    // Navicat 等工具导出 CREATE OR REPLACE EDITIONABLE TRIGGER/FUNCTION/...；
+                    // VIEW/SYNONYM 的 EDITIONABLE 变体仍是普通单语句，不在块类型清单内
+                    + "(?:\\s+(?:EDITIONABLE|NONEDITIONABLE))?"
+                    + "\\s+"
                     + "(?:PROCEDURE|FUNCTION|PACKAGE\\s+BODY|PACKAGE|TRIGGER|TYPE)\\b"
                     + "|DECLARE\\b"
                     + "|BEGIN\\b"

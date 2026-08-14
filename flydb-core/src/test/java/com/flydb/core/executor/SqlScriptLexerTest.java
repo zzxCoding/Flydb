@@ -254,6 +254,32 @@ class SqlScriptLexerTest {
         }
 
         @Test
+        @DisplayName("CREATE OR REPLACE EDITIONABLE TRIGGER ... END; /（Navicat 导出形式）")
+        void plsqlEditionableTrigger() {
+            List<SqlStatement> stmts = parse(config, "/parser/oracle/plsql_editionable_trigger.sql");
+            assertThat(stmts).hasSize(2);
+            assertThat(lineNumbers(stmts)).containsExactly(1, 8);
+            String block = stmts.get(0).sql();
+            assertThat(block).contains("CREATE OR REPLACE EDITIONABLE TRIGGER trg_set_ts");
+            assertThat(block).contains("SELECT SYSDATE INTO :NEW.created_at FROM dual;");
+            assertThat(block).endsWith("END;");      // 块内 FROM dual; 不切断
+            assertThat(stmts.get(1).sql()).isEqualTo("SELECT 1 FROM dual");
+        }
+
+        @Test
+        @DisplayName("块探测器识别 EDITIONABLE/NONEDITIONABLE 变体；EDITIONABLE VIEW 仍是普通语句")
+        void plsqlEditionableKeywordVariants() {
+            assertThat(OraclePlsqlBlockDetector.INSTANCE.startsPlsqlBlock(
+                    "CREATE OR REPLACE EDITIONABLE TRIGGER trg")).isTrue();
+            assertThat(OraclePlsqlBlockDetector.INSTANCE.startsPlsqlBlock(
+                    "CREATE OR REPLACE NONEDITIONABLE FUNCTION f")).isTrue();
+            assertThat(OraclePlsqlBlockDetector.INSTANCE.startsPlsqlBlock(
+                    "CREATE EDITIONABLE PROCEDURE p")).isTrue();
+            assertThat(OraclePlsqlBlockDetector.INSTANCE.startsPlsqlBlock(
+                    "CREATE OR REPLACE EDITIONABLE VIEW v")).isFalse();
+        }
+
+        @Test
         @DisplayName("裸 DECLARE 块：BEGIN/END 内分号不切分")
         void plsqlAnonymousDeclare() {
             List<SqlStatement> stmts = parse(config, "/parser/oracle/plsql_anonymous_declare.sql");
