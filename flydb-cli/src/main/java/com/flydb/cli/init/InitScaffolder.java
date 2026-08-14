@@ -151,6 +151,7 @@ public final class InitScaffolder {
                 .append("# 包含边界的版本范围；可只设置其中一端；CLI: --start-version/--end-version。\n")
                 .append("# flydb.start-version=2\n")
                 .append("# flydb.end-version=5\n")
+                .append("# 注意：结束版本不含其 .N 子版本（如 20260625 不含 20260625.3）；需包含时用 family-range。\n")
                 .append("# 高级模式：exact|range|family|family-range|regex；省略时由上述参数推断。\n")
                 .append("# flydb.version-selection=family\n")
                 .append("# 版本来源：file（默认）或 directory；目录版本可整体选择目录内的 .1/.2/.3。\n")

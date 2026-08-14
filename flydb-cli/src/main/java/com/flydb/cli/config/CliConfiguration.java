@@ -80,6 +80,7 @@ public final class CliConfiguration {
     public boolean outOfOrder() { return booleanValue("flydb.out-of-order"); }
     public boolean cleanDisabled() { return booleanValue("flydb.clean-disabled"); }
     public int lockTimeoutSeconds() { return intValue("flydb.lock-timeout-seconds"); }
+    public int batchSize() { return intValue("flydb.batch-size"); }
 
     public Charset encoding() {
         String value = values.get("flydb.encoding");
@@ -129,7 +130,8 @@ public final class CliConfiguration {
                 .placeholders(placeholders()).placeholderReplacement(placeholderReplacement())
                 .placeholderPrefix(placeholderPrefix())
                 .placeholderSuffix(placeholderSuffix()).cleanDisabled(cleanDisabled())
-                .lockTimeoutSeconds(lockTimeoutSeconds()).databaseType(databaseType())
+                .lockTimeoutSeconds(lockTimeoutSeconds()).batchSize(batchSize())
+                .databaseType(databaseType())
                 .classLoader(classLoader).callbacks(callbacks(classLoader))
                 .sqlMigrationPrefix(sqlMigrationPrefix())
                 .repeatableMigrationPrefix(repeatableMigrationPrefix())

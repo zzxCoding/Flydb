@@ -44,6 +44,69 @@ public final class JdbcFakes {
         }, null);
     }
 
+    /**
+     * 一个支持 JDBC batch 的连接：{@code addBatch} 缓冲语句，{@code executeBatch} 时按序应用并记入
+     * captured（未走 {@code execute}，captured 非空即证明使用了 batch 路径）；命中 {@code failPrefix}
+     * 时抛 {@link java.sql.BatchUpdateException}，其 updateCounts 为失败前已应用的计数（模拟遇错即停驱动）。
+     */
+    public static Connection batchingConnection(List<String> captured, String failPrefix) {
+        return (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(),
+                new Class<?>[]{Connection.class},
+                (proxy, method, args) -> {
+                    if ("createStatement".equals(method.getName())) {
+                        return newBatchingStatement(captured, failPrefix);
+                    }
+                    if ("close".equals(method.getName()) || "isClosed".equals(method.getName())) {
+                        return "isClosed".equals(method.getName()) ? false : null;
+                    }
+                    return defaultValue(method.getReturnType());
+                });
+    }
+
+    private static Statement newBatchingStatement(List<String> captured, String failPrefix) {
+        List<String> buffer = new ArrayList<String>();
+        return (Statement) Proxy.newProxyInstance(
+                Statement.class.getClassLoader(),
+                new Class<?>[]{Statement.class},
+                (proxy, method, args) -> {
+                    String name = method.getName();
+                    if ("addBatch".equals(name) && args != null && args.length > 0) {
+                        buffer.add((String) args[0]);
+                        return null;
+                    }
+                    if ("executeBatch".equals(name)) {
+                        int applied = 0;
+                        for (String sql : new ArrayList<String>(buffer)) {
+                            if (failPrefix != null && sql.startsWith(failPrefix)) {
+                                throw new java.sql.BatchUpdateException("synthetic batch failure",
+                                        appliedCounts(applied));
+                            }
+                            captured.add(sql);
+                            applied++;
+                        }
+                        buffer.clear();
+                        return new int[applied];
+                    }
+                    if ("clearBatch".equals(name)) {
+                        buffer.clear();
+                        return null;
+                    }
+                    if ("close".equals(name) || "isClosed".equals(name)) {
+                        return "isClosed".equals(name) ? false : null;
+                    }
+                    return defaultValue(method.getReturnType());
+                });
+    }
+
+    private static int[] appliedCounts(int applied) {
+        int[] counts = new int[applied];
+        for (int i = 0; i < applied; i++) {
+            counts[i] = 1;
+        }
+        return counts;
+    }
+
     private interface StatementBehavior {
         boolean execute(String sql, Statement stmt) throws SQLException;
     }

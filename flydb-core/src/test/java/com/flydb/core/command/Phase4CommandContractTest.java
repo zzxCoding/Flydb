@@ -141,6 +141,82 @@ class Phase4CommandContractTest {
                 .doesNotContain("SELECT 1", "SELECT 4");
     }
 
+    @Test
+    @DisplayName("clean/baseline 不解析迁移集合，目录中的非法文件名不阻断")
+    void cleanAndBaselineSkipMigrationResolution() throws Exception {
+        write("Vbroken.sql", "SELECT 1;"); // V 前缀 + .sql 但无法解析 → 扫描必报 FLYDB-2001
+        InMemoryFlydbDataSource dataSource = new InMemoryFlydbDataSource(false);
+        FlydbConfiguration cfg = configuration(dataSource, false);
+
+        assertThatCode(() -> new CleanCommand(cfg).execute()).doesNotThrowAnyException();
+        assertThatCode(() -> new BaselineCommand(cfg).execute()).doesNotThrowAnyException();
+        // 对比：依赖迁移集合的 migrate 仍会被阻断，证明惰性发现没有吞掉校验
+        assertThatThrownBy(() -> new MigrateCommand(cfg).execute())
+                .isInstanceOf(FlydbException.class)
+                .extracting(error -> ((FlydbException) error).errorCode())
+                .isEqualTo(ErrorCode.INVALID_VERSION);
+    }
+
+    @Test
+    @DisplayName("migrate 逐脚本输出进度与耗时日志")
+    void migrateReportsPerScriptProgress() throws Exception {
+        List<String> logs = new ArrayList<String>();
+        LogFactory.setLogCreator(new RecordingLogCreator(logs));
+        InMemoryFlydbDataSource dataSource = new InMemoryFlydbDataSource(true);
+        write("V1__one.sql", "SELECT 1;");
+        write("V2__two.sql", "SELECT 2;");
+        FlydbConfiguration cfg = configuration(dataSource, true);
+
+        new MigrateCommand(cfg).execute();
+
+        assertThat(logs).anyMatch(message ->
+                message.startsWith("正在执行迁移 1/2: V1__one.sql"));
+        assertThat(logs).anyMatch(message ->
+                message.startsWith("完成迁移 2/2: V2__two.sql") && message.contains("耗时"));
+    }
+
+    @Test
+    @DisplayName("range 结束版本排除族子版本时输出 family-range 提示")
+    void rangeEndVersionWarnsAboutExcludedFamilyDescendants() throws Exception {
+        List<String> logs = new ArrayList<String>();
+        LogFactory.setLogCreator(new RecordingLogCreator(logs));
+        InMemoryFlydbDataSource dataSource = new InMemoryFlydbDataSource(false);
+        write("V20260625.1__schema.sql", "SELECT 1;");
+        write("V20260625.3__data.sql", "SELECT 2;");
+        FlydbConfiguration cfg = FlydbConfiguration.builder()
+                .dataSource(dataSource)
+                .locations("filesystem:" + migrations)
+                .endVersion("20260625")
+                .build();
+
+        new MigrateCommand(cfg).execute();
+
+        assertThat(logs).anyMatch(message ->
+                message.contains("range 结束版本 20260625 不含其族子版本")
+                        && message.contains("20260625.3") && message.contains("family-range"));
+        // 排除在 range 外的迁移没有执行（executedSql 只含历史表 DDL）
+        assertThat(dataSource.executedSql()).noneMatch(sql -> sql.contains("SELECT"));
+    }
+
+    @Test
+    @DisplayName("flydb.batch-size>1 时 migrate 语句经 JDBC batch 提交")
+    void migrateExecutesStatementsInJdbcBatches() throws Exception {
+        InMemoryFlydbDataSource dataSource = new InMemoryFlydbDataSource(false);
+        write("V1__one.sql", "SELECT 1;\nSELECT 2;\nSELECT 3;");
+        write("V2__two.sql", "SELECT 4;");
+        FlydbConfiguration cfg = FlydbConfiguration.builder()
+                .dataSource(dataSource)
+                .locations("filesystem:" + migrations)
+                .batchSize(2)
+                .build();
+
+        new MigrateCommand(cfg).execute();
+
+        assertThat(dataSource.executedSql()).containsSubsequence(
+                "SELECT 1", "SELECT 2", "SELECT 3", "SELECT 4");
+        assertThat(dataSource.batches()).isEqualTo(3); // 3 条按批 2 → 2 批；末尾 1 条 → 1 批
+    }
+
     private FlydbConfiguration configuration(InMemoryFlydbDataSource dataSource,
                                              boolean cleanDisabled) {
         return FlydbConfiguration.builder().dataSource(dataSource)

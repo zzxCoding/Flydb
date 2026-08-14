@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.BatchUpdateException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +30,7 @@ final class InMemoryFlydbDataSource implements DataSource {
     private final List<String> executedSql = new ArrayList<String>();
     private int commits;
     private int rollbacks;
+    private int batches;
 
     InMemoryFlydbDataSource(boolean postgres) {
         this.postgres = postgres;
@@ -38,6 +40,7 @@ final class InMemoryFlydbDataSource implements DataSource {
     List<String> executedSql() { return executedSql; }
     int commits() { return commits; }
     int rollbacks() { return rollbacks; }
+    int batches() { return batches; }
 
     @Override
     public Connection getConnection() {
@@ -86,6 +89,7 @@ final class InMemoryFlydbDataSource implements DataSource {
     }
 
     private Statement statement() {
+        final List<String> batchBuffer = new ArrayList<String>();
         return proxy(Statement.class, (proxy, method, args) -> {
             String name = method.getName();
             if ("execute".equals(name) && args != null && args.length > 0) {
@@ -96,6 +100,29 @@ final class InMemoryFlydbDataSource implements DataSource {
                     history.clear();
                 }
                 return false;
+            }
+            if ("addBatch".equals(name) && args != null && args.length > 0) {
+                batchBuffer.add((String) args[0]);
+                return null;
+            }
+            if ("executeBatch".equals(name)) {
+                batches++;
+                int applied = 0;
+                for (String sql : new ArrayList<String>(batchBuffer)) {
+                    if (sql.contains("BROKEN")) {
+                        int[] counts = new int[applied];
+                        for (int i = 0; i < applied; i++) counts[i] = 1;
+                        throw new BatchUpdateException("synthetic failure", counts);
+                    }
+                    executedSql.add(sql);
+                    applied++;
+                }
+                batchBuffer.clear();
+                return new int[applied];
+            }
+            if ("clearBatch".equals(name)) {
+                batchBuffer.clear();
+                return null;
             }
             if ("executeQuery".equals(name)) return query((String) args[0]);
             if ("isClosed".equals(name)) return false;

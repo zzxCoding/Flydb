@@ -237,8 +237,8 @@ public final class MigrationInfo implements Comparable<MigrationInfo> {
 | 有（版本化） | 有 | — | checksum 不同 | validate 失败（`FLYDB-2003`） |
 | 有（可重复） | 有 | — | checksum 不同 | `OUTDATED`（待重跑） |
 | 有 | — | 有 | | `FAILED` |
-| 无 | 有 | — | 非 BASELINE/UNDO | `MISSING` |
-| 无 | 有 | — | version > 本地最高版本 | `FUTURE` |
+| 无 | 有 | — | 非 BASELINE/UNDO | `MISSING`；validate 报 `FLYDB-2003` |
+| 无 | 有 | — | version > 本地最高版本 | `FUTURE`；validate 报 `FLYDB-2003` |
 | — | 有（type=BASELINE） | — | | `BASELINE` |
 | 有/无 | 该版本最新记录 type=UNDO_SQL | — | | `UNDONE`（若本地 V 文件仍在 → 重新参与 pending 计算） |
 

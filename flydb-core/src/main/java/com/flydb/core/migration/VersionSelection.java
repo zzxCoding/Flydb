@@ -1,11 +1,13 @@
 package com.flydb.core.migration;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
+import com.flydb.core.log.Log;
 
 /**
  * 不可变版本筛选规则。
@@ -137,6 +139,45 @@ public final class VersionSelection {
         String expected = mode == Mode.REGEX ? regexText : String.valueOf(target);
         throw new FlydbException(ErrorCode.INVALID_VERSION,
                 "本地迁移中不存在匹配的" + sourceLabel() + ": " + expected);
+    }
+
+    /**
+     * range 按版本顺序比较边界，结束版本的族子版本（如 {@code 20260625.3} 相对
+     * {@code 20260625}）数值上大于结束版本本身，会被静默排除。此处发现存在这种被
+     * 排除的子版本时输出一次警告，提示改用 family-range。
+     */
+    public void warnFamilyDescendantsExcluded(List<ResolvedMigration> resolved, Log log) {
+        if (mode != Mode.RANGE || end == null) {
+            return;
+        }
+        List<MigrationVersion> excluded = new ArrayList<MigrationVersion>();
+        for (ResolvedMigration migration : resolved) {
+            if (migration.type() == MigrationType.UNDO_SQL) {
+                continue;
+            }
+            MigrationVersion candidate = coordinate(migration);
+            if (candidate == null) {
+                continue;
+            }
+            if (candidate.compareTo(end) > 0 && candidate.isSameOrDescendantOf(end)
+                    && !excluded.contains(candidate)) {
+                excluded.add(candidate);
+            }
+        }
+        if (excluded.isEmpty()) {
+            return;
+        }
+        StringBuilder detail = new StringBuilder();
+        int shown = Math.min(excluded.size(), 5);
+        for (int i = 0; i < shown; i++) {
+            if (i > 0) detail.append("、");
+            detail.append(excluded.get(i));
+        }
+        if (excluded.size() > shown) {
+            detail.append(" 等 ").append(excluded.size()).append(" 个");
+        }
+        log.warn("range 结束版本 " + end + " 不含其族子版本: " + detail
+                + "；如需包含请改用 family-range（CLI: --version-selection family-range）");
     }
 
     private MigrationVersion coordinate(ResolvedMigration migration) {

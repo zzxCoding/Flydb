@@ -60,6 +60,7 @@ public final class FlydbConfiguration {
     private final String placeholderSuffix;
     private final boolean cleanDisabled;
     private final int lockTimeoutSeconds;
+    private final int batchSize;
     private final String databaseType;
     private final ClassLoader classLoader;
     private final List<Callback> callbacks;
@@ -99,6 +100,7 @@ public final class FlydbConfiguration {
         this.placeholderSuffix = b.placeholderSuffix;
         this.cleanDisabled = b.cleanDisabled;
         this.lockTimeoutSeconds = b.lockTimeoutSeconds;
+        this.batchSize = b.batchSize;
         this.databaseType = b.databaseType;
         this.classLoader = b.classLoader;
         this.callbacks = Collections.unmodifiableList(new ArrayList<Callback>(b.callbacks));
@@ -142,6 +144,7 @@ public final class FlydbConfiguration {
     public String placeholderSuffix() { return placeholderSuffix; }
     public boolean cleanDisabled() { return cleanDisabled; }
     public int lockTimeoutSeconds() { return lockTimeoutSeconds; }
+    public int batchSize() { return batchSize; }
     public String databaseType() { return databaseType; }
     public ClassLoader classLoader() { return classLoader; }
     public List<Callback> callbacks() { return callbacks; }
@@ -188,6 +191,7 @@ public final class FlydbConfiguration {
         private String placeholderSuffix = "}";
         private boolean cleanDisabled = true;
         private int lockTimeoutSeconds = 60;
+        private int batchSize = 1;
         private String databaseType;
         private ClassLoader classLoader;
         private List<Callback> callbacks = new ArrayList<Callback>();
@@ -320,6 +324,7 @@ public final class FlydbConfiguration {
         public Builder placeholderSuffix(String suffix) { this.placeholderSuffix = suffix; return this; }
         public Builder cleanDisabled(boolean flag) { this.cleanDisabled = flag; return this; }
         public Builder lockTimeoutSeconds(int seconds) { this.lockTimeoutSeconds = seconds; return this; }
+        public Builder batchSize(int size) { this.batchSize = size; return this; }
         public Builder databaseType(String typeName) { this.databaseType = typeName; return this; }
         public Builder classLoader(ClassLoader classLoader) { this.classLoader = classLoader; return this; }
         public Builder callbacks(Callback... callbacks) {
@@ -375,6 +380,10 @@ public final class FlydbConfiguration {
             if (lockTimeoutSeconds < 0) {
                 throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
                         "flydb.lock-timeout-seconds 不可为负数: " + lockTimeoutSeconds);
+            }
+            if (batchSize < 1) {
+                throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                        "flydb.batch-size 不可小于 1: " + batchSize);
             }
             if (startVersion != null && endVersion != null
                     && startVersion.compareTo(endVersion) > 0) {

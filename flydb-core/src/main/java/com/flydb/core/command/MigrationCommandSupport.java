@@ -43,7 +43,8 @@ final class MigrationCommandSupport {
                 runtime.configuration().placeholderReplacement(),
                 runtime.configuration().placeholderPrefix(),
                 runtime.configuration().placeholderSuffix(),
-                runtime.configuration().placeholders(), runtime.builtIns());
+                runtime.configuration().placeholders(), runtime.builtIns())
+                .batchSize(runtime.configuration().batchSize());
     }
 
     private static AppliedMigration record(CommandRuntime runtime,

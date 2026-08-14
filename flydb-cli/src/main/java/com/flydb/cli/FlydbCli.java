@@ -148,10 +148,11 @@ public final class FlydbCli {
         @Option(names = "--target-version", description = "只执行指定的精确版本",
                 scope = CommandLine.ScopeType.INHERIT)
         String targetVersion;
-        @Option(names = "--start-version", description = "执行范围起始版本（包含）",
+        @Option(names = "--start-version", description = "执行范围起始版本（包含边界）",
                 scope = CommandLine.ScopeType.INHERIT)
         String startVersion;
-        @Option(names = "--end-version", description = "执行范围结束版本（包含）",
+        @Option(names = "--end-version",
+                description = "执行范围结束版本（含该版本，不含其 .N 子版本；需包含时用 --version-selection family-range）",
                 scope = CommandLine.ScopeType.INHERIT)
         String endVersion;
         @Option(names = "--version-selection",
@@ -228,6 +229,9 @@ public final class FlydbCli {
         @Option(names = "--lock-timeout-seconds", description = "锁等待秒数",
                 scope = CommandLine.ScopeType.INHERIT)
         Integer lockTimeoutSeconds;
+        @Option(names = "--batch-size", description = "SQL 语句 JDBC 批大小（默认 1 逐条执行）",
+                scope = CommandLine.ScopeType.INHERIT)
+        Integer batchSize;
         @Option(names = {"-X", "--debug"}, description = "输出完整异常栈",
                 scope = CommandLine.ScopeType.INHERIT)
         boolean debug;
@@ -254,7 +258,10 @@ public final class FlydbCli {
                     installDirectory, environment, overrides);
             if (configuration.url() == null || configuration.url().trim().isEmpty()) {
                 throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
-                        "必须提供 flydb.url");
+                        "必须提供 flydb.url（可用 --url、FLYDB_URL 或 flydb.conf 提供；"
+                                + "配置文件查找顺序：--config 指定文件、当前目录 "
+                                + workingDirectory + " 下的 flydb.conf、"
+                                + "安装目录 conf/flydb.conf）");
             }
             configuration = promptForPassword(configuration, overrides);
             DriverContext driver = new DriverLoader().open(
@@ -334,6 +341,7 @@ public final class FlydbCli {
             put(values, "flydb.sql-migration-suffix", sqlMigrationSuffix);
             put(values, "flydb.callbacks", callbacks); put(values, "flydb.clean-disabled", cleanDisabled);
             put(values, "flydb.lock-timeout-seconds", lockTimeoutSeconds);
+            put(values, "flydb.batch-size", batchSize);
             for (Map.Entry<String, String> entry : placeholders.entrySet()) {
                 values.put("flydb.placeholders." + entry.getKey(), entry.getValue());
             }

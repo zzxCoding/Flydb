@@ -2,7 +2,7 @@
 
 > [← 04 解析器/锁/事务](04-parser-lock-tx.md) | [返回总览](00-overview.md) | 下一篇：[06 配置与 CLI](06-config-cli.md)
 
-七个命令共用同一套基础设施（探测 → Database → 锁 → 历史仓储 → Resolver → 状态推导），每个命令是 `command/` 包下的一个类。
+七个命令共用同一套基础设施（探测 → Database → 锁 → 历史仓储 → Resolver → 状态推导），每个命令是 `command/` 包下的一个类。Resolver 按需执行：`clean`、`baseline` 不消费本地迁移集合，不触发 locations 扫描——迁移目录中的非法文件名（`FLYDB-2001`）不会阻断与迁移集合无关的命令。
 
 ## 1. `migrate` 完整时序
 
@@ -29,6 +29,8 @@
 14. 返回 MigrateResult（executed / targetVersionReached / totalTime / warnings）
 ```
 
+步骤 11 通过 core 日志抽象输出逐脚本进度（`正在执行迁移 i/N` 与完成耗时），与 clean 的逐对象进度一致；CLI 默认 stderr 可见，starter 经 SLF4J 接收，避免长迁移期间全程不可观测。
+
 ### 1.1 pending 计算规则（`PendingCalculator`，纯函数）
 
 1. **FAILED 阻断**：applied 中存在 `success=false` 记录 → 直接 `FLYDB-2004` 中止，提示先 `repair`（修复旧原型缺陷 #3 的第二道防线；第一道是"当前版本"查询只认 success=true）。
@@ -36,7 +38,7 @@
 3. **outOfOrder**：`false`（默认）时发现版本低于已应用最高版本的未应用迁移 → `FLYDB-2006` 报错（拒绝静默跳过或乱序执行）；`true` 时按版本序插入执行。
 4. **可重复迁移**：checksum 与最近一次应用不同（或从未应用）→ 加入 pending，排在所有版本化迁移之后，按 description 排序。
 5. **UNDONE 版本**：某版本最新记录为 UNDO 且本地 V 文件仍在 → 重新视为 pending。
-6. **版本选择**：`VersionSelection` 统一承载 `exact`、`range`、`family`、`family-range`、`regex`，版本坐标可来自文件或目录。未指定模式时 `targetVersion` 仍推断为精确文件版本，起止参数推断为普通范围，保持兼容。显式选择排除无版本号的可重复迁移，但不绕过 FAILED、baseline、outOfOrder 或 checksum 规则。
+6. **版本选择**：`VersionSelection` 统一承载 `exact`、`range`、`family`、`family-range`、`regex`，版本坐标可来自文件或目录。未指定模式时 `targetVersion` 仍推断为精确文件版本，起止参数推断为普通范围，保持兼容。`range` 按版本顺序比较边界，结束版本的族子版本（如 `20260625.3` 相对 `20260625`）数值上更大而被排除；命中该情况时 `migrate` 与 `--dry-run migrate` 输出警告提示改用 `family-range`。显式选择排除无版本号的可重复迁移，但不绕过 FAILED、baseline、outOfOrder 或 checksum 规则。
 7. **排序安全**：默认按文件版本的数字/字母 token 自然顺序。目录排序只有在目录版本可提取且文件版本属于目录版本族时成立，因此现有 baseline、最高版本、outOfOrder 和 undo 仍使用同一文件版本顺序；不提供会让这些语义分裂的任意路径 Comparator。
 
 ### 1.2 `baselineOnMigrate`
@@ -53,9 +55,9 @@
 
 - 校验规则（全部收集后经 `FlydbValidationException` 一次性抛出，不是遇到第一个就停——方便一次修完）：
   1. 版本化迁移 checksum 不匹配 → `FLYDB-2003`；
-  2. 已应用记录本地缺失（MISSING）→ 报告（可配置降级为警告：`ignoreMissingMigrations`，二期）；
+  2. 已应用记录本地缺失（MISSING）→ `FLYDB-2003`（可配置降级为警告：`ignoreMissingMigrations`，二期）；
   3. FAILED 记录存在 → 报告；
-  4. FUTURE 记录存在 → 报告（本地代码落后于数据库）。
+  4. FUTURE 记录存在 → `FLYDB-2003`（本地代码落后于数据库）。
 - 不加锁的理由：CI 多流水线并行 validate 同一评审库不应互相阻塞。
 - `validateOnMigrate=true`（默认）时 migrate 内部复用同一实现（此时已在锁内）。
 
@@ -79,6 +81,7 @@
 - `cleanDisabled=true`（默认）→ `FLYDB-4003` 直接拒绝。必须显式配置 `cleanDisabled=false` 才可用（CLI 上还需 `--i-know-what-i-am-doing` 式二次确认，见 [06 §4](06-config-cli.md)）。
 - **MVP 范围（明确缩减）**：删除当前 schema 中的表（含历史表/锁表）、视图、序列——按外键依赖拓扑排序删除（或按方言使用 CASCADE）。存储过程/触发器/自定义类型的清理列为二期增强。各内置方言全对等 Flyway clean 的工作量不应隐性打包进 MVP。
 - `CleanStrategy` 由各家族提供实现（[03 §2](03-dialects.md)）。
+- clean 是纯破坏性维护操作，不解析本地迁移集合（Resolver 惰性），迁移目录缺失或含非法文件名都不阻断 clean。
 - 通过 core 日志抽象输出 schema、对象总数、逐对象删除进度、历史表/锁表删除和完成状态；CLI 默认可见，starter 通过 SLF4J 接收，避免大 schema 清理期间只有最终一行结果。
 
 ## 7. `undo`（加锁，"尽力而为"定位）

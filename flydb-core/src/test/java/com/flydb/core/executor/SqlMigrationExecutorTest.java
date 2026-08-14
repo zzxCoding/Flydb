@@ -39,6 +39,12 @@ class SqlMigrationExecutorTest {
                 map(), map());
     }
 
+    private static SqlMigrationExecutor batchExecutor(String script, String sql, int batchSize) {
+        return new SqlMigrationExecutor(script, sql,
+                SqlStatementBuilderConfig.postgresql(), "${", "}",
+                map(), map()).batchSize(batchSize);
+    }
+
     @Nested
     @DisplayName("执行")
     class Execution {
@@ -126,6 +132,46 @@ class SqlMigrationExecutorTest {
                     JdbcFakes.failingConnection(captured, "SELECT 2", driverError)))
                     .isInstanceOf(FlydbException.class);
             assertThat(captured).containsExactly("SELECT 1"); // 仅第 1 条
+        }
+    }
+
+    @Nested
+    @DisplayName("JDBC batch")
+    class JdbcBatch {
+
+        @Test
+        @DisplayName("batch-size>1 时语句经 addBatch/executeBatch 提交，尾部不满一批也会执行")
+        void executesStatementsThroughExecuteBatch() throws Exception {
+            List<String> captured = JdbcFakes.newCapture();
+            MigrationExecutor exec = batchExecutor("V1.sql",
+                    "SELECT 1;\nSELECT 2;\nSELECT 3;\nSELECT 4;\nSELECT 5;", 2);
+            exec.execute(JdbcFakes.batchingConnection(captured, null));
+            // batchingConnection 只在 executeBatch 时记录，captured 非空即证明走的是 batch 路径
+            assertThat(captured).containsExactly(
+                    "SELECT 1", "SELECT 2", "SELECT 3", "SELECT 4", "SELECT 5");
+        }
+
+        @Test
+        @DisplayName("批内失败报 FLYDB-2010，序号与起始行按批内已执行计数推算")
+        void batchFailureReportsInferredIndexAndLine() {
+            List<String> captured = JdbcFakes.newCapture();
+            MigrationExecutor exec = batchExecutor("V2__add.sql",
+                    "CREATE TABLE a(id INT);\nINSERT INTO bad VALUES (1);\nSELECT 3;", 2);
+            assertThatThrownBy(() -> exec.execute(
+                    JdbcFakes.batchingConnection(captured, "INSERT INTO bad")))
+                    .isInstanceOf(FlydbException.class)
+                    .satisfies(ex -> {
+                        FlydbException fe = (FlydbException) ex;
+                        assertThat(fe.errorCode()).isEqualTo(ErrorCode.MIGRATION_EXECUTION_FAILED);
+                        String msg = fe.getMessage();
+                        assertThat(msg).contains("V2__add.sql");
+                        assertThat(msg).contains("第 2 条");          // 起始 1 + 已执行 1
+                        assertThat(msg).contains("行 2");             // INSERT 的起始行号
+                        assertThat(msg).contains("batch-size=2");
+                        assertThat(msg).contains("synthetic batch failure");
+                    });
+            // 同批中失败前的语句已应用，后续批次不再执行
+            assertThat(captured).containsExactly("CREATE TABLE a(id INT)");
         }
     }
 }

@@ -494,13 +494,28 @@ class SqlMigrationResolverTest {
         }
 
         @Test
-        @DisplayName("classpath 上不存在的目录报友好错误")
+        @DisplayName("classpath 上不存在的目录报 FLYDB-4005 而非缺少必填配置")
         void nonexistentClasspathErrors() {
             SqlMigrationResolver resolver = new SqlMigrationResolver();
             assertThatThrownBy(() -> resolver.resolveMigrations(
                     context("classpath:nonexistent_migrations")))
                     .isInstanceOf(FlydbException.class)
-                    .hasMessageContaining("nonexistent_migrations");
+                    .hasMessageContaining("nonexistent_migrations")
+                    .extracting(error -> ((FlydbException) error).errorCode())
+                    .isEqualTo(ErrorCode.LOCATION_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("filesystem 不存在的目录报 FLYDB-4005 并提示按 CWD 解析")
+        void nonexistentFilesystemErrors() {
+            SqlMigrationResolver resolver = new SqlMigrationResolver();
+            assertThatThrownBy(() -> resolver.resolveMigrations(
+                    context("filesystem:./definitely_missing_migration_dir")))
+                    .isInstanceOf(FlydbException.class)
+                    .hasMessageContaining("definitely_missing_migration_dir")
+                    .hasMessageContaining("工作目录")
+                    .extracting(error -> ((FlydbException) error).errorCode())
+                    .isEqualTo(ErrorCode.LOCATION_NOT_FOUND);
         }
     }
 

@@ -36,7 +36,7 @@ CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值
 | `flydb.out-of-order` | `FLYDB_OUT_OF_ORDER` | `--out-of-order` | `false` | 是否允许补执行低版本迁移 |
 | `flydb.target-version` | `FLYDB_TARGET_VERSION` | `--target-version` | 无 | 目标版本；默认精确匹配文件版本 |
 | `flydb.start-version` | `FLYDB_START_VERSION` | `--start-version` | 无 | 执行范围起始版本，包含边界 |
-| `flydb.end-version` | `FLYDB_END_VERSION` | `--end-version` | 无 | 执行范围结束版本，包含边界 |
+| `flydb.end-version` | `FLYDB_END_VERSION` | `--end-version` | 无 | 执行范围结束版本，包含边界但不含该版本的 `.N` 子版本（如 `20260625` 不含 `20260625.3`）；需包含时用 `family-range`，命中时 `migrate` 会输出警告 |
 | `flydb.version-selection` | `FLYDB_VERSION_SELECTION` | `--version-selection` | 自动推断 | `exact`、`range`、`family`、`family-range`、`regex` |
 | `flydb.version-source` | `FLYDB_VERSION_SOURCE` | `--version-source` | `file` | 从文件名或相对目录读取筛选版本：`file\|directory` |
 | `flydb.version-regex` | `FLYDB_VERSION_REGEX` | `--version-regex` | 无 | `regex` 模式的版本整串匹配表达式 |
@@ -60,6 +60,7 @@ CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值
 | `flydb.callbacks` | `FLYDB_CALLBACKS` | `--callbacks` | 空 | Java Callback 类名，逗号分隔 |
 | `flydb.clean-disabled` | `FLYDB_CLEAN_DISABLED` | `--clean-disabled` | `true` | clean 防呆开关 |
 | `flydb.lock-timeout-seconds` | `FLYDB_LOCK_TIMEOUT_SECONDS` | `--lock-timeout-seconds` | `60` | 获取迁移锁的等待秒数 |
+| `flydb.batch-size` | `FLYDB_BATCH_SIZE` | `--batch-size` | `1` | SQL 语句 JDBC 批大小；`1`（默认）逐条执行并精确定位失败语句，`>1` 时按批提交减少远程库往返。远程库大批量 INSERT 可显著提速；MySQL 建议同时在 `flydb.url` 追加 `rewriteBatchedStatements=true` 才能获得改写合并收益。失败时语句序号按批内已执行计数推算，定位粒度略降 |
 
 密码支持直接写入 `flydb.password=明文密码`，也支持 `${env:DB_PASSWORD}` 间接引用或 `flydb.password.file=/run/secrets/db_password`。明文配置会随文件备份、版本控制和权限错误而暴露，因此仅建议本地临时测试；生产和共享环境推荐环境变量或密码文件。Flydb 不会主动把密码写入日志、错误消息或 dry-run 输出。
 
@@ -99,7 +100,7 @@ flydb.locations=filesystem:/opt/app/new-migrations,filesystem:/opt/flydb/db/migr
 | 模式 | 必需参数 | 语义 |
 |---|---|---|
 | `exact` | `target-version` | 精确匹配一个版本 |
-| `range` | `start-version`/`end-version` 至少一个 | 数值范围，包含边界 |
+| `range` | `start-version`/`end-version` 至少一个 | 数值范围，包含边界，但不含结束版本的族子版本（`20260625.3` 相对 `20260625`）；命中会输出警告 |
 | `family` | `target-version` | 目标及其子版本；`20230531-b06.4` 属于 `20230531`，`202305310.1` 不属于 |
 | `family-range` | `start-version`/`end-version` 至少一个 | 版本族范围，结束族的子版本也包含 |
 | `regex` | `version-regex` | 对规范化版本文本整串匹配 |

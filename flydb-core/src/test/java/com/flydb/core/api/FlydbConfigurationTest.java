@@ -43,6 +43,7 @@ class FlydbConfigurationTest {
         assertThat(c.endVersion()).isNull();
         assertThat(c.cleanDisabled()).isTrue();
         assertThat(c.lockTimeoutSeconds()).isEqualTo(60);
+        assertThat(c.batchSize()).isEqualTo(1);
         assertThat(c.placeholderPrefix()).isEqualTo("${");
         assertThat(c.placeholderSuffix()).isEqualTo("}");
         assertThat(c.placeholderReplacement()).isTrue();
@@ -54,6 +55,18 @@ class FlydbConfigurationTest {
         assertThat(c.undoMigrationPrefix()).isEqualTo("U");
         assertThat(c.sqlMigrationSeparator()).isEqualTo("__");
         assertThat(c.sqlMigrationSuffix()).isEqualTo(".sql");
+    }
+
+    @Test
+    void batch_size_defaults_to_one_and_rejects_smaller_values() {
+        FlydbConfiguration c = FlydbConfiguration.builder()
+                .url("jdbc:x").batchSize(100).build();
+        assertThat(c.batchSize()).isEqualTo(100);
+
+        assertThatThrownBy(() -> FlydbConfiguration.builder()
+                .url("jdbc:x").batchSize(0).build())
+                .isInstanceOf(FlydbException.class)
+                .hasMessageContaining("flydb.batch-size");
     }
 
     @Test

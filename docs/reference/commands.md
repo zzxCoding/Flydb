@@ -27,7 +27,7 @@ flydb [全局选项] <命令> [命令选项]
 | `--table <name>` | 历史表名 |
 | `--target-version <version>` | 目标版本；默认精确匹配文件版本 |
 | `--start-version <version>` | 执行范围起始版本，包含边界 |
-| `--end-version <version>` | 执行范围结束版本，包含边界 |
+| `--end-version <version>` | 执行范围结束版本，包含边界但不含该版本的 `.N` 子版本；需包含时用 `--version-selection family-range`，命中时 `migrate` 输出警告 |
 | `--version-selection <mode>` | `exact\|range\|family\|family-range\|regex`；省略时由目标/范围参数推断 |
 | `--version-source <source>` | `file\|directory`，默认 `file` |
 | `--version-regex <regex>` | `regex` 模式的版本整串匹配表达式 |
@@ -37,6 +37,7 @@ flydb [全局选项] <命令> [命令选项]
 | `--directory-version-regex <regex>` | 从相对父目录提取版本；使用 `version` 命名组或第一个捕获组 |
 | `-D<key>=<value>` | SQL 占位符 |
 | `--placeholder-replacement[=true\|false]` | 是否替换 SQL 占位符，默认 `true` |
+| `--batch-size <n>` | SQL 语句 JDBC 批大小，默认 `1` 逐条执行；远程库大批量 INSERT 建议 `>1`，MySQL 可同时在 URL 加 `rewriteBatchedStatements=true` |
 | `-X, --debug` | 输出完整异常栈 |
 | `-q, --quiet` | 只输出必要结果和错误 |
 | `--color=auto\|always\|never` | 控制终端颜色 |
@@ -78,7 +79,9 @@ FLYDB_PASSWORD='...' bin/flydb validate
 
 迁移脚本命名：`V1__init.sql`、`V20260327-b06.4__data.sql`、`R__view.sql`、`U1__init.sql`。版本以数字开头，字母数字 token 可用点、下划线或连字符分隔；无法解析的 `V`/`U` SQL 候选会报 `FLYDB-2001`，不会静默跳过。0.2 起 `R1__...sql` 会报 `FLYDB-2005`；失败记录必须先 `repair`，否则后续 `migrate` 报 `FLYDB-2004`。
 
-不配置 `--version-selection` 时保持兼容行为：`--target-version` 精确匹配，起止版本按包含边界的版本顺序匹配。`family` 将目标版本作为 token 前缀版本族；`family-range` 包含结束版本族的所有子版本；`regex` 对版本文本做整串匹配。`--version-source=directory` 会把相同目录版本下的多个文件版本作为一个选择集合，例如精确目标 `20230531` 可选择 `V20230531.1`、`.2`、`.3`。显式版本选择不执行 `R__...sql`，且不会绕过 checksum、失败记录或 `out-of-order`。
+执行 `migrate` 时会逐脚本输出进度（序号 `i/N` 与单脚本耗时），长迁移期间可据此判断是否仍在推进；`clean`、`baseline` 不解析本地迁移集合，迁移目录中的非法文件名不会阻断它们。`info` 表格列宽按内容自适应，宽版本号不会错位。
+
+不配置 `--version-selection` 时保持兼容行为：`--target-version` 精确匹配，起止版本按包含边界的版本顺序匹配。`family` 将目标版本作为 token 前缀版本族；`family-range` 包含结束版本族的所有子版本；`regex` 对版本文本做整串匹配。`--version-source=directory` 会把相同目录版本下的多个文件版本作为一个选择集合，例如精确目标 `20230531` 可选择 `V20230531.1`、`.2`、`.3`。注意 range 的结束版本不含其族子版本（`20260625` 不含 `20260625.3`），命中时 `migrate` 与 `--dry-run migrate` 会输出警告提示改用 `family-range`。显式版本选择不执行 `R__...sql`，且不会绕过 checksum、失败记录或 `out-of-order`。
 
 路径 glob/regex 是发现过滤器，会影响 `migrate`、`info`、`validate`、`repair` 和 `undo` 看到的本地迁移集合；同一维度的 glob 与 regex 不可并用，不同维度同时配置时取交集。匹配对象始终是 location 下以 `/` 分隔的相对路径，不是机器绝对路径。
 

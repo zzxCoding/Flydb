@@ -43,4 +43,23 @@ class InfoTableRendererTest {
                 "2.1         add_status              SQL     -                    -         待执行");
         assertThat(table).doesNotContain("\u001B[");
     }
+
+    @Test
+    @DisplayName("宽版本号按内容自适应列宽，不挤歪后续列")
+    void wideVersionsExpandColumnWidth() {
+        ResolvedMigration resolved = ResolvedMigration.of(
+                MigrationVersion.parse("20260327-b06.4"), "data",
+                "V20260327-b06.4__data.sql", 30, MigrationType.SQL);
+        MigrationInfoService information = new MigrationInfoService(Arrays.asList(
+                MigrationInfo.derive(resolved, null, null,
+                        MigrationVersion.parse("20260327-b06.4"))));
+
+        String table = new InfoTableRenderer().render("0.2.0", "MySQL",
+                "jdbc:mysql://localhost/test", "flydb_schema_history", information, false);
+
+        // 版本列宽 = max(保底 10, 表头 4, 内容 14) = 14：表头补到 14 后接 2 空格分隔
+        assertThat(table).contains("版本" + "            " + "描述");
+        assertThat(table).contains("20260327-b06.4  data");
+        assertThat(table).contains("--------------  ----------------------");
+    }
 }

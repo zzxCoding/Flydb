@@ -35,6 +35,7 @@ class ErrorCodeTest {
         assertThat(ErrorCode.MISSING_REQUIRED_CONFIG.code()).isEqualTo("FLYDB-4002");
         assertThat(ErrorCode.CLEAN_DISABLED.code()).isEqualTo("FLYDB-4003");
         assertThat(ErrorCode.INIT_TARGET_EXISTS.code()).isEqualTo("FLYDB-4004");
+        assertThat(ErrorCode.LOCATION_NOT_FOUND.code()).isEqualTo("FLYDB-4005");
     }
 
     @Test
@@ -53,5 +54,22 @@ class ErrorCodeTest {
         ErrorCode code = ErrorCode.INVALID_VERSION;
         assertThat(code.zhSummary()).contains("版本号");
         assertThat(code.enSummary()).containsIgnoringCase("version");
+    }
+
+    @Test
+    void validation_mismatch_message_covers_checksum_missing_and_future() {
+        ErrorCode code = ErrorCode.CHECKSUM_MISMATCH;
+        assertThat(code.zhSummary()).contains("校验");
+        assertThat(code.zhCause()).contains("checksum", "缺失", "高于本地");
+        assertThat(code.zhAction()).contains("checksum", "MISSING", "FUTURE", "locations");
+    }
+
+    @Test
+    void location_not_found_points_to_locations_and_cwd_resolution() {
+        ErrorCode code = ErrorCode.LOCATION_NOT_FOUND;
+        assertThat(code.zhSummary()).contains("位置");
+        assertThat(code.enSummary()).containsIgnoringCase("location");
+        assertThat(code.zhCause()).contains("flydb.locations", "工作目录");
+        assertThat(code.zhAction()).contains("classpath:", "filesystem:", "绝对路径");
     }
 }

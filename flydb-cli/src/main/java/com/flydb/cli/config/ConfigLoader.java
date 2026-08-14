@@ -35,7 +35,7 @@ public final class ConfigLoader {
             "flydb.placeholder-suffix", "flydb.sql-migration-prefix",
             "flydb.repeatable-migration-prefix", "flydb.undo-migration-prefix",
             "flydb.sql-migration-separator", "flydb.sql-migration-suffix", "flydb.callbacks",
-            "flydb.clean-disabled", "flydb.lock-timeout-seconds"));
+            "flydb.clean-disabled", "flydb.lock-timeout-seconds", "flydb.batch-size"));
 
     public CliConfiguration load(Path explicitConfig, Path workingDirectory,
                                  Path installDirectory, Map<String, String> environment,
@@ -79,6 +79,7 @@ public final class ConfigLoader {
         values.put("flydb.sql-migration-suffix", ".sql");
         values.put("flydb.clean-disabled", "true");
         values.put("flydb.lock-timeout-seconds", "60");
+        values.put("flydb.batch-size", "1");
         return values;
     }
 

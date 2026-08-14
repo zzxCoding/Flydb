@@ -46,6 +46,25 @@ class ConfigLoaderTest {
         assertThat(configuration.locations()).containsExactly("filesystem:db/migration");
         assertThat(configuration.encoding().name()).isEqualTo("UTF-8");
         assertThat(configuration.placeholders()).containsEntry("tenant", "env-tenant");
+        assertThat(configuration.batchSize()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("flydb.batch-size 默认 1，可被环境变量与 CLI 参数覆盖")
+    void mergesBatchSizeAcrossConfigurationLayers() throws Exception {
+        Map<String, String> environment = new HashMap<String, String>();
+        environment.put("FLYDB_BATCH_SIZE", "50");
+        Map<String, String> cli = Collections.singletonMap("flydb.batch-size", "100");
+
+        CliConfiguration fromEnvironment = new ConfigLoader().load(
+                null, temporaryDirectory, temporaryDirectory.resolve("install"),
+                environment, Collections.<String, String>emptyMap());
+        assertThat(fromEnvironment.batchSize()).isEqualTo(50);
+
+        CliConfiguration fromCli = new ConfigLoader().load(
+                null, temporaryDirectory, temporaryDirectory.resolve("install"),
+                environment, cli);
+        assertThat(fromCli.batchSize()).isEqualTo(100);
     }
 
     @Test

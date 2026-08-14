@@ -33,7 +33,7 @@ CLI 参数  >  环境变量 FLYDB_*  >  配置文件 flydb.conf  >  内置默认
 | `flydb.out-of-order` | `FLYDB_OUT_OF_ORDER` | `--out-of-order` | `false` | |
 | `flydb.target-version` | `FLYDB_TARGET_VERSION` | `--target-version` | 无 | 精确执行版本；与范围互斥 |
 | `flydb.start-version` | `FLYDB_START_VERSION` | `--start-version` | 无 | 包含边界的起始版本 |
-| `flydb.end-version` | `FLYDB_END_VERSION` | `--end-version` | 无 | 包含边界的结束版本 |
+| `flydb.end-version` | `FLYDB_END_VERSION` | `--end-version` | 无 | 包含边界；不含结束版本的族子版本（`.N`），需包含时用 `family-range` |
 | `flydb.version-selection` | `FLYDB_VERSION_SELECTION` | `--version-selection` | 自动推断 | `exact\|range\|family\|family-range\|regex` |
 | `flydb.version-source` | `FLYDB_VERSION_SOURCE` | `--version-source` | `file` | `file\|directory` |
 | `flydb.version-regex` | `FLYDB_VERSION_REGEX` | `--version-regex` | 无 | 版本整串正则 |
@@ -53,6 +53,7 @@ CLI 参数  >  环境变量 FLYDB_*  >  配置文件 flydb.conf  >  内置默认
 | `flydb.callbacks` | `FLYDB_CALLBACKS` | `--callbacks` | 空 | Java 回调类名，逗号分隔 |
 | `flydb.clean-disabled` | `FLYDB_CLEAN_DISABLED` | `--clean-disabled` | `true` | 防呆 |
 | `flydb.lock-timeout-seconds` | `FLYDB_LOCK_TIMEOUT_SECONDS` | `--lock-timeout-seconds` | `60` | |
+| `flydb.batch-size` | `FLYDB_BATCH_SIZE` | `--batch-size` | `1` | SQL 语句 JDBC 批大小；`1` 逐条执行并精确定位失败语句，`>1` 减少远程往返但失败序号按批内计数推算 |
 
 ## 3. 敏感信息处理
 
@@ -113,7 +114,7 @@ flydb 0.2.0 · 达梦 DM8 · jdbc:dm://10.0.0.1:5236 · 历史表: flydb_schema_
 ```
 
 - 状态中文：`待执行/成功/失败/缺失/乱序/未来版本/待更新/基准/已撤销`。
-- TTY 着色（绿=成功、红=失败、黄=待执行、灰=缺失）；非 TTY（管道/CI）自动降级纯文本；中文对齐按显示宽度（全角=2）计算。
+- TTY 着色（绿=成功、红=失败、黄=待执行、灰=缺失）；非 TTY（管道/CI）自动降级纯文本；中文对齐按显示宽度（全角=2）计算，列宽按列内最宽内容自适应（含保底宽度），宽版本号（如 `20260327-b06.4`）不会挤歪后续列。
 
 ## 5. 错误码与消息设计
 
@@ -130,7 +131,7 @@ flydb 0.2.0 · 达梦 DM8 · jdbc:dm://10.0.0.1:5236 · 历史表: flydb_schema_
 | `FLYDB-1xxx` | 连接与探测 | 1001 连接失败；1002 无法识别数据库类型；1003 驱动未找到（提示 drivers/ 用法） |
 | `FLYDB-2xxx` | 迁移与校验 | 2001 非法版本号；2002 重复版本；2003 checksum 不匹配；2004 存在失败记录需 repair；2005 旧式 R 前缀命名；2006 乱序迁移；2007 baseline 前置不满足；2008 缺少 undo 脚本；2009 未定义占位符 |
 | `FLYDB-3xxx` | 并发锁 | 3001 获取锁超时 |
-| `FLYDB-4xxx` | 配置 | 4001 未知配置键；4002 缺少必填项；4003 clean 被禁用；4004 init 目标文件已存在 |
+| `FLYDB-4xxx` | 配置 | 4001 未知配置键；4002 缺少必填项；4003 clean 被禁用；4004 init 目标文件已存在；4005 迁移位置不存在 |
 
 退出码约定（写入文档，CI 按码分支：锁冲突可重试，校验失败需人工）：
 
@@ -160,12 +161,16 @@ flydb-cli-0.2.0/
 ├── lib/                              # flydb-cli.jar + flydb-core.jar + picocli.jar
 ├── drivers/README.md                 # 驱动放置说明 + 坐标速查（01 §5）
 ├── conf/flydb.conf.sample
+├── docs/                             # 与发行版本匹配的命令、配置、错误码和数据库指南
+├── flydb-skills/                     # 可安装的 flydb-cli Agent Skill 与评测用例
+├── AGENTS.md                         # Agent 首次接入、安全边界和 Skill 启用入口
 ├── LICENSE
 ├── NOTICE
+├── README.en.md
 └── README.md                         # 五分钟上手
 ```
 
-zip 由 `maven-assembly-plugin` 产出，挂到 GitHub Releases；`bin/flydb` 对 JDK 版本给出中文错误提示（低于 8 时）。
+zip 由 `maven-assembly-plugin` 产出，挂到 GitHub Releases；版本匹配的文档和 Skill 随包分发，Agent 在没有源码 checkout 时也能读取真实命令契约。`bin/flydb` 对 JDK 版本给出中文错误提示（低于 8 时）。
 
 ## 8. 用户文档规划（仓库 README 重写）
 

@@ -173,7 +173,7 @@ public final class SqlMigrationResolver implements MigrationResolver {
                 }
             }
             if (!found) {
-                throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                throw new FlydbException(ErrorCode.LOCATION_NOT_FOUND,
                         "classpath 迁移目录不存在: " + path);
             }
         } catch (URISyntaxException e) {
@@ -266,8 +266,9 @@ public final class SqlMigrationResolver implements MigrationResolver {
         List<ScriptFile> entries = new ArrayList<ScriptFile>();
         File dir = new File(path);
         if (!dir.exists() || !dir.isDirectory()) {
-            throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
-                    "文件系统迁移目录不存在: " + path);
+            throw new FlydbException(ErrorCode.LOCATION_NOT_FOUND,
+                    "文件系统迁移目录不存在: " + path
+                            + "（相对路径按进程当前工作目录解析）");
         }
         try {
             scanDirectory(dir, entries);

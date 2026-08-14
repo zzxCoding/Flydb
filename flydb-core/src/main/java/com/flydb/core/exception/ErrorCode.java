@@ -30,9 +30,9 @@ public enum ErrorCode {
     DUPLICATE_VERSION("FLYDB-2002", "重复版本", "Duplicate version",
             "两个或多个迁移脚本解析出相同的版本号。",
             "为冲突脚本分配互不相同的版本号（详情列出冲突文件）。"),
-    CHECKSUM_MISMATCH("FLYDB-2003", "校验和不匹配", "Checksum mismatch",
-            "本地脚本内容与历史表记录的 checksum 不一致——脚本在应用后被改动。",
-            "若改动是预期的，执行 flydb repair 对齐 checksum；否则从版本控制还原脚本。"),
+    CHECKSUM_MISMATCH("FLYDB-2003", "迁移校验不一致", "Migration validation mismatch",
+            "本地脚本 checksum 与历史记录不一致；已应用脚本在当前迁移集合中缺失；或数据库历史版本高于本地。",
+            "按详情区分 checksum、MISSING 和 FUTURE；仅对预期的 checksum 变更执行 repair，集合不完整时先修正 locations、过滤条件或代码版本。"),
     FAILED_MIGRATION_NEEDS_REPAIR("FLYDB-2004", "存在失败记录需 repair", "Failed migration needs repair",
             "历史表中存在 success=false 的记录，阻塞后续 migrate。",
             "修正失败脚本后执行 flydb repair 清除失败记录，再重跑 migrate。"),
@@ -72,7 +72,10 @@ public enum ErrorCode {
             "确认要清空目标 schema 后，设置 flydb.clean-disabled=false，并在交互终端或加 --force 二次确认。"),
     INIT_TARGET_EXISTS("FLYDB-4004", "目标文件已存在，拒绝覆盖", "Init target already exists",
             "init 生成的 flydb.conf 或首个迁移脚本已存在；Flydb 不会覆盖已有文件。",
-            "选择空目录执行 init，或先备份并移走冲突文件后重试。");
+            "选择空目录执行 init，或先备份并移走冲突文件后重试。"),
+    LOCATION_NOT_FOUND("FLYDB-4005", "迁移位置不存在", "Migration location not found",
+            "flydb.locations 指向的文件系统目录或 classpath 路径不存在；filesystem: 相对路径按执行 CLI 的当前工作目录解析。",
+            "核对 flydb.locations 的前缀（classpath:/filesystem:）与路径；相对路径需在正确的工作目录执行，或改用绝对路径；init 生成的配置会写入绝对路径。");
 
     private final String code;
     private final String zhSummary;

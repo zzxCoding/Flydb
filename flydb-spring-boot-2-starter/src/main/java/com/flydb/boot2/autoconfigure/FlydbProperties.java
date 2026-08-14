@@ -53,6 +53,7 @@ public class FlydbProperties {
     private List<String> callbacks = new ArrayList<String>();
     private boolean cleanDisabled = true;
     private int lockTimeoutSeconds = 60;
+    private int batchSize = 1;
     private String databaseType;
     private String url;
     private String user;
@@ -99,6 +100,7 @@ public class FlydbProperties {
                 .callbacks(loadCallbacks(classLoader))
                 .cleanDisabled(cleanDisabled)
                 .lockTimeoutSeconds(lockTimeoutSeconds)
+                .batchSize(batchSize)
                 .databaseType(databaseType)
                 .classLoader(classLoader)
                 .build();
@@ -195,6 +197,8 @@ public class FlydbProperties {
     public void setCleanDisabled(boolean cleanDisabled) { this.cleanDisabled = cleanDisabled; }
     public int getLockTimeoutSeconds() { return lockTimeoutSeconds; }
     public void setLockTimeoutSeconds(int lockTimeoutSeconds) { this.lockTimeoutSeconds = lockTimeoutSeconds; }
+    public int getBatchSize() { return batchSize; }
+    public void setBatchSize(int batchSize) { this.batchSize = batchSize; }
     public String getDatabaseType() { return databaseType; }
     public void setDatabaseType(String databaseType) { this.databaseType = databaseType; }
     public String getUrl() { return url; }

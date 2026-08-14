@@ -8,12 +8,15 @@ import com.flydb.core.api.DryRunResult;
 import com.flydb.core.api.DryRunStatement;
 import com.flydb.core.api.FlydbConfiguration;
 import com.flydb.core.executor.SqlStatement;
+import com.flydb.core.log.Log;
+import com.flydb.core.log.LogFactory;
 import com.flydb.core.migration.AppliedMigration;
 import com.flydb.core.migration.PendingCalculator;
 import com.flydb.core.migration.ResolvedMigration;
 
 /** migrate/undo 的只读预演：探测、校验、解析和 pending 计算与真实命令一致。 */
 public final class DryRunCommand {
+
     private final FlydbConfiguration configuration;
 
     public DryRunCommand(FlydbConfiguration configuration) {
@@ -21,14 +24,18 @@ public final class DryRunCommand {
     }
 
     public DryRunResult migrate() {
+        Log log = LogFactory.getLog(DryRunCommand.class);
         try (CommandRuntime runtime = CommandRuntime.open(configuration, false)) {
             List<AppliedMigration> applied = runtime.applied();
+            List<ResolvedMigration> migrations =
+                    MigrateCommand.executableMigrations(runtime.resolved());
+            configuration.versionSelection().warnFamilyDescendantsExcluded(migrations, log);
             if (configuration.validateOnMigrate()) {
                 MigrateCommand.validate(runtime, applied);
             }
             return preview(runtime, PendingCalculator.compute(
-                    MigrateCommand.executableMigrations(runtime.resolved()),
-                    applied, configuration.outOfOrder(), configuration.versionSelection()));
+                    migrations, applied, configuration.outOfOrder(),
+                    configuration.versionSelection()));
         }
     }
 

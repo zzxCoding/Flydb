@@ -27,16 +27,14 @@ final class CommandRuntime implements AutoCloseable {
     private final Connection connection;
     private final Database database;
     private final SchemaHistory history;
-    private final List<ResolvedMigration> resolved;
+    private List<ResolvedMigration> resolved;
 
     private CommandRuntime(FlydbConfiguration configuration, Connection connection,
-                           Database database, SchemaHistory history,
-                           List<ResolvedMigration> resolved) {
+                           Database database, SchemaHistory history) {
         this.configuration = configuration;
         this.connection = connection;
         this.database = database;
         this.history = history;
-        this.resolved = resolved;
     }
 
     static CommandRuntime open(FlydbConfiguration configuration, boolean ensureHistory) {
@@ -59,9 +57,7 @@ final class CommandRuntime implements AutoCloseable {
             if (ensureHistory) {
                 history.ensureExists();
             }
-            List<ResolvedMigration> resolved = new SqlMigrationResolver()
-                    .resolveMigrations(new DefaultResolverContext(configuration));
-            return new CommandRuntime(configuration, connection, database, history, resolved);
+            return new CommandRuntime(configuration, connection, database, history);
         } catch (SQLException e) {
             throw new FlydbException(ErrorCode.CONNECT_FAILED,
                     "初始化命令运行时失败: " + e.getMessage(), e);
@@ -72,7 +68,18 @@ final class CommandRuntime implements AutoCloseable {
     Connection connection() { return connection; }
     Database database() { return database; }
     SchemaHistory history() { return history; }
-    List<ResolvedMigration> resolved() { return resolved; }
+
+    /**
+     * 迁移发现按需执行：clean/baseline 不依赖本地迁移集合，调用本方法前不扫描 locations，
+     * 目录中的非法文件名不会阻断与迁移集合无关的命令。
+     */
+    List<ResolvedMigration> resolved() {
+        if (resolved == null) {
+            resolved = new SqlMigrationResolver()
+                    .resolveMigrations(new DefaultResolverContext(configuration));
+        }
+        return resolved;
+    }
     List<AppliedMigration> applied() { return history.findAll(); }
 
     Map<String, String> builtIns() {

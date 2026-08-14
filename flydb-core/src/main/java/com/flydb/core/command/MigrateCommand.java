@@ -9,6 +9,8 @@ import com.flydb.core.callback.Event;
 import com.flydb.core.exception.FlydbValidationException;
 import com.flydb.core.exception.ValidationProblem;
 import com.flydb.core.lock.MigrationLock;
+import com.flydb.core.log.Log;
+import com.flydb.core.log.LogFactory;
 import com.flydb.core.migration.AppliedMigration;
 import com.flydb.core.migration.MigrationType;
 import com.flydb.core.migration.MigrationVersion;
@@ -44,11 +46,13 @@ public final class MigrateCommand {
 
     public MigrateResult execute() {
         long started = System.nanoTime();
+        Log log = LogFactory.getLog(MigrateCommand.class);
         try (CommandRuntime runtime = CommandRuntime.open(configuration, true);
              MigrationLock lock = runtime.database().createLock(configuration)) {
             lock.acquire();
             List<AppliedMigration> applied = runtime.applied();
             List<ResolvedMigration> migrations = executableMigrations(runtime.resolved());
+            configuration.versionSelection().warnFamilyDescendantsExcluded(migrations, log);
             if (configuration.validateOnMigrate()) {
                 validate(runtime, applied);
             }
@@ -59,7 +63,7 @@ public final class MigrateCommand {
             CommandCallbacks callbacks = CommandCallbacks.create(runtime);
             callbacks.fire(Event.BEFORE_MIGRATE);
             try {
-                executePending(runtime, pending, executed, callbacks);
+                executePending(runtime, pending, executed, callbacks, log);
                 callbacks.fire(Event.AFTER_MIGRATE);
             } catch (RuntimeException e) {
                 callbacks.fire(Event.AFTER_MIGRATE_ERROR);
@@ -87,12 +91,20 @@ public final class MigrateCommand {
     private static void executePending(CommandRuntime runtime,
                                        List<ResolvedMigration> pending,
                                        List<String> executed,
-                                       CommandCallbacks callbacks) {
+                                       CommandCallbacks callbacks,
+                                       Log log) {
+        int total = pending.size();
+        int index = 1;
         for (ResolvedMigration migration : pending) {
+            log.info("正在执行迁移 " + index + "/" + total + ": " + migration.script());
+            long started = System.nanoTime();
             callbacks.fire(Event.BEFORE_EACH_MIGRATE);
             try {
                 MigrationCommandSupport.execute(runtime, migration);
                 executed.add(migration.script());
+                log.info("完成迁移 " + index + "/" + total + ": " + migration.script()
+                        + "（耗时 " + elapsedMillis(started) + " ms）");
+                index++;
                 callbacks.fire(Event.AFTER_EACH_MIGRATE);
             } catch (RuntimeException e) {
                 callbacks.fire(Event.AFTER_EACH_MIGRATE_ERROR);
