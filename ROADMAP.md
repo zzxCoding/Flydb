@@ -19,12 +19,18 @@
 
 ## 阶段二：开发体验与机器契约
 
-让个人开发者愿意主动用，让任何程序（CI、IDE、外部宿主）都能稳定调用。
+让任何程序（CI、IDE、外部宿主、Agent）都能稳定调用 Flydb。投资集中在机器契约上——它是阶段三 MCP 适配与阶段五协议的直接前置。
 
 - [ ] `--json` 机器可读输出：稳定 schema、stdout/stderr 分离
-- [ ] 官方 Docker 镜像与 GitHub Actions / Jenkins 集成方案
-- [ ] brew / SDKMAN / scoop 等安装渠道
-- [ ] 命令、配置、错误码契约的版本化承诺（protocolVersion）
+- [ ] 命令、配置、错误码契约的版本化承诺（protocolVersion），与 `--json` 同批交付
+- [ ] CI 接入文档：GitHub Actions 与 Jenkins 的官方示例与片段
+
+### 按需启动
+
+以下便利项不设排期，出现真实用户需求后再启动：
+
+- [ ] brew / SDKMAN / scoop 安装渠道（前置：发行包增加 tar.gz 格式）
+- [ ] 官方 Docker 镜像（信创环境多为内网，外部镜像可达性有限）
 
 ## 阶段三：Agent 分发
 
