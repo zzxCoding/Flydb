@@ -61,3 +61,6 @@ Thumbs.db
 !.mvn/**
 !mvnw
 !mvnw.cmd
+
+# ---- 本地 Agent 会话产物，不入库 ----
+.zcode/
