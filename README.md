@@ -69,8 +69,8 @@ bin/flydb validate
 
 ## 路线图
 
-- [x] **可靠的迁移运行时**：迁移引擎、8 个内置方言、CLI、Spring Boot starter、Agent Skill、`v0.2.0` GitHub Release
-- [ ] **开发体验与机器契约**：发布与安装渠道、`--json` 机器输出、CI 集成方案
+- [x] **可靠的迁移运行时**：迁移引擎、8 个内置方言、CLI、Spring Boot starter、Agent Skill、`v0.2.0` GitHub Release、`v0.2.1` Maven Central 发布
+- [ ] **开发体验与机器契约**：brew/SDKMAN/scoop 安装渠道、`--json` 机器输出、CI 集成方案
 - [ ] **Agent 分发**：基于稳定 CLI 契约的 MCP 适配
 - [ ] **存量变更智能**：影响分析、应用引用扫描、覆盖率与未知项标注
 - [ ] **Agent 安全变更运行时**：Plan → Validate → Risk → Approval → Apply → Verify 协议
@@ -132,7 +132,7 @@ Spring Boot 应用选择对应 starter，容器初始化期间执行 `migrate`�
 </dependency>
 ```
 
-> CLI 已通过 [GitHub Release](https://github.com/zzxCoding/Flydb/releases) 分发；`v0.2.1` 起坐标 `io.github.zzxcoding` 的各模块将发布到 Maven Central（Java 包名保持 `com.flydb.*` 不变）。该版本上线前的版本需从源码构建并安装到本地或企业 Maven 仓库。
+> CLI 已通过 [GitHub Release](https://github.com/zzxCoding/Flydb/releases) 分发；`v0.2.1` 起坐标 `io.github.zzxcoding` 的各模块已发布到 Maven Central（Java 包名保持 `com.flydb.*` 不变），更早版本需从源码构建。
 
 Java 8 存量应用改用 `flydb-spring-boot-2-starter`（Boot 2.7.18；[Spring 官方已说明](https://spring.io/blog/2023/11/23/spring-boot-2-7-18-available-now/) 2.7.18 是 Boot 2.x 最后一个开源支持版本，因此新项目应优先 Boot 3 starter）。默认复用应用主 `DataSource`；需要权限隔离时设置 `flydb.url/user/password`，用独立 DDL 账号迁移；`flydb.enabled=false` 可完全关闭自动装配。可运行示例：[Boot 2 示例](./examples/boot2-demo)、[Boot 3 示例](./examples/boot3-demo)，详见 [Spring Boot Starter 设计](./docs/design/07-spring-boot-starter.md)。
 

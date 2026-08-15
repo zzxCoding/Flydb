@@ -69,8 +69,8 @@ See the [database getting-started guides](./docs/getting-started/README.md) for 
 
 ## Roadmap
 
-- [x] **Reliable migration runtime**: engine, 8 built-in dialects, CLI, Spring Boot starters, Agent Skill, and the `v0.2.0` GitHub Release
-- [ ] **DX and machine contract**: release and install channels, `--json` machine-readable output, CI recipes
+- [x] **Reliable migration runtime**: engine, 8 built-in dialects, CLI, Spring Boot starters, Agent Skill, the `v0.2.0` GitHub Release, and the `v0.2.1` Maven Central publishing
+- [ ] **DX and machine contract**: brew/SDKMAN/scoop install channels, `--json` machine-readable output, CI recipes
 - [ ] **Agent distribution**: MCP adapter on top of a stable CLI contract
 - [ ] **Brownfield change intelligence**: impact analysis, application reference scanning, coverage with explicit unknowns
 - [ ] **Agent-safe change runtime**: a Plan → Validate → Risk → Approval → Apply → Verify protocol
@@ -132,7 +132,7 @@ Spring Boot applications pick the matching starter; it runs `migrate` during con
 </dependency>
 ```
 
-> The CLI is distributed through [GitHub Releases](https://github.com/zzxCoding/Flydb/releases). Starting with `v0.2.1`, all modules under the `io.github.zzxcoding` groupId will be published to Maven Central (Java package names stay `com.flydb.*`). Until that release goes live, build from source and install artifacts into a local or private Maven repository.
+> The CLI is distributed through [GitHub Releases](https://github.com/zzxCoding/Flydb/releases). Starting with `v0.2.1`, all modules under the `io.github.zzxcoding` groupId are published to Maven Central (Java package names stay `com.flydb.*`); earlier releases must be built from source.
 
 Java 8 applications use `flydb-spring-boot-2-starter` (Boot 2.7.18; [Spring states](https://spring.io/blog/2023/11/23/spring-boot-2-7-18-available-now/) that 2.7.18 is the last open-source release of the Boot 2.x line, so new projects should prefer the Boot 3 starter). The starter reuses the application's primary `DataSource` by default; set `flydb.url/user/password` to migrate with a separate DDL account, and `flydb.enabled=false` to disable auto-configuration entirely. Runnable examples: [Boot 2](./examples/boot2-demo), [Boot 3](./examples/boot3-demo); see the [Spring Boot starter design](./docs/design/07-spring-boot-starter.md).
 

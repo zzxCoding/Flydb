@@ -15,7 +15,7 @@
 - [x] Spring Boot 2 / 3 starter 与可运行示例
 - [x] `flydb-cli` Agent Skill 与评测用例
 - [x] `v0.2.0` GitHub Release 与 CLI 发行包
-- [ ] 包管理器、Maven Central 等安装渠道，兼容性矩阵公开化
+- [x] Maven Central 发布渠道与兼容性矩阵公开化（brew 等包管理器渠道见阶段二）
 
 ## 阶段二：开发体验与机器契约
 
