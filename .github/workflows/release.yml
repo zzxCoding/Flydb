@@ -30,6 +30,10 @@ jobs:
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
       GH_TOKEN: ${{ github.token }}
+      # settings.xml 中 ${env.*} 由 Maven 在 deploy 阶段解析，凭据必须在整个 job 可见
+      CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+      CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
@@ -54,11 +58,7 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: echo "$GPG_PRIVATE_KEY" | gpg --batch --import
       - name: Write Maven settings with publishing credentials
-        env:
-          CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
-          CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        # 凭据经 ${env.*} 间接引用，不落入 settings.xml 明文；单引号防止 shell 展开
+        # 凭据经 ${env.*} 间接引用（job 级 env），不落入 settings.xml 明文；单引号防止 shell 展开
         run: |
           mkdir -p "$HOME/.m2"
           printf '%s\n' \
