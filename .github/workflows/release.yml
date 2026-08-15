@@ -103,14 +103,48 @@ jobs:
           ./scripts/check-release-artifacts.sh --signatures "$staging" flydb-cli/target
       - name: Create GitHub Release with CLI distribution
         run: |
+          version="${RELEASE_TAG#v}"
+          zip_file="flydb-cli-${version}.zip"
+          # 发布正文 = CHANGELOG 对应版本段落 + 标准安装说明，与 v0.2.0 起的正文结构一致
+          notes="$(mktemp -d)/release-notes.md"
+          awk -v ver="$version" '
+            $0 ~ "^## \\[" ver "\\]" { in_section = 1; next }
+            in_section && /^## \[/ { exit }
+            in_section { print }
+          ' CHANGELOG.md > "$notes"
+          printf '\n' >> "$notes"
+          printf '%s\n' '## 安装' \
+            '' \
+            'Maven Central：' \
+            '' \
+            '```xml' \
+            '<dependency>' \
+            '  <groupId>io.github.zzxcoding</groupId>' \
+            '  <artifactId>flydb-core</artifactId>' \
+            "  <version>${version}</version>" \
+            '</dependency>' \
+            '```' \
+            '' \
+            'Spring Boot 应用改用 `flydb-spring-boot-2-starter`（Java 8 / Boot 2.7）或 `flydb-spring-boot-3-starter`（Java 17 / Boot 3）。' \
+            '' \
+            "CLI：下载下方 \`${zip_file}\`，使用同名 \`.sha256\` 文件校验后解压：" \
+            '' \
+            '```bash' \
+            "shasum -a 256 -c ${zip_file}.sha256" \
+            "unzip ${zip_file}" \
+            "cd flydb-cli-${version}" \
+            'bin/flydb version' \
+            '```' \
+            '' \
+            "完整变更与验证边界见 [CHANGELOG.md](https://github.com/zzxCoding/Flydb/blob/${RELEASE_TAG}/CHANGELOG.md)。" >> "$notes"
           cd flydb-cli/target
-          zip_file="$(ls flydb-cli-*.zip)"
           shasum -a 256 "$zip_file" > "$zip_file.sha256"
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" "$zip_file" "$zip_file.sha256" --clobber
+            gh release edit "$RELEASE_TAG" --notes-file "$notes"
           else
             gh release create "$RELEASE_TAG" \
-              --title "Flydb ${RELEASE_TAG#v}" \
-              --generate-notes \
+              --title "Flydb ${version}" \
+              --notes-file "$notes" \
               "$zip_file" "$zip_file.sha256"
           fi
