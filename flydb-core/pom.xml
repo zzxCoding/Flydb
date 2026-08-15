@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.flydb</groupId>
+        <groupId>io.github.zzxcoding</groupId>
         <artifactId>flydb-parent</artifactId>
         <version>${revision}</version>
     </parent>

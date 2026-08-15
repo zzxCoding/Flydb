@@ -3,6 +3,18 @@
 Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正式发行包与发布说明见
 [GitHub Releases](https://github.com/zzxCoding/Flydb/releases)。
 
+## [未发布]
+
+### 变更
+
+- Maven 坐标 groupId 由 `com.flydb` 调整为 `io.github.zzxcoding`（Sonatype Central Portal 经 GitHub 验证的 namespace）；Java 包名保持 `com.flydb.*` 不变。`0.2.0` 及更早版本未发布到任何 Maven 仓库，无迁移影响。
+
+### 新增
+
+- Maven Central 发布链路：根 POM 新增 `central` 发布 profile（GPG 签名 + central-publishing-maven-plugin），tag 触发的 release workflow（`.github/workflows/release.yml`）一次完成全量 verify、签名、发布 Central 与 GitHub Release 附件；发布范围为 parent、core、CLI（jar）、两个 starter，examples 与 integration-tests 不发布。
+- 兼容性矩阵参考文档（`docs/reference/compatibility.md`）：模块与 Java/Spring Boot 运行环境、数据库方言与驱动、验证层级。
+- `scripts/check-release-artifacts.sh` 新增 `--signatures` 模式，发布前校验每个产物均有 GPG 签名且验证通过。
+
 ## [0.2.0] - 2026-08-14
 
 首个正式公开版本，提供可用于本地开发、CI 和应用启动阶段的 Schema 迁移运行时。

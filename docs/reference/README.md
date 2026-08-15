@@ -5,6 +5,7 @@
 - [配置项参考](configuration.md)：CLI、环境变量、`flydb.conf` 与 Spring Boot `flydb.*` 配置。
 - [错误码参考](errors.md)：稳定错误码、常见原因、修复动作和 CLI 退出码。
 - [CLI 命令参考](commands.md)：全局选项、命令、锁范围和常用流程。
+- [兼容性矩阵](compatibility.md)：模块与 Java/Spring Boot 运行环境、数据库方言与驱动、验证层级。
 - [命令与 CLI 设计](../design/06-config-cli.md)：命令语义、驱动加载和发行包布局。
 
 接入新数据库的操作流程见[JDBC 数据库快速接入](../getting-started/jdbc-integration.md)；方言扩展接口见[数据库方言层设计](../design/03-dialects.md)。

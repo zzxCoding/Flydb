@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.flydb</groupId>
+        <groupId>io.github.zzxcoding</groupId>
         <artifactId>flydb-parent</artifactId>
         <version>${revision}</version>
         <relativePath>../..</relativePath>
@@ -14,9 +14,14 @@
     <artifactId>flydb-boot2-demo</artifactId>
     <name>Flydb :: Example :: Spring Boot 2</name>
 
+    <properties>
+        <!-- 示例模块不发布（设计 01 §1 的发布范围不含 examples） -->
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
     <dependencies>
         <dependency>
-            <groupId>com.flydb</groupId>
+            <groupId>io.github.zzxcoding</groupId>
             <artifactId>flydb-spring-boot-2-starter</artifactId>
             <version>${project.version}</version>
         </dependency>

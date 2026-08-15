@@ -65,7 +65,7 @@ bin/flydb validate
 | TiDB | MySQL family reuse | Lightweight compatibility tests; real-environment coverage growing |
 | Other JDBC databases | Extensible | Requires a JDBC driver and a `DatabaseType` SPI dialect |
 
-See the [database getting-started guides](./docs/getting-started/README.md) for drivers, URLs, permissions, and known limitations per database. The status reflects current verification evidence, not vendor certification. For vendor or Xinchuang JDBC databases, start with the [JDBC integration guide](./docs/getting-started/jdbc-integration.md).
+See the [database getting-started guides](./docs/getting-started/README.md) for drivers, URLs, permissions, and known limitations per database. The status reflects current verification evidence, not vendor certification. The full matrix of modules, Java/Spring Boot versions, and database drivers is in the [compatibility matrix](./docs/reference/compatibility.md) (in Chinese). For vendor or Xinchuang JDBC databases, start with the [JDBC integration guide](./docs/getting-started/jdbc-integration.md).
 
 ## Roadmap
 
@@ -105,18 +105,34 @@ Flydb flydb = Flydb.configure()
 flydb.migrate();
 ```
 
+Plain Java applications depend on `flydb-core`:
+
+```xml
+<dependency>
+  <groupId>io.github.zzxcoding</groupId>
+  <artifactId>flydb-core</artifactId>
+  <version>0.2.1</version>
+</dependency>
+```
+
 Spring Boot applications pick the matching starter; it runs `migrate` during context initialization and aborts startup on failure:
 
 ```xml
 <!-- Spring Boot 3.x / Java 17+ -->
 <dependency>
-  <groupId>com.flydb</groupId>
+  <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-3-starter</artifactId>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
+</dependency>
+<!-- Spring Boot 2.7 / Java 8 -->
+<dependency>
+  <groupId>io.github.zzxcoding</groupId>
+  <artifactId>flydb-spring-boot-2-starter</artifactId>
+  <version>0.2.1</version>
 </dependency>
 ```
 
-> The CLI is distributed through the [GitHub Release](https://github.com/zzxCoding/Flydb/releases/tag/v0.2.0). Maven Central publishing is not available yet; Java API and starter users currently build from source and install artifacts into a local or private Maven repository.
+> The CLI is distributed through [GitHub Releases](https://github.com/zzxCoding/Flydb/releases). Starting with `v0.2.1`, all modules under the `io.github.zzxcoding` groupId will be published to Maven Central (Java package names stay `com.flydb.*`). Until that release goes live, build from source and install artifacts into a local or private Maven repository.
 
 Java 8 applications use `flydb-spring-boot-2-starter` (Boot 2.7.18; [Spring states](https://spring.io/blog/2023/11/23/spring-boot-2-7-18-available-now/) that 2.7.18 is the last open-source release of the Boot 2.x line, so new projects should prefer the Boot 3 starter). The starter reuses the application's primary `DataSource` by default; set `flydb.url/user/password` to migrate with a separate DDL account, and `flydb.enabled=false` to disable auto-configuration entirely. Runnable examples: [Boot 2](./examples/boot2-demo), [Boot 3](./examples/boot3-demo); see the [Spring Boot starter design](./docs/design/07-spring-boot-starter.md).
 

@@ -5,19 +5,21 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!--
-        Flydb 0.2 根 POM
+        Flydb 根 POM
         设计依据：docs/design/01-modules.md
         - 统一版本由 revision 属性管理（CI-friendly），flatten-maven-plugin 处理发布
+        - Maven 坐标 namespace 为 io.github.zzxcoding（Central Portal 经 GitHub 验证）；
+          Java 包名保持 com.flydb.*，两者相互独立
         - core/cli/starter-2 编译目标 Java 8；starter-3、integration-tests 目标 Java 17
         - enforcer 在 flydb-core 强制"零非 test 运行时依赖"
         - JaCoCo 行覆盖率 ≥80% 构建门禁（integration-tests 除外）
     -->
-    <groupId>com.flydb</groupId>
+    <groupId>io.github.zzxcoding</groupId>
     <artifactId>flydb-parent</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
 
-    <name>Flydb 0.2</name>
+    <name>Flydb Parent</name>
     <description>面向各类 JDBC 数据库、以国产信创数据库支持为特色的 Schema 版本化迁移工具</description>
     <url>https://github.com/zzxCoding/Flydb</url>
 
@@ -53,7 +55,7 @@
     </ciManagement>
 
     <properties>
-        <revision>0.2.0</revision>
+        <revision>0.2.1</revision>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -82,6 +84,8 @@
         <maven-assembly-plugin.version>3.7.1</maven-assembly-plugin.version>
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
         <maven-javadoc-plugin.version>3.10.1</maven-javadoc-plugin.version>
+        <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
+        <central-publishing-maven-plugin.version>0.11.0</central-publishing-maven-plugin.version>
     </properties>
 
     <modules>
@@ -149,6 +153,16 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
                     <version>${maven-assembly-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>${maven-gpg-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonatype.central</groupId>
+                    <artifactId>central-publishing-maven-plugin</artifactId>
+                    <version>${central-publishing-maven-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -242,6 +256,54 @@
             <properties>
                 <maven.compiler.release>8</maven.compiler.release>
             </properties>
+        </profile>
+
+        <!--
+            Maven Central 发布（Sonatype Central Portal，OSSRH 已于 2025-06 停用）。
+            仅在发布流程（.github/workflows/release.yml，-Pcentral）激活；
+            未激活时默认 deploy 行为不变，CI 的本地 staging 演练不受影响。
+            凭据约定（写入 ~/.m2/settings.xml）：
+            - server id "central"：Central Portal user token（username/password）
+            - server id "gpg.passphrase"：GPG 私钥口令
+        -->
+        <profile>
+            <id>central</id>
+            <build>
+                <plugins>
+                    <!-- 签名所有产物（jar/sources/javadoc/zip 逐个生成 .asc），Central 强制要求 -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals><goal>sign</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!--
+                        extensions=true 接管默认 deploy；发布范围遵循设计 01 §1：
+                        parent/core/cli(jar+zip)/两 starter；demo 与 integration-tests 排除
+                        （它们同时设置了 maven.deploy.skip=true，双保险）。
+                    -->
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                            <waitUntil>published</waitUntil>
+                            <excludeArtifacts>
+                                <artifact>flydb-boot2-demo</artifact>
+                                <artifact>flydb-boot3-demo</artifact>
+                                <artifact>flydb-integration-tests</artifact>
+                            </excludeArtifacts>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>

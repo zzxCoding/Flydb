@@ -1,8 +1,17 @@
 #!/usr/bin/env sh
 set -eu
 
+# 用法: $0 [--signatures] <staging 目录> [zip 搜索目录]
+# --signatures: 发布模式额外校验——staging 内每个 jar/zip 都必须有配对 .asc
+#               且 gpg --verify 通过（Maven Central 强制签名）。
+signatures=false
+if [ "${1:-}" = "--signatures" ]; then
+    signatures=true
+    shift
+fi
+
 if [ "$#" -lt 1 ]; then
-    echo "用法: $0 <staging 目录> [zip 搜索目录]" >&2
+    echo "用法: $0 [--signatures] <staging 目录> [zip 搜索目录]" >&2
     exit 2
 fi
 
@@ -32,4 +41,18 @@ if ! find "$zip_dir" -maxdepth 1 -type f -name 'flydb-cli-*.zip' -print -quit 2>
     exit 1
 fi
 
-echo "发布产物门禁通过: JAR + sources + javadoc + CLI ZIP"
+if [ "$signatures" = true ]; then
+    for artifact in $(find "$staging_dir" -type f \( -name '*.jar' -o -name '*.zip' \) | sort); do
+        if [ ! -f "$artifact.asc" ]; then
+            echo "缺少签名: $artifact.asc" >&2
+            exit 1
+        fi
+        if ! gpg --verify "$artifact.asc" "$artifact" >/dev/null 2>&1; then
+            echo "签名校验失败: $artifact" >&2
+            exit 1
+        fi
+    done
+    echo "发布产物门禁通过: JAR + sources + javadoc + CLI ZIP + GPG 签名"
+else
+    echo "发布产物门禁通过: JAR + sources + javadoc + CLI ZIP"
+fi

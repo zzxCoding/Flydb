@@ -65,7 +65,7 @@ bin/flydb validate
 | TiDB | 复用 MySQL 家族 | 轻量兼容测试；真实环境覆盖持续补充 |
 | 其他 JDBC 数据库 | 可扩展 | 需提供 JDBC 驱动及 `DatabaseType` SPI 方言实现 |
 
-每个数据库的驱动、连接、权限和已知限制见[数据库上手指南](./docs/getting-started/README.md)。状态只代表当前验证证据，不代表厂商认证。信创或新型 JDBC 数据库快速接入见 [JDBC 数据库快速接入](./docs/getting-started/jdbc-integration.md)。
+每个数据库的驱动、连接、权限和已知限制见[数据库上手指南](./docs/getting-started/README.md)。状态只代表当前验证证据，不代表厂商认证。模块、Java/Spring Boot 版本与数据库驱动的完整兼容矩阵见[兼容性矩阵](./docs/reference/compatibility.md)。信创或新型 JDBC 数据库快速接入见 [JDBC 数据库快速接入](./docs/getting-started/jdbc-integration.md)。
 
 ## 路线图
 
@@ -105,18 +105,34 @@ Flydb flydb = Flydb.configure()
 flydb.migrate();
 ```
 
+纯 Java 应用引入 `flydb-core`：
+
+```xml
+<dependency>
+  <groupId>io.github.zzxcoding</groupId>
+  <artifactId>flydb-core</artifactId>
+  <version>0.2.1</version>
+</dependency>
+```
+
 Spring Boot 应用选择对应 starter，容器初始化期间执行 `migrate`，失败会中止应用启动：
 
 ```xml
 <!-- Spring Boot 3.x / Java 17+ -->
 <dependency>
-  <groupId>com.flydb</groupId>
+  <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-3-starter</artifactId>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
+</dependency>
+<!-- Spring Boot 2.7 / Java 8 -->
+<dependency>
+  <groupId>io.github.zzxcoding</groupId>
+  <artifactId>flydb-spring-boot-2-starter</artifactId>
+  <version>0.2.1</version>
 </dependency>
 ```
 
-> CLI 已通过 [GitHub Release](https://github.com/zzxCoding/Flydb/releases/tag/v0.2.0) 分发；Maven Central 尚未发布。Java API 与 starter 用户当前需从源码构建并安装到本地或企业 Maven 仓库。
+> CLI 已通过 [GitHub Release](https://github.com/zzxCoding/Flydb/releases) 分发；`v0.2.1` 起坐标 `io.github.zzxcoding` 的各模块将发布到 Maven Central（Java 包名保持 `com.flydb.*` 不变）。该版本上线前的版本需从源码构建并安装到本地或企业 Maven 仓库。
 
 Java 8 存量应用改用 `flydb-spring-boot-2-starter`（Boot 2.7.18；[Spring 官方已说明](https://spring.io/blog/2023/11/23/spring-boot-2-7-18-available-now/) 2.7.18 是 Boot 2.x 最后一个开源支持版本，因此新项目应优先 Boot 3 starter）。默认复用应用主 `DataSource`；需要权限隔离时设置 `flydb.url/user/password`，用独立 DDL 账号迁移；`flydb.enabled=false` 可完全关闭自动装配。可运行示例：[Boot 2 示例](./examples/boot2-demo)、[Boot 3 示例](./examples/boot3-demo)，详见 [Spring Boot Starter 设计](./docs/design/07-spring-boot-starter.md)。
 
