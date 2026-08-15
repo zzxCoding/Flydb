@@ -111,7 +111,7 @@ public interface Log {
 - 所有模块统一版本号，由根 POM `revision` 属性管理（`flatten-maven-plugin` 处理发布）。
 - 发布物：
   1. Maven 仓库：flydb-core、flydb-cli（jar）、两个 starter；
-  2. GitHub Releases：`flydb-cli-0.2.0.zip` 发行包（布局见 [06 §7](06-config-cli.md)）。
+  2. GitHub Releases：`flydb-cli-<版本>.zip` 发行包（布局见 [06 §7](06-config-cli.md)）。
 
 ## 7. 旧代码处置
 

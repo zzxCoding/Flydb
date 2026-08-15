@@ -29,9 +29,9 @@ Flydb is a versioned schema migration tool for databases with JDBC drivers: buil
 Prerequisites: Java 8 or newer, an existing target database, and a Java 8-compatible JDBC driver.
 
 ```bash
-curl -LO https://github.com/zzxCoding/Flydb/releases/download/v0.2.0/flydb-cli-0.2.0.zip
-unzip flydb-cli-0.2.0.zip
-cd flydb-cli-0.2.0
+curl -LO https://github.com/zzxCoding/Flydb/releases/download/v0.2.1/flydb-cli-0.2.1.zip
+unzip flydb-cli-0.2.1.zip
+cd flydb-cli-0.2.1
 
 # Example: place mysql-connector-j.jar into drivers/
 cp /path/to/mysql-connector-j.jar drivers/
@@ -172,7 +172,7 @@ The full reactor, including the Boot 3 modules, is built with Java 17; the Boot 
 ./mvnw verify
 ```
 
-The CLI distribution is generated at `flydb-cli/target/flydb-cli-0.2.0.zip`. The core module enforces an 80% JaCoCo line-coverage gate and zero non-test runtime dependencies via Maven Enforcer.
+The CLI distribution is generated at `flydb-cli/target/flydb-cli-0.2.1.zip`. The core module enforces an 80% JaCoCo line-coverage gate and zero non-test runtime dependencies via Maven Enforcer.
 
 Local integration contracts default to MySQL 8 only; to run a specific CI dialect, set `-Pmysql`/`-Ppostgresql` and `-Dflydb.integration.database=<dialect>`. The full matrix runs in `.github/workflows/ci.yml`.
 

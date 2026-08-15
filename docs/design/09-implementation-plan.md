@@ -150,7 +150,7 @@
 ```bash
 # 纯 JDK8 容器内，MySQL 8 目标库（密码为演示用合成值）
 docker run -d --name flydb-mysql -e MYSQL_ROOT_PASSWORD=test -p 3306:3306 mysql:8
-unzip flydb-cli-0.2.0.zip && cd flydb-cli-0.2.0
+unzip flydb-cli-0.2.1.zip && cd flydb-cli-0.2.1
 # 放入 mysql-connector-j.jar 到 drivers/
 bin/flydb init --url "jdbc:mysql://127.0.0.1:3306/demo" --user root --yes
 echo "CREATE TABLE t1(id INT PRIMARY KEY);" > db/migration/V1__init.sql

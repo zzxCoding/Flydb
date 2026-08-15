@@ -96,7 +96,7 @@ public class FlydbAutoConfiguration {
 starter 模块内注册 `LogFactory.setLogCreator(...)` 将 core 的日志抽象（[01 §4](01-modules.md)）桥接到 SLF4J，迁移过程以标准应用日志输出：
 
 ```
-INFO  c.f.starter : Flydb 0.2.0 · openGauss · 发现 3 个待执行迁移
+INFO  c.f.starter : Flydb 0.2.1 · openGauss · 发现 3 个待执行迁移
 INFO  c.f.starter : 执行 V2__add_status_column.sql (45ms)
 INFO  c.f.starter : 迁移完成，当前版本 2，总耗时 128ms
 ```
