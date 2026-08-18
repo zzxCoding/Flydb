@@ -58,19 +58,47 @@ class JsonRenderersTest {
     }
 
     @Test
-    @DisplayName("dry-run 信封保留语句行号并对 SQL 脱敏")
-    void dryRunEnvelopeRedactsSql() {
-        DryRunResult result = new DryRunResult(Collections.singletonList(new DryRunMigration(
-                "V2__add_order.sql", MigrationType.SQL, Arrays.asList(
+    @DisplayName("dry-run 信封即 Plan Artifact：携带确定性摘要并对 SQL 脱敏")
+    void dryRunEnvelopeIsPlanArtifactAndRedactsSql() {
+        DryRunResult result = new DryRunResult("migrate",
+                Collections.singletonList(new DryRunMigration(
+                "V2__add_order.sql", MigrationType.SQL, MigrationVersion.parse("2"),
+                "add_order", Integer.valueOf(777), Arrays.asList(
                 new DryRunStatement(1, "CREATE TABLE orders (id INT)"),
                 new DryRunStatement(3, "CREATE USER app IDENTIFIED BY 's3cret'")))));
 
         assertThat(JsonRenderers.dryRun("migrate", result, "s3cret"))
                 .isEqualTo("{\"protocolVersion\":1,\"command\":\"migrate\",\"status\":\"success\","
-                        + "\"exitCode\":0,\"dryRun\":true,\"migrations\":[{\"script\":"
-                        + "\"V2__add_order.sql\",\"type\":\"SQL\",\"statements\":["
+                        + "\"exitCode\":0,\"dryRun\":true,\"plan\":{"
+                        + "\"algorithm\":\"flydb-plan-v1\",\"direction\":\"migrate\","
+                        + "\"id\":\"ba1b0bc7a857b8a06131d8c031ec8a2d2f5b6df20e32eaaf1496bdf77b23000a\","
+                        + "\"targetVersion\":\"2\",\"migrationCount\":1,\"statementCount\":2},"
+                        + "\"migrations\":[{\"script\":\"V2__add_order.sql\",\"type\":\"SQL\","
+                        + "\"version\":\"2\",\"description\":\"add_order\",\"checksum\":777,"
+                        + "\"statementCount\":2,\"statements\":["
                         + "{\"lineNumber\":1,\"sql\":\"CREATE TABLE orders (id INT)\"},"
                         + "{\"lineNumber\":3,\"sql\":\"CREATE USER app IDENTIFIED BY '****'\"}]}]}");
+    }
+
+    @Test
+    @DisplayName("undo dry-run 信封：可重复迁移版本为 null 时 targetVersion 与 version 均为 null")
+    void undoDryRunEnvelopeKeepsNullVersion() {
+        DryRunResult result = new DryRunResult("undo",
+                Collections.singletonList(new DryRunMigration(
+                "U2__drop_order.sql", MigrationType.UNDO_SQL, null,
+                "drop_order", Integer.valueOf(88), Collections.singletonList(
+                new DryRunStatement(1, "DROP TABLE orders")))));
+
+        assertThat(JsonRenderers.dryRun("undo", result, null))
+                .isEqualTo("{\"protocolVersion\":1,\"command\":\"undo\",\"status\":\"success\","
+                        + "\"exitCode\":0,\"dryRun\":true,\"plan\":{"
+                        + "\"algorithm\":\"flydb-plan-v1\",\"direction\":\"undo\","
+                        + "\"id\":\"dd702401a06e9a68d200da64c8d7d0b8856299a468aa772d5f40f1c7e200f73a\","
+                        + "\"targetVersion\":null,\"migrationCount\":1,\"statementCount\":1},"
+                        + "\"migrations\":[{\"script\":\"U2__drop_order.sql\",\"type\":\"UNDO_SQL\","
+                        + "\"version\":null,\"description\":\"drop_order\",\"checksum\":88,"
+                        + "\"statementCount\":1,\"statements\":["
+                        + "{\"lineNumber\":1,\"sql\":\"DROP TABLE orders\"}]}]}");
     }
 
     @Test

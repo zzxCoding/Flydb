@@ -35,7 +35,7 @@ public final class DryRunCommand {
             }
             return preview(runtime, PendingCalculator.compute(
                     migrations, applied, configuration.outOfOrder(),
-                    configuration.versionSelection()));
+                    configuration.versionSelection()), "migrate");
         }
     }
 
@@ -43,21 +43,23 @@ public final class DryRunCommand {
         try (CommandRuntime runtime = CommandRuntime.open(configuration, false)) {
             ResolvedMigration undo = UndoCommand.findUndo(runtime.resolved(),
                     UndoCommand.latestAppliedVersion(runtime.applied()));
-            return preview(runtime, java.util.Collections.singletonList(undo));
+            return preview(runtime, java.util.Collections.singletonList(undo), "undo");
         }
     }
 
     private static DryRunResult preview(CommandRuntime runtime,
-                                        List<ResolvedMigration> migrations) {
+                                        List<ResolvedMigration> migrations, String direction) {
         List<DryRunMigration> result = new ArrayList<DryRunMigration>();
         for (ResolvedMigration migration : migrations) {
             List<DryRunStatement> statements = new ArrayList<DryRunStatement>();
             for (SqlStatement statement : MigrationCommandSupport.preview(runtime, migration)) {
                 statements.add(new DryRunStatement(statement.lineNumber(), statement.sql()));
             }
-            result.add(new DryRunMigration(migration.script(), migration.type(), statements));
+            result.add(new DryRunMigration(migration.script(), migration.type(),
+                    migration.version(), migration.description(), migration.checksum(),
+                    statements));
         }
-        return new DryRunResult(result);
+        return new DryRunResult(direction, result);
     }
 
 }

@@ -59,7 +59,7 @@
 |---|---|
 | `version` | `version`（产品版本字符串） |
 | `migrate` | `executed`（脚本名数组）、`targetVersionReached`、`totalExecutionTimeMillis`、`warnings` |
-| `migrate`/`undo` + `--dry-run` | `dryRun:true`、`migrations:[{script,type,statements:[{lineNumber,sql}]}]`；`sql` 与文本 dry-run 同样脱敏 |
+| `migrate`/`undo` + `--dry-run` | `dryRun:true`、`plan` 摘要对象（Plan Artifact v1，见[11](11-plan-artifact.md)）、`migrations:[{script,type,version,description,checksum,statementCount,statements:[{lineNumber,sql}]}]`；`sql` 与文本 dry-run 同样脱敏 |
 | `info` | `databaseName`、`url`（脱敏）、`historyTable`、`current`（已应用最高版本，可 null）、`migrations` 数组 |
 | `info` 单条迁移 | `version`（可重复迁移为 null）、`description`、`type`、`script`、`checksum`、`installedOn`、`executionTimeMillis`、`state` |
 | `validate` | 无载荷字段 |

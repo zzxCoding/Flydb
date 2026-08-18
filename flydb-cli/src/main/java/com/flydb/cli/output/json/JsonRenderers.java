@@ -9,6 +9,7 @@ import com.flydb.core.api.DryRunResult;
 import com.flydb.core.api.DryRunStatement;
 import com.flydb.core.api.MigrateResult;
 import com.flydb.core.api.MigrationInfoService;
+import com.flydb.core.api.PlanArtifact;
 import com.flydb.core.api.RepairResult;
 import com.flydb.core.api.UndoResult;
 import com.flydb.core.exception.ValidationProblem;
@@ -70,15 +71,31 @@ public final class JsonRenderers {
         return json.endArray().endObject().toString();
     }
 
-    /** dry-run 信封；command 为 {@code migrate} 或 {@code undo}，SQL 与文本模式同样脱敏。 */
+    /**
+     * dry-run 信封（即 Plan Artifact v1 载荷，设计 11）；command 为 {@code migrate}
+     * 或 {@code undo}，SQL 与文本模式同样脱敏。
+     */
     public static String dryRun(String command, DryRunResult result, String password) {
+        PlanArtifact plan = PlanArtifact.of(result);
         JsonWriter json = envelope(command)
                 .name("dryRun").value(true)
+                .name("plan").beginObject()
+                .name("algorithm").value(PlanArtifact.ALGORITHM)
+                .name("direction").value(plan.direction())
+                .name("id").value(plan.id())
+                .name("targetVersion").value(plan.targetVersion())
+                .name("migrationCount").value(plan.migrationCount())
+                .name("statementCount").value(plan.statementCount())
+                .endObject()
                 .name("migrations").beginArray();
         for (DryRunMigration migration : result.migrations()) {
             json.beginObject()
                     .name("script").value(migration.script())
                     .name("type").value(migration.type().name())
+                    .name("version").value(versionText(migration.version()))
+                    .name("description").value(migration.description())
+                    .name("checksum").value(migration.checksum())
+                    .name("statementCount").value(migration.statements().size())
                     .name("statements").beginArray();
             for (DryRunStatement statement : migration.statements()) {
                 json.beginObject()

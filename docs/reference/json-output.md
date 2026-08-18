@@ -44,7 +44,7 @@ $ bin/flydb --json migrate
 |---|---|
 | `version` | `version` |
 | `migrate` | `executed`、`targetVersionReached`、`totalExecutionTimeMillis`、`warnings` |
-| `--dry-run migrate` / `--dry-run undo` | `dryRun:true`、`migrations[].{script,type,statements[].{lineNumber,sql}}` |
+| `--dry-run migrate` / `--dry-run undo` | `dryRun:true`、`plan.{algorithm,direction,id,targetVersion,migrationCount,statementCount}`（Plan Artifact v1，见[Plan Artifact 设计](../design/11-plan-artifact.md)）、`migrations[].{script,type,version,description,checksum,statementCount,statements[].{lineNumber,sql}}` |
 | `info` | `databaseName`、`url`（脱敏）、`historyTable`、`current`、`migrations[]` |
 | `validate` | 无载荷 |
 | `baseline` | `baselineVersion` |

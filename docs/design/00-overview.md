@@ -1,6 +1,6 @@
 # Flydb 0.2 设计总览
 
-> 设计文档目录：本文（总览）| [01 模块划分](01-modules.md) | [02 领域模型与 API](02-domain-api.md) | [03 数据库方言层](03-dialects.md) | [04 解析器/锁/事务](04-parser-lock-tx.md) | [05 命令语义](05-commands.md) | [06 配置与 CLI](06-config-cli.md) | [07 Spring Boot Starter](07-spring-boot-starter.md) | [08 测试与路线图](08-testing-roadmap.md) | [09 实施交接计划](09-implementation-plan.md) | [10 机器契约](10-machine-contract.md)
+> 设计文档目录：本文（总览）| [01 模块划分](01-modules.md) | [02 领域模型与 API](02-domain-api.md) | [03 数据库方言层](03-dialects.md) | [04 解析器/锁/事务](04-parser-lock-tx.md) | [05 命令语义](05-commands.md) | [06 配置与 CLI](06-config-cli.md) | [07 Spring Boot Starter](07-spring-boot-starter.md) | [08 测试与路线图](08-testing-roadmap.md) | [09 实施交接计划](09-implementation-plan.md) | [10 机器契约](10-machine-contract.md) | [11 Plan Artifact](11-plan-artifact.md)
 
 ## 1. 产品定位
 
