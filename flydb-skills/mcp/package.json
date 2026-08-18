@@ -1,0 +1,54 @@
+{
+  "name": "flydb-mcp",
+  "version": "0.1.0",
+  "description": "Flydb MCP Adapter：以受控子进程调用 flydb --json，向 MCP 宿主提供安全的数据库迁移工具（只映射 Flydb 领域命令，不提供通用 execute_sql）",
+  "type": "module",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/zzxCoding/Flydb",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zzxCoding/Flydb.git",
+    "directory": "flydb-skills/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/zzxCoding/Flydb/issues"
+  },
+  "keywords": [
+    "flydb",
+    "mcp",
+    "model-context-protocol",
+    "database",
+    "migration",
+    "schema",
+    "flyway-alternative"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/server.mjs",
+  "exports": "./dist/server.mjs",
+  "bin": {
+    "flydb-mcp": "./dist/server.mjs"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "flydb": {
+    "cli": ">=0.3.0 <0.4.0",
+    "protocolVersion": 1
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}

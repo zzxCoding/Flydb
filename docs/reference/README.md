@@ -6,6 +6,7 @@
 - [错误码参考](errors.md)：稳定错误码、常见原因、修复动作和 CLI 退出码。
 - [CLI 命令参考](commands.md)：全局选项、命令、锁范围和常用流程。
 - [JSON 输出参考](json-output.md)：`--json` 机器输出信封 schema 与稳定性承诺。
+- [MCP 工具参考](mcp-tools.md)：Flydb MCP Adapter 的工具清单、输入输出约定与安全模型。
 - [兼容性矩阵](compatibility.md)：模块与 Java/Spring Boot 运行环境、数据库方言与驱动、验证层级。
 - [命令与 CLI 设计](../design/06-config-cli.md)：命令语义、驱动加载和发行包布局；机器契约设计见[设计 10](../design/10-machine-contract.md)。
 

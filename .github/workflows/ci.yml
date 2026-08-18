@@ -53,6 +53,43 @@ jobs:
           path: flydb-cli/target/flydb-cli-*.zip
           if-no-files-found: error
 
+  mcp-adapter:
+    name: MCP adapter (Node)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: flydb-skills/mcp/package-lock.json
+      - name: Install adapter dependencies
+        run: npm ci
+        working-directory: flydb-skills/mcp
+      - name: Typecheck and unit tests
+        run: npm run typecheck && npm test
+        working-directory: flydb-skills/mcp
+      - name: Build adapter bundle
+        run: npm run build
+        working-directory: flydb-skills/mcp
+      - name: Build CLI distribution
+        run: ./mvnw -B -pl flydb-cli -am package -DskipTests
+      - name: Cross-runtime e2e (real CLI + official MCP client)
+        run: |
+          unzip -q flydb-cli/target/flydb-cli-*.zip -d "$RUNNER_TEMP/flydb-dist"
+          bin_dir=$(echo "$RUNNER_TEMP"/flydb-dist/*/bin)
+          FLYDB_E2E_CLI="$bin_dir/flydb" npm run test:e2e
+        working-directory: flydb-skills/mcp
+
   java8-compatibility:
     name: Java 8 compatibility
     runs-on: ubuntu-latest

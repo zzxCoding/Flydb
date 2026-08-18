@@ -2,7 +2,9 @@
 
 Flydb 的 Agent Skills 集合。Skill 负责把重复的操作流程交给 Agent，项目文档仍然是命令、配置和数据库接入行为的唯一事实来源，避免 Skill 内复制一份会过期的 CLI 手册。
 
-本目录同时是一个合法的 [Agent Plugins 1.0.0](https://agent-plugins.org/specification) 插件包：根目录的 [`plugin.json`](plugin.json) 是插件清单，`skills/` 下是组件技能。支持该规范的宿主（ChatGPT、Codex、Cursor、Copilot、VS Code 等）可以直接以插件形式装载本目录；`mcp.json` 留待路线图阶段三的 MCP 适配交付。`plugin.json` 的 `version` 随 Flydb 发布版本同步维护，`name: flydb` 是规范层面永不重分配的包标识。
+本目录同时是一个合法的 [Agent Plugins 1.0.0](https://agent-plugins.org/specification) 插件包：根目录的 [`plugin.json`](plugin.json) 是插件清单，`skills/` 下是组件技能，[`mcp.json`](mcp.json) 声明 stdio MCP server（入口 [`mcp/dist/server.mjs`](mcp/dist/server.mjs)，需先在 `mcp/` 内构建）。支持该规范的宿主（ChatGPT、Codex、Cursor、Copilot、VS Code 等）可以直接以插件形式装载本目录。`plugin.json` 的 `version` 随 Flydb 发布版本同步维护，`name: flydb` 是规范层面永不重分配的包标识。
+
+MCP server 把 Flydb 暴露为 9 个领域工具（写入工具默认不注册，`FLYDB_MCP_ENABLE_WRITES=true` 显式开启，永不暴露 `clean`）。工具清单、安全模型与宿主配置见 [MCP 工具参考](../docs/reference/mcp-tools.md)与[MCP 接入指南](../docs/getting-started/mcp-adapter.md)；npm 包 `flydb-mcp` 是独立分发入口，与插件内置运行时复用同一构建产物。
 
 ## Agent 首次接入
 

@@ -72,7 +72,7 @@ See the [database getting-started guides](./docs/getting-started/README.md) for 
 
 - [x] **Reliable migration runtime**: engine, 8 built-in dialects, CLI, Spring Boot starters, Agent Skill, the `v0.2.0` GitHub Release, and the `v0.2.1` Maven Central publishing
 - [x] **DX and machine contract**: `--json` machine-readable output, protocolVersion contract versioning, CI integration docs, an Agent Plugins 1.0 package (`v0.3.0`; package managers and a Docker image on demand)
-- [ ] **Agent distribution**: MCP adapter on top of a stable CLI contract
+- [x] **Agent distribution**: an MCP adapter (TypeScript, nine domain tools, writes unregistered by default) plus the Plan Artifact v1 plan digest; the npm package ships with the next release
 - [ ] **Brownfield change intelligence**: impact analysis, application reference scanning, coverage with explicit unknowns
 - [ ] **Agent-safe change runtime**: a Plan → Validate → Risk → Approval → Apply → Verify protocol
 
@@ -80,7 +80,7 @@ The roadmap indicates direction, not delivery commitments; see [ROADMAP.md](./RO
 
 ## Agent usage
 
-If you are an agent, read the repository-root [`AGENTS.md`](./AGENTS.md) first, then install or enable the [`flydb-cli` Skill](./flydb-skills/skills/flydb-cli/SKILL.md) as it instructs before running commands; for migrations, run `validate` and `--dry-run migrate` first. The Skill is a thin orchestration layer that never duplicates the CLI manual; command, configuration, and error-code details are authoritative in [`docs/reference`](./docs/reference/README.md). The Skill follows the open `SKILL.md` format for reuse across Claude Code, Codex, Gemini CLI, ZCode, and other agents — see [`flydb-skills`](./flydb-skills/README.md).
+If you are an agent, read the repository-root [`AGENTS.md`](./AGENTS.md) first, then install or enable the [`flydb-cli` Skill](./flydb-skills/skills/flydb-cli/SKILL.md) as it instructs before running commands; for migrations, run `validate` and `--dry-run migrate` first. The Skill is a thin orchestration layer that never duplicates the CLI manual; command, configuration, and error-code details are authoritative in [`docs/reference`](./docs/reference/README.md). The Skill follows the open `SKILL.md` format for reuse across Claude Code, Codex, Gemini CLI, ZCode, and other agents — see [`flydb-skills`](./flydb-skills/README.md). MCP-capable hosts can also call Flydb as MCP tools via [`mcp.json`](./flydb-skills/mcp.json) (write tools unregistered by default); see the [MCP tools reference](./docs/reference/mcp-tools.md) and the [setup guide](./docs/getting-started/mcp-adapter.md) (in Chinese).
 
 The CLI distribution ZIP includes `AGENTS.md`, `docs/`, and `flydb-skills/`, so documentation and the Skill remain available with only the distribution and no source checkout. If you copy the Skill into an agent-specific directory, keep the distribution path so it can resolve those docs.
 

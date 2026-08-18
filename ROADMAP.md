@@ -2,7 +2,7 @@
 
 本路线图描述 Flydb 的演进方向、各阶段边界与当前进度。它代表当前规划方向，不构成交付时间或功能承诺；阶段与版本号并非一一对应，详细任务以仓库 Issue 为准。
 
-## 阶段一：可靠的迁移运行时（当前阶段）
+## 阶段一：可靠的迁移运行时
 
 让迁移引擎本身值得信任。这是后续一切能力的基础——模型再强，也无法替代事务、锁、版本排序、迁移历史与故障恢复的确定性。
 
@@ -33,12 +33,13 @@
 - [ ] brew / SDKMAN / scoop 安装渠道（前置：发行包增加 tar.gz 格式）
 - [ ] 官方 Docker 镜像（信创环境多为内网，外部镜像可达性有限）
 
-## 阶段三：Agent 分发
+## 阶段三：Agent 分发（当前阶段）
 
 让主流 Agent 都能安全调用 Flydb；Flydb 不绑定任何模型或平台，适配层保持薄。
 
-- [ ] 基于稳定 CLI 契约的 MCP 适配（只映射 Flydb 领域命令，不提供通用 `execute_sql`）
-- [ ] Plan Artifact v1：迁移计划的结构化表示，供人、CI 与 Agent 消费同一份计划
+- [x] 基于稳定 CLI 契约的 MCP 适配（TypeScript Adapter，只映射 Flydb 领域命令，不提供通用 `execute_sql`；写入工具默认不注册、`FLYDB_MCP_ENABLE_WRITES=true` 显式开启，永不暴露 `clean`）
+- [x] Plan Artifact v1：迁移计划的结构化表示，供人、CI 与 Agent 消费同一份计划（dry-run 信封携带 `plan.id` 确定性摘要）
+- [ ] npm 包 `flydb-mcp` 正式发布与 Agent Plugin 分发验证（随下一个 Release 交付，名称已在 registry 预检）
 
 ## 阶段四：存量变更智能
 

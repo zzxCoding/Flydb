@@ -72,7 +72,7 @@ bin/flydb validate
 
 - [x] **可靠的迁移运行时**：迁移引擎、8 个内置方言、CLI、Spring Boot starter、Agent Skill、`v0.2.0` GitHub Release、`v0.2.1` Maven Central 发布
 - [x] **开发体验与机器契约**：`--json` 机器输出、protocolVersion 契约版本化、CI 接入文档、Agent Plugins 1.0 插件包（`v0.3.0`；包管理器与 Docker 镜像按需启动）
-- [ ] **Agent 分发**：基于稳定 CLI 契约的 MCP 适配
+- [x] **Agent 分发**：MCP 适配（TypeScript Adapter + 九个领域工具，写入默认不注册）与 Plan Artifact v1 计划摘要；npm 包随下一个 Release 发布
 - [ ] **存量变更智能**：影响分析、应用引用扫描、覆盖率与未知项标注
 - [ ] **Agent 安全变更运行时**：Plan → Validate → Risk → Approval → Apply → Verify 协议
 
@@ -80,7 +80,7 @@ bin/flydb validate
 
 ## Agent 使用
 
-Agent 请先阅读仓库根目录的 [`AGENTS.md`](./AGENTS.md)，按其指引安装或启用 [`flydb-cli` Skill](./flydb-skills/skills/flydb-cli/SKILL.md) 后再执行命令；涉及迁移时先执行 `validate` 和 `--dry-run migrate`。Skill 是薄编排层，不复制 CLI 手册；命令、配置和错误码细节以 [`docs/reference`](./docs/reference/README.md) 为准，Skill 面向 Claude Code、Codex、Gemini CLI、ZCode 等主流 Agent 复用，格式与安装方式见 [`flydb-skills`](./flydb-skills/README.md)。
+Agent 请先阅读仓库根目录的 [`AGENTS.md`](./AGENTS.md)，按其指引安装或启用 [`flydb-cli` Skill](./flydb-skills/skills/flydb-cli/SKILL.md) 后再执行命令；涉及迁移时先执行 `validate` 和 `--dry-run migrate`。Skill 是薄编排层，不复制 CLI 手册；命令、配置和错误码细节以 [`docs/reference`](./docs/reference/README.md) 为准，Skill 面向 Claude Code、Codex、Gemini CLI、ZCode 等主流 Agent 复用，格式与安装方式见 [`flydb-skills`](./flydb-skills/README.md)。宿主支持 MCP 时，可通过 [`mcp.json`](./flydb-skills/mcp.json) 以 MCP tools 调用 Flydb（写入工具默认不注册），见 [MCP 工具参考](./docs/reference/mcp-tools.md)与[接入指南](./docs/getting-started/mcp-adapter.md)。
 
 CLI 发行 ZIP 同时包含 `AGENTS.md`、`docs/` 和 `flydb-skills/`，因此只有发行包、没有源码 checkout 时，也能使用与当前 CLI 版本匹配的文档和 Skill；复制 Skill 到 Agent 目录后，应保留发行包路径供其查找这些文档。
 

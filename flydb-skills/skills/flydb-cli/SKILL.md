@@ -17,6 +17,7 @@ compatibility: Flydb CLI 0.3，Java 8 或更高版本；需要 Flydb CLI 发行�
    - 配置或环境变量：[`docs/reference/configuration.md`](../../../docs/reference/configuration.md)
    - 错误或退出码：[`docs/reference/errors.md`](../../../docs/reference/errors.md)
    - `--json` 机器输出与 protocolVersion 契约：[`docs/reference/json-output.md`](../../../docs/reference/json-output.md)
+   - 通过 MCP 宿主调用 Flydb（MCP tools、写入开关、安全模型）：[`docs/reference/mcp-tools.md`](../../../docs/reference/mcp-tools.md)
    - 多数据库、多测试/生产环境的自动化与 CI 组织：[`docs/getting-started/multi-environment.md`](../../../docs/getting-started/multi-environment.md)
    - 信创/新型 JDBC 数据库、驱动或方言：[`docs/getting-started/jdbc-integration.md`](../../../docs/getting-started/jdbc-integration.md)
    - 某个内置数据库：[`docs/getting-started/README.md`](../../../docs/getting-started/README.md) 及对应页面

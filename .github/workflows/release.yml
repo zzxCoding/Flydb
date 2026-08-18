@@ -1,8 +1,9 @@
 # 发布流程：tag（v*）触发，或手动指定既有 tag。
-# 一次构建同时完成：全量 verify → GPG 签名 → 发布 Maven Central（Central Portal）
-# → 生成校验和 → 创建 GitHub Release 附 CLI ZIP。
+# 一次构建同时完成：全量 verify → MCP Adapter 构建/测试 → GPG 签名
+# → 发布 Maven Central（Central Portal）→ 生成校验和 → 发布 npm Adapter（凭据就绪时）
+# → 创建 GitHub Release 附 CLI ZIP（内含已构建 mcp/dist）。
 # 所需 Secrets：CENTRAL_PORTAL_USERNAME / CENTRAL_PORTAL_PASSWORD（user token）、
-# GPG_PRIVATE_KEY（armored 私钥）、GPG_PASSPHRASE。
+# GPG_PRIVATE_KEY（armored 私钥）、GPG_PASSPHRASE；可选 NPM_TOKEN（npm Adapter 发布）。
 name: Flydb Release
 
 on:
@@ -45,6 +46,17 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: flydb-skills/mcp/package-lock.json
+      # Adapter 必须先于 mvn deploy 构建：CLI 发行包按目录打包 flydb-skills/，
+      # 需要带上 mcp/dist/server.mjs 才能让插件宿主免 npm install 直接运行。
+      - name: Build and test MCP adapter
+        run: npm ci && npm run typecheck && npm test && npm run build
+        working-directory: flydb-skills/mcp
       - name: Assert tag matches pom revision
         run: |
           tag_version="${RELEASE_TAG#v}"
@@ -101,6 +113,21 @@ jobs:
                "$module"/target/*-"${RELEASE_TAG#v}"*.asc "$staging"/ 2>/dev/null || true
           done
           ./scripts/check-release-artifacts.sh --signatures "$staging" flydb-cli/target
+      - name: Cross-runtime MCP e2e against released CLI dist
+        run: |
+          unzip -q flydb-cli/target/flydb-cli-*.zip -d "$RUNNER_TEMP/flydb-dist"
+          bin_dir=$(echo "$RUNNER_TEMP"/flydb-dist/*/bin)
+          FLYDB_E2E_CLI="$bin_dir/flydb" npm run test:e2e
+        working-directory: flydb-skills/mcp
+      - name: Publish npm adapter (flydb-mcp)
+        # 独立 SemVer，与 CLI 产品版本解耦；未配置 NPM_TOKEN 时跳过，不阻塞 Java 发布
+        if: ${{ secrets.NPM_TOKEN != '' }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > "$HOME/.npmrc"
+          npm publish --access public
+        working-directory: flydb-skills/mcp
       - name: Create GitHub Release with CLI distribution
         run: |
           version="${RELEASE_TAG#v}"

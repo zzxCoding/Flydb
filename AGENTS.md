@@ -14,6 +14,9 @@
 - CLI 命令、配置、错误码和 `--json` 机器输出分别以 [`commands.md`](docs/reference/commands.md)、
   [`configuration.md`](docs/reference/configuration.md)、[`errors.md`](docs/reference/errors.md) 和
   [`json-output.md`](docs/reference/json-output.md) 为准。不要凭记忆重构选项、错误语义或输出 schema。
+- 涉及 MCP Adapter（`flydb-skills/mcp/`、`mcp.json` 或 MCP tools）时，以
+  [`mcp-tools.md`](docs/reference/mcp-tools.md) 和 [`11-plan-artifact.md`](docs/design/11-plan-artifact.md)
+  为准；TypeScript 侧不得新增领域逻辑或第二套计划模型。
 - 接入新 JDBC 数据库、厂商数据库或信创数据库前，先读
   [`jdbc-integration.md`](docs/getting-started/jdbc-integration.md) 及对应数据库指南。
 - 纯文档任务只需读取本文件和相关源文档，不要求安装 Skill，也不要求连接数据库。

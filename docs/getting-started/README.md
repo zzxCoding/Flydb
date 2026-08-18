@@ -4,7 +4,7 @@
 
 首次接入信创、行业或新型 JDBC 数据库，请先阅读[JDBC 数据库快速接入](jdbc-integration.md)，再按下表选择具体家族页面。该指南明确了驱动 JAR、`--driver`、`--database-type`、Spring Boot 和自定义 `DatabaseType` SPI 的最短路径。
 
-需要同时管理多个数据库家族、多套测试与生产环境时，阅读[多数据库多环境自动化](multi-environment.md)；把 Flydb 接入 GitHub Actions 或 Jenkins 时，阅读[CI 集成指南](ci-integration.md)。
+需要同时管理多个数据库家族、多套测试与生产环境时，阅读[多数据库多环境自动化](multi-environment.md)；把 Flydb 接入 GitHub Actions 或 Jenkins 时，阅读[CI 集成指南](ci-integration.md)；把 Flydb 挂进 Claude Code、Cursor 等 MCP 宿主时，阅读[MCP 接入指南](mcp-adapter.md)。
 
 | 数据库 | 方言标识 | 当前证据 |
 |---|---|---|
