@@ -71,7 +71,7 @@ See the [database getting-started guides](./docs/getting-started/README.md) for 
 ## Roadmap
 
 - [x] **Reliable migration runtime**: engine, 8 built-in dialects, CLI, Spring Boot starters, Agent Skill, the `v0.2.0` GitHub Release, and the `v0.2.1` Maven Central publishing
-- [ ] **DX and machine contract**: `--json` machine-readable output, protocolVersion contract versioning, CI integration docs (package managers and a Docker image on demand)
+- [x] **DX and machine contract**: `--json` machine-readable output, protocolVersion contract versioning, CI integration docs, an Agent Plugins 1.0 package (`v0.3.0`; package managers and a Docker image on demand)
 - [ ] **Agent distribution**: MCP adapter on top of a stable CLI contract
 - [ ] **Brownfield change intelligence**: impact analysis, application reference scanning, coverage with explicit unknowns
 - [ ] **Agent-safe change runtime**: a Plan → Validate → Risk → Approval → Apply → Verify protocol

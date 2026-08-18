@@ -84,6 +84,7 @@ bin/flydb -c "$CONF" validate            # 迁移后复核
 ```
 
 - **环境晋升就是换一个 `-c`。** 测试与生产使用同一份脚本产物、同一个发行包 ZIP，只替换 conf 路径。各环境统一锁定同一个 Flydb 版本，流水线开头的 `version` 即检查点；发行包自带版本匹配的 `docs/` 与 Skill。
+- **机器消费加 `--json`**：stdout 单行 JSON 信封、stderr 仅诊断，CI 用 `jq` 提取字段而不是解析文本表格；GitHub Actions 与 Jenkins 的完整示例见 [CI 集成指南](ci-integration.md)。
 - **退出码做门禁**：按[错误码参考](../reference/errors.md#cli-退出码)分类处理——`2` 校验失败直接阻断，`3` 锁冲突可配置自动重试与告警（`flydb.lock-timeout-seconds` 按最长迁移时长设置），`4` 配置错误回退到配置阶段修复。
 - **迁移只能有一个执行者。** 要么 CI 统一执行 CLI，要么应用启动时由 Spring Boot starter 执行；两边都跑虽然会被迁移锁串行，但结果依赖时序。常见分工是测试环境用 starter 省事、生产走 CI 加审批，生产应用可用 `flydb.enabled=false` 关闭自动迁移。
 - 远程库大批量数据迁移用 `--batch-size` 提速，MySQL 家族同时在 URL 上加 `rewriteBatchedStatements=true`，见[配置项参考](../reference/configuration.md)。
@@ -108,9 +109,9 @@ bin/flydb -c "$CONF" baseline --baseline-version 20260801
 
 ## 8. 当前能力边界
 
-- **没有 `--json` 机器输出**（规划于路线图阶段二）：CI 目前只能依赖退出码和 `info --color=never` 的文本输出，解析逻辑需要接受这一约束，见[路线图](../../ROADMAP.md)。
+- **MCP 适配尚未交付**（规划于路线图阶段三）：Agent 与 IDE 目前通过 CLI + `--json` 稳定消费结果（见[JSON 输出参考](../reference/json-output.md)），尚无 MCP 服务器形态，见[路线图](../../ROADMAP.md)。
 - **没有配置继承或模板**：多份 conf 之间的重复内容，可在流水线中用模板生成后作为制品管理，而不是等待工具内置 profile。
 - **`undo` 只回退最近一次版本化迁移，`clean` 是破坏性操作**（默认禁用，非交互需双开关）：两者都不应出现在自动化脚本中，仅在本地排障时人工执行。
 - **信创数据库的验证层级以[数据库上手指南](README.md)为准**：达梦、KingbaseES、openGauss 目前为方言与驱动元数据契约测试，接入生产前应先在授权实例完成[JDBC 数据库快速接入](jdbc-integration.md#5-接入后的最小验证清单)中的最小验证清单，不要把单测通过当作厂商兼容证明。
 
-相关页面：[数据库上手指南索引](README.md)、[JDBC 数据库快速接入](jdbc-integration.md)、[配置项参考](../reference/configuration.md)、[CLI 命令参考](../reference/commands.md)、[错误码参考](../reference/errors.md)。
+相关页面：[CI 集成指南](ci-integration.md)、[数据库上手指南索引](README.md)、[JDBC 数据库快速接入](jdbc-integration.md)、[配置项参考](../reference/configuration.md)、[CLI 命令参考](../reference/commands.md)、[错误码参考](../reference/errors.md)。

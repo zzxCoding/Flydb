@@ -42,6 +42,7 @@ flydb [全局选项] <命令> [命令选项]
 | `-q, --quiet` | 只输出必要结果和错误 |
 | `--color=auto\|always\|never` | 控制终端颜色 |
 | `-n, --dry-run` | `migrate`/`undo` 只解析、打印，不执行 SQL |
+| `--json` | 机器可读输出：stdout 单行 JSON 信封，stderr 仅诊断；零交互。schema 见 [JSON 输出参考](json-output.md) |
 
 ## 命令
 

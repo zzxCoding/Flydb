@@ -11,9 +11,9 @@
   [`flydb-cli/SKILL.md`](flydb-skills/skills/flydb-cli/SKILL.md)。只有当前 Agent
   必须安装 Skill 才能发现它时，才按 [`flydb-skills/README.md`](flydb-skills/README.md)
   操作；无法自动发现时直接读取仓库内的 `SKILL.md`。
-- CLI 命令、配置和错误码分别以 [`commands.md`](docs/reference/commands.md)、
-  [`configuration.md`](docs/reference/configuration.md) 和
-  [`errors.md`](docs/reference/errors.md) 为准。不要凭记忆重构选项或错误语义。
+- CLI 命令、配置、错误码和 `--json` 机器输出分别以 [`commands.md`](docs/reference/commands.md)、
+  [`configuration.md`](docs/reference/configuration.md)、[`errors.md`](docs/reference/errors.md) 和
+  [`json-output.md`](docs/reference/json-output.md) 为准。不要凭记忆重构选项、错误语义或输出 schema。
 - 接入新 JDBC 数据库、厂商数据库或信创数据库前，先读
   [`jdbc-integration.md`](docs/getting-started/jdbc-integration.md) 及对应数据库指南。
 - 纯文档任务只需读取本文件和相关源文档，不要求安装 Skill，也不要求连接数据库。

@@ -1,13 +1,16 @@
 package com.flydb.cli;
 
 import java.io.Console;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.concurrent.Callable;
 
 import com.flydb.cli.config.CliConfiguration;
@@ -16,6 +19,8 @@ import com.flydb.cli.driver.DriverContext;
 import com.flydb.cli.driver.DriverLoader;
 import com.flydb.cli.init.InitScaffolder;
 import com.flydb.cli.output.InfoTableRenderer;
+import com.flydb.cli.output.SecretRedactor;
+import com.flydb.cli.output.json.JsonRenderers;
 import com.flydb.core.Flydb;
 import com.flydb.core.api.MigrateResult;
 import com.flydb.core.api.DryRunMigration;
@@ -26,6 +31,7 @@ import com.flydb.core.api.UndoResult;
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
 import com.flydb.core.exception.FlydbValidationException;
+import com.flydb.core.exception.ValidationProblem;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -43,7 +49,8 @@ public final class FlydbCli {
     private final InterruptCoordinator interrupts;
 
     public FlydbCli() {
-        this(new PrintWriter(System.out, true), new PrintWriter(System.err, true),
+        this(new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true),
+                new PrintWriter(new OutputStreamWriter(System.err, StandardCharsets.UTF_8), true),
                 System.getenv(), Paths.get(".").toAbsolutePath().normalize(),
                 detectInstallDirectory());
     }
@@ -64,12 +71,24 @@ public final class FlydbCli {
         commandLine.setOut(out);
         commandLine.setErr(err);
         commandLine.setExecutionExceptionHandler((error, command, parseResult) ->
-                handleFailure(error, root.debug));
+                handleFailure(error, root, command));
         commandLine.setParameterExceptionHandler((error, arguments) -> {
-            err.println(redact(error.getMessage()));
+            String message = SecretRedactor.redact(error.getMessage());
+            err.println(message);
+            if (jsonRequested(arguments)) {
+                out.println(JsonRenderers.error(commandName(error.getCommandLine()), 4,
+                        null, message, null));
+            }
             return 4;
         });
         return commandLine.execute(args);
+    }
+
+    private static boolean jsonRequested(String... arguments) {
+        for (String argument : arguments) {
+            if ("--json".equals(argument)) return true;
+        }
+        return false;
     }
 
     public static void main(String[] args) {
@@ -244,6 +263,9 @@ public final class FlydbCli {
         @Option(names = {"-n", "--dry-run"}, description = "migrate/undo 只解析并打印 SQL",
                 scope = CommandLine.ScopeType.INHERIT)
         boolean dryRun;
+        @Option(names = "--json", description = "机器可读 JSON 输出：stdout 单行信封，stderr 仅诊断",
+                scope = CommandLine.ScopeType.INHERIT)
+        boolean json;
 
         @Override public void run() {
             new CommandLine(this).usage(out);
@@ -285,7 +307,7 @@ public final class FlydbCli {
         private CliConfiguration promptForPassword(CliConfiguration current,
                                                    Map<String, String> overrides) {
             if (current.password() != null) return current;
-            Console console = System.console();
+            Console console = json ? null : System.console();
             if (console == null) {
                 throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
                         "非交互终端缺少密码；请在 flydb.conf 配置 flydb.password，或使用 --password、FLYDB_PASSWORD、"
@@ -367,11 +389,20 @@ public final class FlydbCli {
     static final class MigrateCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             if (root.dryRun) {
-                printDryRun(root, configured.flydb.dryRunMigrate(),
-                        configured.configuration.password());
+                DryRunResult result = configured.flydb.dryRunMigrate();
+                if (root.json) {
+                    root.out().println(JsonRenderers.dryRun("migrate", result,
+                            configured.configuration.password()));
+                } else {
+                    printDryRun(root, result, configured.configuration.password());
+                }
                 return;
             }
             MigrateResult result = configured.flydb.migrate();
+            if (root.json) {
+                root.out().println(JsonRenderers.migrate(result));
+                return;
+            }
             if (!root.quiet) rootLine(root, "迁移完成，执行 " + result.executed().size() + " 个脚本");
             for (String warning : result.warnings()) rootLine(root, "警告: " + warning);
         }
@@ -382,6 +413,12 @@ public final class FlydbCli {
     static final class InfoCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             com.flydb.core.api.MigrationInfoService information = configured.flydb.info();
+            if (root.json) {
+                root.out().println(JsonRenderers.info(information.databaseName(),
+                        configured.configuration.url(), configured.configuration.table(),
+                        information));
+                return;
+            }
             boolean color = colorEnabled(root.color);
             root.out().print(new InfoTableRenderer().render(version(), information.databaseName(),
                     configured.configuration.url(), configured.configuration.table(),
@@ -395,6 +432,10 @@ public final class FlydbCli {
     static final class ValidateCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             configured.flydb.validate();
+            if (root.json) {
+                root.out().println(JsonRenderers.validate());
+                return;
+            }
             if (!root.quiet) rootLine(root, "校验通过");
         }
     }
@@ -404,6 +445,11 @@ public final class FlydbCli {
     static final class BaselineCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             configured.flydb.baseline();
+            if (root.json) {
+                root.out().println(JsonRenderers.baseline(
+                        configured.configuration.baselineVersion()));
+                return;
+            }
             if (!root.quiet) rootLine(root, "基准版本已写入");
         }
     }
@@ -413,6 +459,10 @@ public final class FlydbCli {
     static final class RepairCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             RepairResult result = configured.flydb.repair();
+            if (root.json) {
+                root.out().println(JsonRenderers.repair(result));
+                return;
+            }
             if (!root.quiet) rootLine(root, "修复完成，清除失败记录 "
                     + result.removedFailedRecords().size() + " 条，对齐校验和 "
                     + result.alignedChecksums().size() + " 条");
@@ -426,7 +476,7 @@ public final class FlydbCli {
 
         @Override void run(ConfiguredFlydb configured) {
             if (!force) {
-                Console console = System.console();
+                Console console = root.json ? null : System.console();
                 if (console == null) {
                     throw new FlydbException(ErrorCode.CLEAN_DISABLED,
                             "非交互执行 clean 必须同时设置 flydb.clean-disabled=false 并使用 --force");
@@ -440,6 +490,10 @@ public final class FlydbCli {
                 }
             }
             configured.flydb.clean();
+            if (root.json) {
+                root.out().println(JsonRenderers.clean());
+                return;
+            }
             if (!root.quiet) rootLine(root, "目标 schema 已清空");
         }
     }
@@ -449,11 +503,20 @@ public final class FlydbCli {
     static final class UndoCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             if (root.dryRun) {
-                printDryRun(root, configured.flydb.dryRunUndo(),
-                        configured.configuration.password());
+                DryRunResult result = configured.flydb.dryRunUndo();
+                if (root.json) {
+                    root.out().println(JsonRenderers.dryRun("undo", result,
+                            configured.configuration.password()));
+                } else {
+                    printDryRun(root, result, configured.configuration.password());
+                }
                 return;
             }
             UndoResult result = configured.flydb.undo();
+            if (root.json) {
+                root.out().println(JsonRenderers.undo(result));
+                return;
+            }
             if (!root.quiet) rootLine(root, "已撤销版本 " + result.undoneVersion());
         }
     }
@@ -470,7 +533,7 @@ public final class FlydbCli {
             String initDriver = root.driver;
             String initDatabaseType = root.databaseType;
             if (!yes) {
-                Console console = System.console();
+                Console console = root.json ? null : System.console();
                 if (console == null) {
                     throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
                             "非交互执行 init 必须使用 --yes 并提供 --url");
@@ -493,7 +556,13 @@ public final class FlydbCli {
             }
             List<Path> created = new InitScaffolder().create(root.workingDirectory(),
                     initUrl, initUser, initDriver, initDatabaseType);
-            if (!root.quiet) {
+            if (root.json) {
+                List<String> createdFiles = new ArrayList<String>();
+                for (Path file : created) {
+                    createdFiles.add(root.workingDirectory().relativize(file).toString());
+                }
+                root.out().println(JsonRenderers.init(createdFiles));
+            } else if (!root.quiet) {
                 root.out().println("已生成 Flydb 工程骨架:");
                 for (Path file : created) {
                     root.out().println("  " + root.workingDirectory().relativize(file));
@@ -512,15 +581,54 @@ public final class FlydbCli {
     @Command(name = "version", mixinStandardHelpOptions = true,
             description = "输出 flydb 自身版本")
     static final class VersionCommand implements Runnable {
+        @ParentCommand RootCommand root;
         @CommandLine.Spec CommandLine.Model.CommandSpec spec;
-        @Override public void run() { spec.commandLine().getOut().println("flydb " + version()); }
+
+        @Override public void run() {
+            if (root.json) {
+                spec.commandLine().getOut().println(JsonRenderers.version(version()));
+            } else {
+                spec.commandLine().getOut().println("flydb " + version());
+            }
+        }
     }
 
-    private int handleFailure(Throwable error, boolean debug) {
+    private int handleFailure(Throwable error, RootCommand root, CommandLine command) {
         Throwable cause = unwrap(error);
-        err.println(redact(cause.getMessage() == null ? cause.toString() : cause.getMessage()));
-        if (debug) cause.printStackTrace(err);
-        return exitCode(cause);
+        String message = SecretRedactor.redact(
+                cause.getMessage() == null ? cause.toString() : cause.getMessage());
+        err.println(message);
+        if (root.debug) cause.printStackTrace(err);
+        int exitCode = exitCode(cause);
+        if (root.json) {
+            out.println(jsonError(commandName(command), exitCode, cause, message));
+        }
+        return exitCode;
+    }
+
+    private static String jsonError(String command, int exitCode, Throwable cause,
+                                    String fallbackDetail) {
+        String code = null;
+        String detail = fallbackDetail;
+        List<ValidationProblem> problems = Collections.emptyList();
+        if (cause instanceof FlydbException) {
+            FlydbException flydbError = (FlydbException) cause;
+            code = flydbError.errorCode().code();
+            detail = SecretRedactor.redact(flydbError.detail());
+            if (cause instanceof FlydbValidationException) {
+                problems = ((FlydbValidationException) cause).problems();
+            }
+        }
+        return JsonRenderers.error(command, exitCode, code, detail, problems);
+    }
+
+    /** 从 picocli 的限定名取叶子命令名；根命令或未知场景返回 null。 */
+    private static String commandName(CommandLine command) {
+        if (command == null) return null;
+        String qualified = command.getCommandName();
+        int space = qualified.lastIndexOf(' ');
+        String leaf = space >= 0 ? qualified.substring(space + 1) : qualified;
+        return "flydb".equals(leaf) ? null : leaf;
     }
 
     static int exitCode(Throwable cause) {
@@ -553,7 +661,7 @@ public final class FlydbCli {
             root.out().println("-- " + migration.script() + " [" + migration.type() + "]");
             for (DryRunStatement statement : migration.statements()) {
                 root.out().println("-- 起始行 " + statement.lineNumber());
-                root.out().println(redactSecret(statement.sql(), password) + ";");
+                root.out().println(SecretRedactor.redactSecret(statement.sql(), password) + ";");
             }
         }
     }
@@ -577,24 +685,10 @@ public final class FlydbCli {
         if (value != null) values.put(key, String.valueOf(value));
     }
 
-    private static String redact(String text) {
-        if (text == null) return "未知错误";
-        return text.replaceAll("(?i)(password[=:]\\s*)[^\\s]+", "$1****")
-                .replaceAll("(?i)(//[^/:@\\s]+:)[^@\\s]+@", "$1****@");
-    }
-
-    private static String redactSecret(String text, String password) {
-        String redacted = redact(text);
-        if (password != null && !password.isEmpty()) {
-            redacted = redacted.replaceAll(Pattern.quote(password), "****");
-        }
-        return redacted;
-    }
-
     private static String version() {
         Package pkg = FlydbCli.class.getPackage();
         String implementation = pkg == null ? null : pkg.getImplementationVersion();
-        return implementation != null ? implementation : "0.2.0";
+        return implementation != null ? implementation : "0.3.0";
     }
 
     private static Path detectInstallDirectory() {

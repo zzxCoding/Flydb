@@ -21,9 +21,10 @@
 
 让任何程序（CI、IDE、外部宿主、Agent）都能稳定调用 Flydb。投资集中在机器契约上——它是阶段三 MCP 适配与阶段五协议的直接前置。
 
-- [ ] `--json` 机器可读输出：稳定 schema、stdout/stderr 分离
-- [ ] 命令、配置、错误码契约的版本化承诺（protocolVersion），与 `--json` 同批交付
-- [ ] CI 接入文档：GitHub Actions 与 Jenkins 的官方示例与片段
+- [x] `--json` 机器可读输出：稳定 schema、stdout/stderr 分离
+- [x] 命令、配置、错误码契约的版本化承诺（protocolVersion），与 `--json` 同批交付
+- [x] CI 接入文档：GitHub Actions 与 Jenkins 的官方示例与片段
+- [x] `flydb-skills` 成为合法的 Agent Plugins 1.0.0 插件包（`plugin.json`；`mcp.json` 随阶段三交付）
 
 ### 按需启动
 

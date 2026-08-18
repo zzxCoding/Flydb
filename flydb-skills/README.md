@@ -2,6 +2,8 @@
 
 Flydb 的 Agent Skills 集合。Skill 负责把重复的操作流程交给 Agent，项目文档仍然是命令、配置和数据库接入行为的唯一事实来源，避免 Skill 内复制一份会过期的 CLI 手册。
 
+本目录同时是一个合法的 [Agent Plugins 1.0.0](https://agent-plugins.org/specification) 插件包：根目录的 [`plugin.json`](plugin.json) 是插件清单，`skills/` 下是组件技能。支持该规范的宿主（ChatGPT、Codex、Cursor、Copilot、VS Code 等）可以直接以插件形式装载本目录；`mcp.json` 留待路线图阶段三的 MCP 适配交付。`plugin.json` 的 `version` 随 Flydb 发布版本同步维护，`name: flydb` 是规范层面永不重分配的包标识。
+
 ## Agent 首次接入
 
 请先阅读仓库根目录的 [`AGENTS.md`](../AGENTS.md)。它会引导你安装或启用 `flydb-cli`、读取 CLI/JDBC 文档，并从 `version`、`validate`、`--dry-run migrate` 开始；如果当前环境不能自动发现 Skill，直接读取下面的 `SKILL.md` 即可。
@@ -47,6 +49,7 @@ Flydb 的 Agent Skills 集合。Skill 负责把重复的操作流程交给 Agent
 - [CLI 命令参考](../docs/reference/commands.md)
 - [配置项参考](../docs/reference/configuration.md)
 - [错误码参考](../docs/reference/errors.md)
+- [JSON 输出参考](../docs/reference/json-output.md)
 - [JDBC 数据库快速接入](../docs/getting-started/jdbc-integration.md)
 - [数据库上手指南索引](../docs/getting-started/README.md)
 - [配置体系与 CLI 设计](../docs/design/06-config-cli.md)

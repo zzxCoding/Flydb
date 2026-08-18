@@ -2,7 +2,7 @@
 name: flydb-cli
 description: >-
   使用和排查 Flydb CLI 完成数据库迁移、初始化、校验、状态查看、baseline、repair、clean、undo 和驱动接入。当用户提到 Flydb、bin/flydb、flydb.conf、drivers/、JDBC 驱动、--driver、--database-type，或需要把信创/新型 JDBC 数据库接入 Flydb CLI 时使用。先读取 Flydb 仓库内对应 CLI 文档，再执行最小、可验证的操作；涉及真实数据库写入时保留明确的授权和安全边界。
-compatibility: Flydb CLI 0.2，Java 8 或更高版本；需要 Flydb CLI 发行包或源码仓库，以及目标数据库的 JDBC 驱动。
+compatibility: Flydb CLI 0.3，Java 8 或更高版本；需要 Flydb CLI 发行包或源码仓库，以及目标数据库的 JDBC 驱动。
 ---
 
 # Flydb CLI
@@ -16,6 +16,7 @@ compatibility: Flydb CLI 0.2，Java 8 或更高版本；需要 Flydb CLI 发行�
 3. 根据任务读取：
    - 配置或环境变量：[`docs/reference/configuration.md`](../../../docs/reference/configuration.md)
    - 错误或退出码：[`docs/reference/errors.md`](../../../docs/reference/errors.md)
+   - `--json` 机器输出与 protocolVersion 契约：[`docs/reference/json-output.md`](../../../docs/reference/json-output.md)
    - 多数据库、多测试/生产环境的自动化与 CI 组织：[`docs/getting-started/multi-environment.md`](../../../docs/getting-started/multi-environment.md)
    - 信创/新型 JDBC 数据库、驱动或方言：[`docs/getting-started/jdbc-integration.md`](../../../docs/getting-started/jdbc-integration.md)
    - 某个内置数据库：[`docs/getting-started/README.md`](../../../docs/getting-started/README.md) 及对应页面
@@ -57,7 +58,7 @@ bin/flydb version
 | 撤销最近一次版本化迁移 | `undo` 或 `--dry-run undo` | `undo` 会执行 SQL 并持有迁移锁 |
 | 清空目标 schema | `clean` | 高风险破坏性操作，默认禁用 |
 
-命令细节不要在 Skill 中重新维护；以上表格只帮助选择入口，实际参数以命令参考为准。
+命令细节不要在 Skill 中重新维护；以上表格只帮助选择入口，实际参数以命令参考为准。需要程序化消费结果（CI 脚本、结构化汇报）时加 `--json`：stdout 是单行 JSON 信封，stderr 仍是人类日志；schema 以 JSON 输出参考为准，不要解析中文文本表格。
 
 ## 4. 推荐执行流程
 

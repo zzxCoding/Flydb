@@ -76,7 +76,7 @@ flydb [全局选项] <命令> [命令选项]
   version    输出 flydb 自身版本
 ```
 
-全局选项：`-c/--config <file>`、`-u/--url`、`--user`、`-p/--password`、`-l/--locations`、版本选择/来源、路径 glob/regex、迁移排序、`-X/--debug`（完整堆栈）、`-q/--quiet`、`--color=auto|always|never`、`-n/--dry-run`。完整名称以[命令参考](../reference/commands.md)为准。
+全局选项：`-c/--config <file>`、`-u/--url`、`--user`、`-p/--password`、`-l/--locations`、版本选择/来源、路径 glob/regex、迁移排序、`-X/--debug`（完整堆栈）、`-q/--quiet`、`--color=auto|always|never`、`-n/--dry-run`、`--json`（机器输出契约，见[设计 10](10-machine-contract.md)）。完整名称以[命令参考](../reference/commands.md)为准。
 
 - **`--dry-run`**（migrate/undo）：完整执行探测/校验/解析/pending 计算，对每条将执行的语句**只打印不执行**——上线评审的刚需。
 - **版本选择**（migrate）：默认目标为精确文件版本；显式支持版本族、版本族范围、正则与目录版本来源。显式选择排除 repeatable，且继续服从校验和 `out-of-order`。

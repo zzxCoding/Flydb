@@ -39,8 +39,87 @@ class FlydbCliTest {
         int exitCode = cli.execute("version");
 
         assertThat(exitCode).isZero();
-        assertThat(standardOutput.toString()).contains("flydb 0.2.0");
+        assertThat(standardOutput.toString()).contains("flydb 0.3.0");
         assertThat(errorOutput.toString()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("--json version 在 stdout 输出单行契约信封，stderr 保持为空")
+    void jsonVersionEmitsSingleLineEnvelope() {
+        StringWriter standardOutput = new StringWriter();
+        StringWriter errorOutput = new StringWriter();
+        Path workingDirectory = Paths.get(".").toAbsolutePath().normalize();
+        FlydbCli cli = new FlydbCli(new PrintWriter(standardOutput, true),
+                new PrintWriter(errorOutput, true), Collections.<String, String>emptyMap(),
+                workingDirectory, workingDirectory);
+
+        int exitCode = cli.execute("--json", "version");
+
+        assertThat(exitCode).isZero();
+        assertThat(standardOutput.toString())
+                .isEqualTo("{\"protocolVersion\":1,\"command\":\"version\","
+                        + "\"status\":\"success\",\"exitCode\":0,\"version\":\"0.3.0\"}\n");
+        assertThat(errorOutput.toString()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("--json init --yes 输出创建文件清单信封")
+    void jsonInitEmitsCreatedFiles() {
+        StringWriter standardOutput = new StringWriter();
+        StringWriter errorOutput = new StringWriter();
+        FlydbCli cli = new FlydbCli(new PrintWriter(standardOutput, true),
+                new PrintWriter(errorOutput, true), Collections.<String, String>emptyMap(),
+                temporaryDirectory, temporaryDirectory);
+
+        int exitCode = cli.execute("--json", "init", "--yes",
+                "--url", "jdbc:mysql://localhost:3306/app");
+
+        assertThat(exitCode).isZero();
+        assertThat(standardOutput.toString())
+                .contains("\"command\":\"init\"", "\"createdFiles\":[\"flydb.conf\","
+                        + "\"db/migration/V1__init.sql\",\"drivers/README.md\"]");
+        assertThat(standardOutput.toString().trim()).doesNotContain("\n");
+        assertThat(errorOutput.toString()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("--json 下配置失败在 stdout 输出错误信封，stderr 保留人类可读消息")
+    void jsonFailureEmitsErrorEnvelopeOnStdout() {
+        StringWriter standardOutput = new StringWriter();
+        StringWriter errorOutput = new StringWriter();
+        Path emptyDirectory = Paths.get(System.getProperty("java.io.tmpdir"),
+                "flydb-cli-json-error-" + System.nanoTime());
+        FlydbCli cli = new FlydbCli(new PrintWriter(standardOutput, true),
+                new PrintWriter(errorOutput, true), Collections.<String, String>emptyMap(),
+                emptyDirectory, emptyDirectory);
+
+        int exitCode = cli.execute("--json", "migrate");
+
+        assertThat(exitCode).isEqualTo(4);
+        assertThat(standardOutput.toString())
+                .contains("\"status\":\"error\"", "\"exitCode\":4",
+                        "\"code\":\"FLYDB-4002\"");
+        assertThat(standardOutput.toString().trim()).doesNotContain("\n");
+        assertThat(errorOutput.toString()).contains("[FLYDB-4002]");
+    }
+
+    @Test
+    @DisplayName("--json 下参数用法错误同样输出错误信封（error.code 为 null）")
+    void jsonParameterErrorEmitsEnvelope() {
+        StringWriter standardOutput = new StringWriter();
+        StringWriter errorOutput = new StringWriter();
+        Path workingDirectory = Paths.get(".").toAbsolutePath().normalize();
+        FlydbCli cli = new FlydbCli(new PrintWriter(standardOutput, true),
+                new PrintWriter(errorOutput, true), Collections.<String, String>emptyMap(),
+                workingDirectory, workingDirectory);
+
+        int exitCode = cli.execute("--json", "migrate", "--no-such-option");
+
+        assertThat(exitCode).isEqualTo(4);
+        assertThat(standardOutput.toString())
+                .contains("\"command\":\"migrate\"", "\"status\":\"error\"",
+                        "\"exitCode\":4", "\"code\":null");
+        assertThat(errorOutput.toString()).isNotEmpty();
     }
 
     @Test

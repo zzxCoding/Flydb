@@ -71,7 +71,7 @@ bin/flydb validate
 ## 路线图
 
 - [x] **可靠的迁移运行时**：迁移引擎、8 个内置方言、CLI、Spring Boot starter、Agent Skill、`v0.2.0` GitHub Release、`v0.2.1` Maven Central 发布
-- [ ] **开发体验与机器契约**：`--json` 机器输出、protocolVersion 契约版本化、CI 接入文档（包管理器与 Docker 镜像按需启动）
+- [x] **开发体验与机器契约**：`--json` 机器输出、protocolVersion 契约版本化、CI 接入文档、Agent Plugins 1.0 插件包（`v0.3.0`；包管理器与 Docker 镜像按需启动）
 - [ ] **Agent 分发**：基于稳定 CLI 契约的 MCP 适配
 - [ ] **存量变更智能**：影响分析、应用引用扫描、覆盖率与未知项标注
 - [ ] **Agent 安全变更运行时**：Plan → Validate → Risk → Approval → Apply → Verify 协议
