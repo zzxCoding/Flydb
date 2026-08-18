@@ -10,6 +10,7 @@ Adapter 只是协议 seam：每次 tool 调用以受控子进程执行 `flydb --
 
 - MCP 宿主侧需要 Node.js ≥ 20；CLI 侧需要 Java 8+ 与 Flydb CLI ≥ 0.3.0。普通 CLI/starter 用户不需要 Node。
 - CLI 定位顺序固定：`FLYDB_CLI`（绝对路径）→ `FLYDB_HOME/bin/flydb`（Windows 为 `flydb.bat`）→ `PATH` 中的 `flydb`。
+- Windows 下 Adapter 不经 `cmd.exe` 执行 `flydb.bat`，而是从同一发行包解析 `lib/*` 并以参数数组直接启动 Java 主类，路径和 tool 参数仍不经过 shell 解释。
 - 启动时执行 `--json version` 握手：产品版本 ≥ 0.3.0 且 `protocolVersion=1` 才就绪；否则拒绝启动并在 stderr 输出脱敏诊断。
 - Adapter 使用独立 SemVer；`package.json` 的 `flydb` 字段声明支持的 CLI 范围（`>=0.3.0 <0.4.0`）与 `protocolVersion`。
 - Adapter 自身日志只写 stderr，MCP stdout 通道只承载协议消息。

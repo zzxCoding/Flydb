@@ -8,6 +8,8 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -34,8 +36,9 @@ export function resolveTimeoutMs(env: NodeJS.ProcessEnv,
                                  warn: (message: string) => void): number {
   const raw = env["FLYDB_MCP_TIMEOUT_MS"];
   if (raw === undefined || raw.trim().length === 0) return DEFAULT_TIMEOUT_MS;
-  const value = Number.parseInt(raw.trim(), 10);
-  if (!Number.isInteger(value) || value <= 0) {
+  const normalized = raw.trim();
+  const value = Number(normalized);
+  if (!/^[1-9]\d*$/.test(normalized) || !Number.isSafeInteger(value)) {
     warn(`FLYDB_MCP_TIMEOUT_MS 非法（${raw.trim()}），使用默认值 ${DEFAULT_TIMEOUT_MS} ms`);
     return DEFAULT_TIMEOUT_MS;
   }
@@ -155,8 +158,14 @@ async function main(): Promise<void> {
   }
 }
 
-const isDirectRun = process.argv[1] !== undefined
-    && (process.argv[1]!.endsWith("server.mjs") || process.argv[1]!.endsWith("server.ts"));
+const isDirectRun = (() => {
+  if (process.argv[1] === undefined) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+  } catch {
+    return false;
+  }
+})();
 if (isDirectRun) {
   void main();
 }

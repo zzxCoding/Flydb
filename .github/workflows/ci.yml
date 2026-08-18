@@ -90,6 +90,45 @@ jobs:
           FLYDB_E2E_CLI="$bin_dir/flydb" npm run test:e2e
         working-directory: flydb-skills/mcp
 
+  mcp-adapter-windows:
+    name: MCP adapter (Windows CLI distribution)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: flydb-skills/mcp/package-lock.json
+      - name: Install and verify adapter
+        shell: pwsh
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+        working-directory: flydb-skills/mcp
+      - name: Build CLI distribution
+        shell: pwsh
+        run: .\mvnw.cmd -B -pl flydb-cli -am package -DskipTests
+      - name: Cross-runtime e2e through flydb.bat
+        shell: pwsh
+        run: |
+          $archive = (Get-ChildItem "flydb-cli/target/flydb-cli-*.zip" | Select-Object -First 1).FullName
+          $dist = Join-Path $env:RUNNER_TEMP "flydb-dist"
+          Expand-Archive -Path $archive -DestinationPath $dist
+          $env:FLYDB_E2E_CLI = (Get-ChildItem $dist -Filter "flydb.bat" -Recurse | Select-Object -First 1).FullName
+          npm --prefix flydb-skills/mcp run test:e2e
+
   java8-compatibility:
     name: Java 8 compatibility
     runs-on: ubuntu-latest

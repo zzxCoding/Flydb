@@ -7,6 +7,7 @@
  */
 
 import { spawn } from "node:child_process";
+import { posix as posixPath, win32 as win32Path } from "node:path";
 
 export interface CliRunOptions {
   /** 子进程工作目录（数据库工具固定为 tool 的 workingDirectory）。 */
@@ -44,6 +45,36 @@ export interface CliRunner {
 const MAX_STDOUT_CHARS = 8 * 1024 * 1024;
 const MAX_STDERR_CHARS = 1024 * 1024;
 const KILL_GRACE_MS = 5000;
+
+export interface LaunchCommand {
+  executable: string;
+  args: string[];
+}
+
+/**
+ * Windows 不能在 shell:false 下直接执行 .bat/.cmd。Adapter 根据 Flydb 官方
+ * 发行包布局解析安装目录与 Java 主类，等价展开为受控参数数组，保持路径与
+ * tool 参数不经过 cmd.exe 解释。
+ */
+export function resolveLaunchCommand(executable: string, args: string[],
+                                     env: NodeJS.ProcessEnv = process.env,
+                                     platform: NodeJS.Platform = process.platform): LaunchCommand {
+  const path = platform === "win32" ? win32Path : posixPath;
+  const extension = path.extname(executable).toLowerCase();
+  if (platform !== "win32" || (extension !== ".bat" && extension !== ".cmd")) {
+    return {executable, args};
+  }
+  const installDirectory = path.resolve(path.dirname(executable), "..");
+  const javaHome = env["JAVA_HOME"];
+  const javaExecutable = javaHome === undefined || javaHome.length === 0
+      ? "java.exe"
+      : path.join(javaHome, "bin", "java.exe");
+  return {
+    executable: javaExecutable,
+    args: ["-cp", path.join(installDirectory, "lib", "*"),
+      "com.flydb.cli.FlydbCli", ...args],
+  };
+}
 
 class BoundedCollector {
   private buffer = "";
@@ -83,7 +114,8 @@ export class SubprocessCliRunner implements CliRunner {
     return new Promise<CliRunResult>((resolve) => {
       const stdout = new BoundedCollector(MAX_STDOUT_CHARS);
       const stderr = new BoundedCollector(MAX_STDERR_CHARS);
-      const child = spawn(this.executable, args, {
+      const launch = resolveLaunchCommand(this.executable, args);
+      const child = spawn(launch.executable, launch.args, {
         cwd: options.cwd,
         stdio: ["ignore", "pipe", "pipe"],
         shell: false,

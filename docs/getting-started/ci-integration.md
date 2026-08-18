@@ -22,7 +22,7 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     env:
-      FLYDB_HOME: ${{ runner.temp }}/flydb-cli   # 解压发行包的位置
+      FLYDB_HOME: ${{ runner.temp }}/flydb-cli-0.3.0   # ZIP 内的版本化根目录
       CONF: deploy/flydb.mysql.uat.conf
     steps:
       - uses: actions/checkout@v4

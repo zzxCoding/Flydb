@@ -93,6 +93,42 @@ function envelopeOutputSchema(payload: Record<string, unknown>): JsonSchema {
 
 const STRING_ARRAY = {type: "array", items: {type: "string"}};
 
+const PLAN_PAYLOAD_SCHEMA: Record<string, unknown> = {
+  dryRun: {type: "boolean", const: true},
+  plan: {
+    type: "object",
+    properties: {
+      algorithm: {type: "string"},
+      direction: {type: "string", enum: ["migrate", "undo"]},
+      id: {type: "string"},
+      targetVersion: {type: ["string", "null"]},
+      migrationCount: {type: "integer"},
+      statementCount: {type: "integer"},
+    },
+  },
+  migrations: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        script: {type: "string"},
+        type: {type: "string"},
+        version: {type: ["string", "null"]},
+        description: {type: ["string", "null"]},
+        checksum: {type: ["integer", "null"]},
+        statementCount: {type: "integer"},
+        statements: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {lineNumber: {type: "integer"}, sql: {type: "string"}},
+          },
+        },
+      },
+    },
+  },
+};
+
 function dbTool(config: {
   name: string;
   description: string;
@@ -162,7 +198,11 @@ export const FLYDB_TOOLS: readonly FlydbTool[] = [
     outputSchema: envelopeOutputSchema({
       version: {type: ["string", "null"]},
     }),
-    buildArgs(): InputBuildResult {
+    buildArgs(input: unknown): InputBuildResult {
+      if (typeof input !== "object" || input === null || Array.isArray(input)
+          || Object.keys(input as Record<string, unknown>).length > 0) {
+        return {ok: false, error: "flydb_version 不接受任何输入字段"};
+      }
       return {ok: true, args: ["--json", "version"], cwd: process.cwd()};
     },
   },
@@ -228,41 +268,7 @@ export const FLYDB_TOOLS: readonly FlydbTool[] = [
       idempotentHint: true,
       openToWorldHint: false,
     },
-    outputSchema: envelopeOutputSchema({
-      dryRun: {type: "boolean", const: true},
-      plan: {
-        type: "object",
-        properties: {
-          algorithm: {type: "string"},
-          direction: {type: "string", enum: ["migrate", "undo"]},
-          id: {type: "string"},
-          targetVersion: {type: ["string", "null"]},
-          migrationCount: {type: "integer"},
-          statementCount: {type: "integer"},
-        },
-      },
-      migrations: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            script: {type: "string"},
-            type: {type: "string"},
-            version: {type: ["string", "null"]},
-            description: {type: ["string", "null"]},
-            checksum: {type: ["integer", "null"]},
-            statementCount: {type: "integer"},
-            statements: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {lineNumber: {type: "integer"}, sql: {type: "string"}},
-              },
-            },
-          },
-        },
-      },
-    }),
+    outputSchema: envelopeOutputSchema(PLAN_PAYLOAD_SCHEMA),
   }),
   dbTool({
     name: "flydb_plan_undo",
@@ -277,41 +283,7 @@ export const FLYDB_TOOLS: readonly FlydbTool[] = [
       idempotentHint: true,
       openToWorldHint: false,
     },
-    outputSchema: envelopeOutputSchema({
-      dryRun: {type: "boolean", const: true},
-      plan: {
-        type: "object",
-        properties: {
-          algorithm: {type: "string"},
-          direction: {type: "string", enum: ["migrate", "undo"]},
-          id: {type: "string"},
-          targetVersion: {type: ["string", "null"]},
-          migrationCount: {type: "integer"},
-          statementCount: {type: "integer"},
-        },
-      },
-      migrations: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            script: {type: "string"},
-            type: {type: "string"},
-            version: {type: ["string", "null"]},
-            description: {type: ["string", "null"]},
-            checksum: {type: ["integer", "null"]},
-            statementCount: {type: "integer"},
-            statements: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {lineNumber: {type: "integer"}, sql: {type: "string"}},
-              },
-            },
-          },
-        },
-      },
-    }),
+    outputSchema: envelopeOutputSchema(PLAN_PAYLOAD_SCHEMA),
   }),
   dbTool({
     name: "flydb_migrate",
@@ -393,5 +365,5 @@ export const WRITE_TOOLS: readonly FlydbTool[] = FLYDB_TOOLS.filter((tool) => to
 export function writesEnabled(env: NodeJS.ProcessEnv): boolean {
   const raw = env["FLYDB_MCP_ENABLE_WRITES"];
   if (raw === undefined) return false;
-  return raw.trim().toLowerCase() === "true";
+  return raw.toLowerCase() === "true";
 }

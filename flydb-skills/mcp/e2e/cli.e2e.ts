@@ -1,11 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { describe, expect, it } from "vitest";
+import { resolveLaunchCommand } from "../src/cliRunner.js";
 
 /**
  * 跨运行时端到端（技术决策 §7.2）：真实 flydb-cli 发行包 + 真实 Adapter 进程
@@ -31,7 +32,8 @@ async function connectClient(extraEnv: Record<string, string>): Promise<Client> 
 
 describeE2e("跨运行时：真实 CLI + MCP stdio", () => {
   it("真实发行包可直接执行 --json version", () => {
-    const run = spawnSync(e2eCli!, ["--json", "version"], {encoding: "utf8"});
+    const launch = resolveLaunchCommand(e2eCli!, ["--json", "version"]);
+    const run = spawnSync(launch.executable, launch.args, {encoding: "utf8"});
     expect(run.status).toBe(0);
     const envelope = JSON.parse(run.stdout!.trim());
     expect(envelope.protocolVersion).toBe(1);
@@ -78,21 +80,42 @@ describeE2e("跨运行时：真实 CLI + MCP stdio", () => {
     }
   });
 
-  it("CLI 版本过低时拒绝启动（退出码非零，诊断走 stderr）", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "flydb-e2e-old-"));
-    const fakeOldCli = join(dir, "flydb");
-    writeFileSync(fakeOldCli,
-        "#!/bin/sh\nprintf '%s\\n' '{\"protocolVersion\":1,\"command\":\"version\","
-        + "\"status\":\"success\",\"exitCode\":0,\"version\":\"0.2.1\"}'\n",
-        {mode: 0o755});
-    const run = spawnSync(process.execPath, [serverBundle], {
-      encoding: "utf8",
-      env: {...process.env, FLYDB_CLI: fakeOldCli},
-    });
-    expect(run.status).not.toBe(0);
-    expect(run.stderr).toContain("版本过低");
-    expect(run.stdout!.trim()).toBe("");
-  });
+  it.skipIf(process.platform === "win32")(
+      "npm bin 符号链接入口仍会启动 MCP server", async () => {
+        const dir = mkdtempSync(join(tmpdir(), "flydb-e2e-bin-"));
+        const binEntry = join(dir, "flydb-mcp");
+        symlinkSync(serverBundle, binEntry);
+        const transport = new StdioClientTransport({
+          command: process.execPath,
+          args: [binEntry],
+          env: {...process.env, FLYDB_CLI: e2eCli},
+        });
+        const client = new Client({name: "flydb-bin-e2e", version: "0.0.0"});
+        await client.connect(transport);
+        try {
+          const listed = await client.listTools();
+          expect(listed.tools).toHaveLength(5);
+        } finally {
+          await client.close();
+        }
+      });
+
+  it.skipIf(process.platform === "win32")(
+      "CLI 版本过低时拒绝启动（退出码非零，诊断走 stderr）", async () => {
+        const dir = mkdtempSync(join(tmpdir(), "flydb-e2e-old-"));
+        const fakeOldCli = join(dir, "flydb");
+        writeFileSync(fakeOldCli,
+            "#!/bin/sh\nprintf '%s\\n' '{\"protocolVersion\":1,\"command\":\"version\","
+            + "\"status\":\"success\",\"exitCode\":0,\"version\":\"0.2.1\"}'\n",
+            {mode: 0o755});
+        const run = spawnSync(process.execPath, [serverBundle], {
+          encoding: "utf8",
+          env: {...process.env, FLYDB_CLI: fakeOldCli},
+        });
+        expect(run.status).not.toBe(0);
+        expect(run.stderr).toContain("版本过低");
+        expect(run.stdout!.trim()).toBe("");
+      });
 
   it("非法输入不触发 CLI 子进程，返回 FLYDB_MCP-0008", async () => {
     const client = await connectClient({FLYDB_CLI: e2eCli});

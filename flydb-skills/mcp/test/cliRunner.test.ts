@@ -2,7 +2,7 @@ import { mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { SubprocessCliRunner } from "../src/cliRunner.js";
+import { resolveLaunchCommand, SubprocessCliRunner } from "../src/cliRunner.js";
 
 /**
  * 用真实子进程测试 CliRunner：以 node（或带空格路径的 shell 脚本）扮演 flydb CLI，
@@ -23,6 +23,21 @@ afterEach(() => {
 });
 
 describe("SubprocessCliRunner", () => {
+  it("Windows flydb.bat 转为无 shell 的 Java 参数数组", () => {
+    expect(resolveLaunchCommand(
+        "C:\\tools\\flydb-cli-0.3.0\\bin\\flydb.bat",
+        ["--json", "-c", "C:\\work dir\\flydb.conf", "info"],
+        {JAVA_HOME: "C:\\Program Files\\Java\\jdk-17"},
+        "win32",
+    )).toEqual({
+      executable: "C:\\Program Files\\Java\\jdk-17\\bin\\java.exe",
+      args: [
+        "-cp", "C:\\tools\\flydb-cli-0.3.0\\lib\\*", "com.flydb.cli.FlydbCli",
+        "--json", "-c", "C:\\work dir\\flydb.conf", "info",
+      ],
+    });
+  });
+
   it("成功执行并分离 stdout/stderr", async () => {
     const runner = new SubprocessCliRunner(node, 30_000);
     const run = await runner.run(["-e",
@@ -66,21 +81,17 @@ describe("SubprocessCliRunner", () => {
     expect(run.exitCode).not.toBe(0);
   });
 
-  it("路径带空格与参数带空格不经 shell 直传", async () => {
-    const dir = tempDir("flydb runner space-");
-    const scriptPath = join(dir, "fake flydb");
-    if (process.platform === "win32") {
-      writeFileSync(scriptPath + ".cmd", "@echo off\r\necho {\"ok\":true}\r\n");
-    } else {
-      writeFileSync(scriptPath, "#!/bin/sh\nprintf '%s' \"$1\"\n", {mode: 0o755});
-    }
-    const executable = process.platform === "win32" ? scriptPath + ".cmd" : scriptPath;
-    const runner = new SubprocessCliRunner(executable, 30_000);
-    const run = await runner.run(["--json -c /path with space/flydb.conf"]);
-    expect(run.exitCode).toBe(0);
-    expect(run.stdout).toBe("--json -c /path with space/flydb.conf");
-    expect(run.spawnError).toBeNull();
-  });
+  it.skipIf(process.platform === "win32")(
+      "路径带空格与参数带空格不经 shell 直传", async () => {
+        const dir = tempDir("flydb runner space-");
+        const scriptPath = join(dir, "fake flydb");
+        writeFileSync(scriptPath, "#!/bin/sh\nprintf '%s' \"$1\"\n", {mode: 0o755});
+        const runner = new SubprocessCliRunner(scriptPath, 30_000);
+        const run = await runner.run(["--json -c /path with space/flydb.conf"]);
+        expect(run.exitCode).toBe(0);
+        expect(run.stdout).toBe("--json -c /path with space/flydb.conf");
+        expect(run.spawnError).toBeNull();
+      });
 
   it("显式 cwd 生效", async () => {
     const dir = tempDir("flydb-runner-cwd-");

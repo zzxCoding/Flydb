@@ -58,6 +58,9 @@ describe("v1 工具集", () => {
     const build = tool.buildArgs({});
     expect(build.ok).toBe(true);
     if (build.ok) expect(build.args).toEqual(["--json", "version"]);
+    expect(tool.buildArgs({rawArgs: ["clean"]}).ok).toBe(false);
+    expect(tool.buildArgs({password: "secret"}).ok).toBe(false);
+    expect(tool.buildArgs(null).ok).toBe(false);
   });
 
   it("输入白名单：拒绝多余字段、相对路径、非字符串", () => {
@@ -102,6 +105,7 @@ describe("v1 工具集", () => {
     expect(writesEnabled({FLYDB_MCP_ENABLE_WRITES: "1"})).toBe(false);
     expect(writesEnabled({FLYDB_MCP_ENABLE_WRITES: "yes"})).toBe(false);
     expect(writesEnabled({FLYDB_MCP_ENABLE_WRITES: ""})).toBe(false);
+    expect(writesEnabled({FLYDB_MCP_ENABLE_WRITES: " true "})).toBe(false);
     expect(writesEnabled({FLYDB_MCP_ENABLE_WRITES: "true"})).toBe(true);
     expect(writesEnabled({FLYDB_MCP_ENABLE_WRITES: "TRUE"})).toBe(true);
   });

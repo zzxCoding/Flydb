@@ -7,7 +7,7 @@ import java.security.NoSuchAlgorithmException;
 /**
  * Plan Artifact v1：一份 dry-run 计划的确定性摘要（设计 11）。
  *
- * <p>同一份脚本集合、同一顺序、同一 checksum 与切分结果必然得到同一 {@code id}；
+ * <p>同一份脚本集合、同一顺序、同一 checksum 与占位符解析后的 SQL 必然得到同一 {@code id}；
  * 摘要不含时间戳、绝对路径或数据库状态，供人、CI 与 Agent 指称“同一份计划”。
  * 摘要算法与规范文本见 {@link #canonicalText}；破坏性变更会换用新
  * {@code algorithm} token，不改动 v1 语义。
@@ -53,23 +53,46 @@ public final class PlanArtifact {
     public int statementCount() { return statementCount; }
 
     /**
-     * 规范文本（契约）：首行算法 token，次行方向 token，随后每个迁移一行
-     * {@code version\ttype\tscript\tchecksum\tstatementCount}（null 为空串），
-     * 每行以 {@code \n} 结束。字段顺序与取值规则不得变更，否则 {@code id} 语义破坏。
+     * 规范文本（契约）：首行算法 token，随后是方向、迁移及实际 SQL 语句记录。
+     * 字符串字段编码为 {@code UTF-8字节数:原值}，null 编码为 {@code -1:}，
+     * 避免字段中的制表符或换行造成歧义。字段顺序与取值规则不得变更，否则
+     * {@code id} 语义破坏。
      */
     static String canonicalText(DryRunResult result) {
         StringBuilder canonical = new StringBuilder();
-        canonical.append(ALGORITHM).append('\n').append(result.direction()).append('\n');
+        canonical.append(ALGORITHM).append('\n').append("direction\t");
+        appendField(canonical, result.direction());
+        canonical.append('\n');
         for (DryRunMigration migration : result.migrations()) {
-            canonical.append(migration.version() == null ? "" : migration.version().toString())
-                    .append('\t').append(migration.type().name())
-                    .append('\t').append(migration.script())
-                    .append('\t').append(migration.checksum() == null ? ""
-                            : migration.checksum().toString())
-                    .append('\t').append(migration.statements().size())
-                    .append('\n');
+            canonical.append("migration\t");
+            appendField(canonical,
+                    migration.version() == null ? null : migration.version().toString());
+            canonical.append('\t');
+            appendField(canonical, migration.type().name());
+            canonical.append('\t');
+            appendField(canonical, migration.script());
+            canonical.append('\t');
+            appendField(canonical, migration.description());
+            canonical.append('\t');
+            appendField(canonical,
+                    migration.checksum() == null ? null : migration.checksum().toString());
+            canonical.append('\t').append(migration.statements().size()).append('\n');
+            for (DryRunStatement statement : migration.statements()) {
+                canonical.append("statement\t").append(statement.lineNumber()).append('\t');
+                appendField(canonical, statement.sql());
+                canonical.append('\n');
+            }
         }
         return canonical.toString();
+    }
+
+    private static void appendField(StringBuilder canonical, String value) {
+        if (value == null) {
+            canonical.append("-1:");
+            return;
+        }
+        canonical.append(value.getBytes(StandardCharsets.UTF_8).length)
+                .append(':').append(value);
     }
 
     private static String sha256Hex(String text) {

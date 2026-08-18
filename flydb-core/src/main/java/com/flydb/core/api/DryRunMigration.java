@@ -21,6 +21,17 @@ public final class DryRunMigration {
     private final Integer checksum;
     private final List<DryRunStatement> statements;
 
+    /**
+     * 兼容 0.2.x 的构造器；旧调用方没有迁移元数据时，这些字段保持 null。
+     *
+     * @deprecated 新代码应传入完整迁移元数据，以便生成可审计的 Plan Artifact。
+     */
+    @Deprecated
+    public DryRunMigration(String script, MigrationType type,
+                           List<DryRunStatement> statements) {
+        this(script, type, null, null, null, statements);
+    }
+
     public DryRunMigration(String script, MigrationType type, MigrationVersion version,
                            String description, Integer checksum,
                            List<DryRunStatement> statements) {

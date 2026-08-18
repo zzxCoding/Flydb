@@ -11,11 +11,11 @@ Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正�
 
 - MCP Adapter（`flydb-skills/mcp/`，npm 包名 `flydb-mcp`，独立 SemVer `0.1.0`）：TypeScript + 官方 MCP SDK，stdio 对外提供 9 个领域工具——默认注册 5 个只读工具（`flydb_version`/`flydb_info`/`flydb_validate`/`flydb_plan_migrate`/`flydb_plan_undo`），写入工具（`flydb_migrate`/`flydb_baseline`/`flydb_repair`/`flydb_undo`）默认不注册、由操作者设置 `FLYDB_MCP_ENABLE_WRITES=true` 显式开启（fail closed）。每次调用以无 shell 子进程执行 `bin/flydb --json`，校验信封（`protocolVersion=1`、退出码一致）后映射到 MCP `structuredContent`/`content`/`isError`；CLI 缺失、超时、取消、stdout 非法等进程层失败返回 `FLYDB_MCP-xxxx` Adapter 诊断，不伪造领域错误码。永不暴露 `clean`/`init`/`execute_sql`；数据库工具只接收绝对 `workingDirectory`+`configPath` 白名单字段并固定追加 `--driver-download never`；启动时执行 `--json version` 握手（要求 CLI ≥ 0.3.0）。事实来源为 `docs/reference/mcp-tools.md` 与 `docs/getting-started/mcp-adapter.md`。
 - `flydb-skills/mcp.json`：Agent Plugins 1.0.0 MCP 配置（stdio，入口 `${PLUGIN_ROOT}/mcp/dist/server.mjs`），插件宿主可直接装载；`dist` 为单文件 bundle，宿主无需 `npm install`。
-- Plan Artifact v1（`docs/design/11-plan-artifact.md` 契约）：`--json --dry-run migrate|undo` 信封新增 `plan` 摘要对象（`algorithm: flydb-plan-v1`、`direction`、`id`、`targetVersion`、`migrationCount`、`statementCount`）与 `migrations[]` 标识字段（`version`、`description`、`checksum`、`statementCount`）。`plan.id` 是规范文本的 SHA-256，确定性语义：同一脚本集合、顺序、checksum 与切分结果必然同 id，任何一项变化必然不同 id；文本 dry-run 同步打印计划标识。实现位于 `flydb-core` `PlanArtifact`（零第三方依赖），`protocolVersion` 保持 `1`（追加字段）。
+- Plan Artifact v1（`docs/design/11-plan-artifact.md` 契约）：`--json --dry-run migrate|undo` 信封新增 `plan` 摘要对象（`algorithm: flydb-plan-v1`、`direction`、`id`、`targetVersion`、`migrationCount`、`statementCount`）与 `migrations[]` 标识字段（`version`、`description`、`checksum`、`statementCount`）。`plan.id` 是规范文本的 SHA-256，确定性语义覆盖脚本集合、顺序、checksum、语句切分及占位符替换后的逐条实际 SQL，任一变化都会产生不同 id；文本 dry-run（包括 `--quiet`）同步打印计划标识。实现位于 `flydb-core` `PlanArtifact`（零第三方依赖），`protocolVersion` 保持 `1`（追加字段）。
 
 ### 验证
 
-- TypeScript 单元测试 56 例（信封校验、脱敏、CLI 定位、CliRunner 真实子进程、工具白名单、结果映射、server 行为、插件结构）。
+- TypeScript 单元测试 58 例（信封校验、脱敏、CLI 定位、CliRunner 真实子进程、工具白名单、结果映射、server 行为、插件结构）。
 - 跨运行时端到端：真实 `flydb-cli` 发行包 + 官方 MCP client 驱动 `initialize`/`tools/list`/`tools/call`（含版本握手拒绝、写入工具默认不注册与开启态注册）。
 - 写入路径一次性测试库验证（Docker PostgreSQL 16）：默认态写入工具不可见且直接调用返回未知工具错误；开启态完成 `flydb_plan_migrate` → `flydb_migrate` → `flydb_info` → `flydb_validate` 闭环，`flydb_baseline`/`flydb_repair`/`flydb_undo` 各自 fixture 通过。未在生产或授权共享库上执行。
 

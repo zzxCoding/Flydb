@@ -14,6 +14,16 @@ public final class DryRunResult {
     private final String direction;
     private final List<DryRunMigration> migrations;
 
+    /**
+     * 兼容 0.2.x 的 migrate dry-run 结果构造器。
+     *
+     * @deprecated 新代码应显式传入 {@code migrate} 或 {@code undo} 方向。
+     */
+    @Deprecated
+    public DryRunResult(List<DryRunMigration> migrations) {
+        this("migrate", migrations);
+    }
+
     public DryRunResult(String direction, List<DryRunMigration> migrations) {
         if (direction == null) throw new NullPointerException("direction");
         if (!"migrate".equals(direction) && !"undo".equals(direction)) {

@@ -9,7 +9,7 @@
 Plan Artifact v1 回答一个问题：**人、CI 与 Agent 如何指称并核对“同一份迁移计划”**。
 
 - 人看文本 dry-run 输出，CI 消费 JSON 信封，Agent 通过 MCP `flydb_plan_migrate` 取得计划——三者消费的是同一份计划，而不是三份各自渲染的近似描述。
-- 计划必须有确定性身份：同一脚本集合、同一顺序、同一 checksum 与切分结果，必然得到同一 `plan.id`；任何一项变化必然得到不同 `plan.id`。这使得“我批准的就是这份计划”成为可验证的陈述，是阶段五 Plan → Validate → Approval → Apply 协议的直接前置。
+- 计划必须有确定性身份：同一脚本集合、同一顺序、同一迁移元数据、checksum 与占位符解析后的实际 SQL，必然得到同一 `plan.id`；任何一项变化必然得到不同 `plan.id`。这使得“我批准的就是这份计划”成为可验证的陈述，是阶段五 Plan → Validate → Approval → Apply 协议的直接前置。
 
 阶段三的边界（契约）：
 
@@ -25,11 +25,12 @@ Plan Artifact v1 回答一个问题：**人、CI 与 Agent 如何指称并核对
 {"protocolVersion":1,"command":"migrate","status":"success","exitCode":0,
  "dryRun":true,
  "plan":{"algorithm":"flydb-plan-v1","direction":"migrate",
-         "id":"ba1b0bc7a857b8a06131d8c031ec8a2d2f5b6df20e32eaaf1496bdf77b23000a",
+         "id":"bf5b19854acd952093cd18485c33c174b48bb1a3077de5cd18af23b17400650f",
          "targetVersion":"2","migrationCount":1,"statementCount":2},
  "migrations":[{"script":"V2__add_order.sql","type":"SQL","version":"2",
                 "description":"add_order","checksum":777,"statementCount":2,
-                "statements":[{"lineNumber":1,"sql":"..."}]}]}
+                "statements":[{"lineNumber":1,"sql":"SELECT 0"},
+                              {"lineNumber":2,"sql":"SELECT 1"}]}]}
 ```
 
 | 字段 | 类型 | 说明 |
@@ -45,7 +46,7 @@ Plan Artifact v1 回答一个问题：**人、CI 与 Agent 如何指称并核对
 | `migrations[].checksum` | 整数或 null | 解析出的 checksum |
 | `migrations[].statementCount` | 整数 | 该迁移语句数 |
 
-文本模式 dry-run 同步打印 `计划 flydb-plan-v1/<id>` 摘要行，人与机器指称同一标识。
+文本模式 dry-run 同步打印 `计划 flydb-plan-v1/<id>` 摘要行；即使指定 `--quiet`，该审计标识也不会被隐藏，人与机器指称同一标识。
 
 ## 3. 摘要算法（契约）
 
@@ -53,19 +54,22 @@ Plan Artifact v1 回答一个问题：**人、CI 与 Agent 如何指称并核对
 
 ```
 flydb-plan-v1\n
-<direction>\n
-(<version>\t<type>\t<script>\t<checksum>\t<statementCount>\n)*
+direction\t<field(direction)>\n
+[migration\t<field(version)>\t<field(type)>\t<field(script)>\t<field(description)>\t<field(checksum)>\t<statementCount>\n
+[statement\t<lineNumber>\t<field(resolvedSql)>\n]*
+]*
 ```
 
-- 每个迁移一行，字段以制表符分隔，行以 `\n` 结束；`version`、`checksum` 为 null 时取空串。
+- `field(value)` 编码为 `<UTF-8字节数>:<原值>`；null 编码为 `-1:`。长度前缀使字段中的制表符、换行和多字节字符均无歧义。
+- 每个迁移先写一条 `migration` 记录，再按执行顺序写入每条 `statement` 记录；`resolvedSql` 是占位符替换后的实际 SQL，`lineNumber` 是切分后的起始行。
 - `type` 是 `MigrationType` 枚举名（`SQL`、`JDBC`、`BASELINE`、`UNDO_SQL`），与信封 token 一致。
 - 规范文本**不含**时间戳、绝对路径、执行耗时或数据库状态；只含决定计划内容本身的字段。
 
 确定性与敏感性（契约，由 `PlanArtifactTest` 固定）：
 
-- 同一输入（脚本、顺序、checksum、语句切分）必然得到同一 `plan.id`；
+- 同一输入（脚本、顺序、迁移元数据、checksum、语句切分、实际 SQL）必然得到同一 `plan.id`；
 - 顺序变化、checksum 变化、方向变化必然得到不同 `plan.id`；
-- 语句切分结果参与摘要（通过 `statementCount`）：同一脚本内容在不同切分规则下视为不同计划。
+- 语句切分结果与每条实际 SQL 均参与摘要：占位符值变化或 SQL 文本变化时，即使脚本 checksum 和语句数未变，也会得到不同 `plan.id`。
 
 ## 4. 实现与消费边界
 

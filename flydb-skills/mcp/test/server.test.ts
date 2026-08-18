@@ -2,7 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it } from "vitest";
 import type { CliRunOptions, CliRunResult, CliRunner } from "../src/cliRunner.js";
-import { createServer } from "../src/server.js";
+import { createServer, DEFAULT_TIMEOUT_MS, resolveTimeoutMs } from "../src/server.js";
 
 /** 记录调用并以脚本回放信封的内存 fake。 */
 class FakeCliRunner implements CliRunner {
@@ -64,6 +64,15 @@ function commandOf(args: string[]): string {
 }
 
 describe("server（官方 Client 驱动 initialize/list/call）", () => {
+  it("超时环境变量必须是完整的正整数字符串", () => {
+    const warnings: string[] = [];
+    const warn = (message: string): void => { warnings.push(message); };
+    expect(resolveTimeoutMs({FLYDB_MCP_TIMEOUT_MS: "1500"}, warn)).toBe(1500);
+    expect(resolveTimeoutMs({FLYDB_MCP_TIMEOUT_MS: "1.5"}, warn)).toBe(DEFAULT_TIMEOUT_MS);
+    expect(resolveTimeoutMs({FLYDB_MCP_TIMEOUT_MS: "600000ms"}, warn)).toBe(DEFAULT_TIMEOUT_MS);
+    expect(warnings).toHaveLength(2);
+  });
+
   it("默认只注册 5 个只读工具，写入工具不在 tools/list", async () => {
     await withClient({}, (args) => ({stdout: ENVELOPES[commandOf(args)] ?? "", exitCode: 0}),
         async (client) => {
@@ -162,6 +171,14 @@ describe("server（官方 Client 驱动 initialize/list/call）", () => {
           const diagnostic = JSON.parse(
               first !== undefined && first.type === "text" ? first.text! : "{}");
           expect(diagnostic.adapterError.code).toBe("FLYDB_MCP-0008");
+          const versionResult = await client.callTool({
+            name: "flydb_version",
+            arguments: {rawArgs: ["clean"]},
+          });
+          expect(versionResult.isError).toBe(true);
+          const versionContent = versionResult.content as Array<{type: string; text?: string}>;
+          expect(JSON.parse(versionContent[0]?.text ?? "{}").adapterError.code)
+              .toBe("FLYDB_MCP-0008");
           expect(runner.calls).toHaveLength(0);
         });
   });

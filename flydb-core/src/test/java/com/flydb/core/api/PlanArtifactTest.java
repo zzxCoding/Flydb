@@ -57,6 +57,22 @@ class PlanArtifactTest {
     }
 
     @Test
+    @DisplayName("占位符替换后的实际 SQL 变化会改变 id")
+    void resolvedStatementChangeAffectsId() {
+        DryRunMigration first = new DryRunMigration("V1__tenant.sql", MigrationType.SQL,
+                MigrationVersion.parse("1"), "tenant", 10,
+                Collections.singletonList(new DryRunStatement(1, "CREATE SCHEMA tenant_a")));
+        DryRunMigration second = new DryRunMigration("V1__tenant.sql", MigrationType.SQL,
+                MigrationVersion.parse("1"), "tenant", 10,
+                Collections.singletonList(new DryRunStatement(1, "CREATE SCHEMA tenant_b")));
+
+        assertThat(PlanArtifact.of(new DryRunResult("migrate",
+                Collections.singletonList(first))).id())
+                .isNotEqualTo(PlanArtifact.of(new DryRunResult("migrate",
+                        Collections.singletonList(second))).id());
+    }
+
+    @Test
     @DisplayName("规范文本与摘要的已知向量固定不变")
     void canonicalTextVectorIsPinned() {
         DryRunResult result = new DryRunResult("migrate", Collections.singletonList(
@@ -64,23 +80,31 @@ class PlanArtifactTest {
                         MigrationVersion.parse("2"), "add_order", 777, statements(2))));
 
         assertThat(PlanArtifact.canonicalText(result))
-                .isEqualTo("flydb-plan-v1\nmigrate\n2\tSQL\tV2__add_order.sql\t777\t2\n");
+                .isEqualTo("flydb-plan-v1\n"
+                        + "direction\t7:migrate\n"
+                        + "migration\t1:2\t3:SQL\t17:V2__add_order.sql\t9:add_order\t3:777\t2\n"
+                        + "statement\t1\t8:SELECT 0\n"
+                        + "statement\t2\t8:SELECT 1\n");
         assertThat(PlanArtifact.of(result).id())
-                .isEqualTo("ba1b0bc7a857b8a06131d8c031ec8a2d2f5b6df20e32eaaf1496bdf77b23000a");
+                .isEqualTo("bf5b19854acd952093cd18485c33c174b48bb1a3077de5cd18af23b17400650f");
     }
 
     @Test
-    @DisplayName("null 版本与 null checksum 在规范文本中为空串，目标版本取最后一个版本化迁移")
-    void nullFieldsAreEmptyInCanonicalText() {
+    @DisplayName("null 字段使用无歧义编码，目标版本取最后一个版本化迁移")
+    void nullFieldsAreUnambiguousInCanonicalText() {
         DryRunResult result = new DryRunResult("undo", Collections.singletonList(
                 new DryRunMigration("U2__drop_order.sql", MigrationType.UNDO_SQL,
                         null, "drop_order", 88, statements(1))));
 
         assertThat(PlanArtifact.canonicalText(result))
-                .isEqualTo("flydb-plan-v1\nundo\n\tUNDO_SQL\tU2__drop_order.sql\t88\t1\n");
+                .isEqualTo("flydb-plan-v1\n"
+                        + "direction\t4:undo\n"
+                        + "migration\t-1:\t8:UNDO_SQL\t18:U2__drop_order.sql\t"
+                        + "10:drop_order\t2:88\t1\n"
+                        + "statement\t1\t8:SELECT 0\n");
         assertThat(PlanArtifact.of(result).targetVersion()).isNull();
         assertThat(PlanArtifact.of(result).id())
-                .isEqualTo("dd702401a06e9a68d200da64c8d7d0b8856299a468aa772d5f40f1c7e200f73a");
+                .isEqualTo("9e383581267df7e8f5515adb881eaf14a8f80d1544352db7786d7780fe0c8857");
     }
 
     @Test
@@ -111,5 +135,20 @@ class PlanArtifactTest {
 
         assertThatThrownBy(() -> new DryRunResult("apply", Collections.emptyList()))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("0.2 公共构造器保持源码兼容并默认 migrate 方向")
+    @SuppressWarnings("deprecation")
+    void legacyConstructorsRemainSourceCompatible() {
+        DryRunMigration migration = new DryRunMigration("V1__init.sql", MigrationType.SQL,
+                Collections.singletonList(new DryRunStatement(1, "SELECT 1")));
+        DryRunResult result = new DryRunResult(Collections.singletonList(migration));
+
+        assertThat(migration.version()).isNull();
+        assertThat(migration.description()).isNull();
+        assertThat(migration.checksum()).isNull();
+        assertThat(result.direction()).isEqualTo("migrate");
+        assertThat(result.migrations()).containsExactly(migration);
     }
 }

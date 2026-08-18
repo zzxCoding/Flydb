@@ -13,10 +13,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.flydb.core.api.DryRunMigration;
+import com.flydb.core.api.DryRunResult;
+import com.flydb.core.api.DryRunStatement;
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
 import com.flydb.core.exception.FlydbValidationException;
 import com.flydb.core.exception.ValidationProblem;
+import com.flydb.core.migration.MigrationType;
+import com.flydb.core.migration.MigrationVersion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -202,6 +207,29 @@ class FlydbCliTest {
                 "--directory-regex", "--file-regex", "--path-regex",
                 "--migration-order", "--directory-version-regex",
                 "--placeholder-replacement");
+        assertThat(errorOutput.toString()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("quiet dry-run 仍输出可审计的计划 ID 和 SQL")
+    void quietDryRunStillEmitsPlanIdentity() {
+        StringWriter standardOutput = new StringWriter();
+        StringWriter errorOutput = new StringWriter();
+        FlydbCli cli = new FlydbCli(new PrintWriter(standardOutput, true),
+                new PrintWriter(errorOutput, true), Collections.<String, String>emptyMap(),
+                temporaryDirectory, temporaryDirectory);
+        FlydbCli.RootCommand root = cli.new RootCommand();
+        root.quiet = true;
+        DryRunResult result = new DryRunResult("migrate", Collections.singletonList(
+                new DryRunMigration("V1__init.sql", MigrationType.SQL,
+                        MigrationVersion.parse("1"), "init", 10,
+                        Collections.singletonList(new DryRunStatement(1, "SELECT 1")))));
+
+        FlydbCli.printDryRun(root, result, null);
+
+        assertThat(standardOutput.toString())
+                .contains("计划 flydb-plan-v1/", "-- V1__init.sql [SQL]", "SELECT 1;")
+                .doesNotContain("预演完成");
         assertThat(errorOutput.toString()).isEmpty();
     }
 

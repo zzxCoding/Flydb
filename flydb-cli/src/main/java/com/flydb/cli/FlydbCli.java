@@ -655,10 +655,10 @@ public final class FlydbCli {
         if (!root.quiet) root.out().println(text);
     }
 
-    private static void printDryRun(RootCommand root, DryRunResult result, String password) {
+    static void printDryRun(RootCommand root, DryRunResult result, String password) {
         com.flydb.core.api.PlanArtifact plan = com.flydb.core.api.PlanArtifact.of(result);
         rootLine(root, "预演完成：" + result.migrations().size() + " 个脚本，仅打印、不执行");
-        rootLine(root, "计划 " + com.flydb.core.api.PlanArtifact.ALGORITHM + "/" + plan.id()
+        root.out().println("计划 " + com.flydb.core.api.PlanArtifact.ALGORITHM + "/" + plan.id()
                 + "（" + plan.statementCount() + " 条语句"
                 + (plan.targetVersion() == null ? "" : "，目标版本 " + plan.targetVersion())
                 + "）");
