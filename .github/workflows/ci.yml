@@ -85,7 +85,13 @@ jobs:
         run: ./mvnw -B -pl flydb-cli -am package -DskipTests
       - name: Cross-runtime e2e (real CLI + official MCP client)
         run: |
-          unzip -q flydb-cli/target/flydb-cli-*.zip -d "$RUNNER_TEMP/flydb-dist"
+          archives=("$GITHUB_WORKSPACE"/flydb-cli/target/flydb-cli-*.zip)
+          if [ "${#archives[@]}" -ne 1 ] || [ ! -f "${archives[0]}" ]; then
+            echo "CLI 发行包数量必须为 1，实际为 ${#archives[@]}" >&2
+            exit 1
+          fi
+          archive="${archives[0]}"
+          unzip -q "$archive" -d "$RUNNER_TEMP/flydb-dist"
           bin_dir=$(echo "$RUNNER_TEMP"/flydb-dist/*/bin)
           FLYDB_E2E_CLI="$bin_dir/flydb" npm run test:e2e
         working-directory: flydb-skills/mcp

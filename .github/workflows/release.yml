@@ -116,7 +116,12 @@ jobs:
           ./scripts/check-release-artifacts.sh --signatures "$staging" flydb-cli/target
       - name: Cross-runtime MCP e2e against released CLI dist
         run: |
-          unzip -q flydb-cli/target/flydb-cli-*.zip -d "$RUNNER_TEMP/flydb-dist"
+          archive="$GITHUB_WORKSPACE/flydb-cli/target/flydb-cli-${RELEASE_TAG#v}.zip"
+          if [ ! -f "$archive" ]; then
+            echo "找不到 CLI 发行包: $archive" >&2
+            exit 1
+          fi
+          unzip -q "$archive" -d "$RUNNER_TEMP/flydb-dist"
           bin_dir=$(echo "$RUNNER_TEMP"/flydb-dist/*/bin)
           FLYDB_E2E_CLI="$bin_dir/flydb" npm run test:e2e
         working-directory: flydb-skills/mcp
