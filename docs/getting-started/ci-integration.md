@@ -22,7 +22,7 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     env:
-      FLYDB_HOME: ${{ runner.temp }}/flydb-cli-0.3.1   # ZIP 内的版本化根目录
+      FLYDB_HOME: ${{ runner.temp }}/flydb-cli-0.3.2   # ZIP 内的版本化根目录
       CONF: deploy/flydb.mysql.uat.conf
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
       - name: 安装 Flydb CLI（版本随仓库锁定）
         run: |
           curl -fsSL -o flydb.zip \
-            "https://github.com/zzxCoding/Flydb/releases/download/v0.3.1/flydb-cli-0.3.1.zip"
+            "https://github.com/zzxCoding/Flydb/releases/download/v0.3.2/flydb-cli-0.3.2.zip"
           unzip -q flydb.zip -d "$RUNNER_TEMP"
           "$FLYDB_HOME/bin/flydb" version
 

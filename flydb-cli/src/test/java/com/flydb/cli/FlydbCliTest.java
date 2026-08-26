@@ -44,7 +44,7 @@ class FlydbCliTest {
         int exitCode = cli.execute("version");
 
         assertThat(exitCode).isZero();
-        assertThat(standardOutput.toString()).contains("flydb 0.3.1");
+        assertThat(standardOutput.toString()).contains("flydb 0.3.2");
         assertThat(errorOutput.toString()).isEmpty();
     }
 
@@ -63,7 +63,7 @@ class FlydbCliTest {
         assertThat(exitCode).isZero();
         assertThat(standardOutput.toString())
                 .isEqualTo("{\"protocolVersion\":1,\"command\":\"version\","
-                        + "\"status\":\"success\",\"exitCode\":0,\"version\":\"0.3.1\"}\n");
+                        + "\"status\":\"success\",\"exitCode\":0,\"version\":\"0.3.2\"}\n");
         assertThat(errorOutput.toString()).isEmpty();
     }
 

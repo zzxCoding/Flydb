@@ -24,7 +24,8 @@ final class MigrationCommandSupport {
     static void execute(final CommandRuntime runtime, final ResolvedMigration migration) {
         SqlMigrationExecutor executor = executor(runtime, migration);
         boolean transactional = runtime.database().supportsDdlTransactions()
-                || isTransactionSafeDml(executor.statements());
+                || isTransactionSafeDml(executor.statements(),
+                        runtime.database().statementBuilderConfig().hashLineCommentSupported());
         try {
             MigrationExecutionTemplate.execute(runtime.connection(),
                     transactional, executor,
@@ -41,12 +42,52 @@ final class MigrationCommandSupport {
         return executor(runtime, migration).statements();
     }
 
-    private static boolean isTransactionSafeDml(List<SqlStatement> statements) {
+    private static boolean isTransactionSafeDml(List<SqlStatement> statements,
+                                                boolean hashLineComments) {
         if (statements.isEmpty()) return false;
+        boolean hasDml = false;
         for (SqlStatement statement : statements) {
-            if (!TRANSACTION_SAFE_DML.matcher(statement.sql()).find()) return false;
+            String executableSql = stripLeadingComments(statement.sql(), hashLineComments);
+            if (executableSql.isEmpty()) continue;
+            hasDml = true;
+            if (!TRANSACTION_SAFE_DML.matcher(executableSql).find()) return false;
         }
-        return true;
+        return hasDml;
+    }
+
+    private static String stripLeadingComments(String sql, boolean hashLineComments) {
+        int offset = 0;
+        while (offset < sql.length()) {
+            offset = skipWhitespace(sql, offset);
+            if (startsWith(sql, offset, "--")
+                    || (hashLineComments && startsWith(sql, offset, "#"))) {
+                offset = skipLineComment(sql, offset);
+            } else if (startsWith(sql, offset, "/*")) {
+                int end = sql.indexOf("*/", offset + 2);
+                if (end < 0) return "";
+                offset = end + 2;
+            } else {
+                break;
+            }
+        }
+        return sql.substring(offset);
+    }
+
+    private static int skipWhitespace(String sql, int offset) {
+        while (offset < sql.length() && Character.isWhitespace(sql.charAt(offset))) offset++;
+        return offset;
+    }
+
+    private static int skipLineComment(String sql, int offset) {
+        while (offset < sql.length()) {
+            char current = sql.charAt(offset++);
+            if (current == '\n' || current == '\r') break;
+        }
+        return offset;
+    }
+
+    private static boolean startsWith(String sql, int offset, String prefix) {
+        return sql.regionMatches(offset, prefix, 0, prefix.length());
     }
 
     private static SqlMigrationExecutor executor(CommandRuntime runtime,

@@ -82,7 +82,7 @@ FLYDB_PASSWORD='...' bin/flydb validate
 
 执行 `migrate` 时会逐脚本输出进度（序号 `i/N` 与单脚本耗时），长迁移期间可据此判断是否仍在推进；`clean`、`baseline` 不解析本地迁移集合，迁移目录中的非法文件名不会阻断它们。`info` 表格列宽按内容自适应，宽版本号不会错位。
 
-MySQL/Oracle 家族虽然不支持 DDL 事务，但一份脚本若解析后的所有语句都以 `INSERT`、`UPDATE`、`DELETE` 或 `MERGE` 开头，Flydb 会把整份脚本与成功历史记录放入同一事务，仅在末尾提交一次。这样既避免大量数据脚本逐语句自动提交，也使执行中断后不会留下部分数据。含 DDL、过程块、显式事务控制、`WITH` 或未知语句的脚本保持原有非事务语义；不要依赖 Flydb 对迁移写入做自动重连或自动重放。
+MySQL/Oracle 家族虽然不支持 DDL 事务，但一份脚本若解析后的所有语句在忽略前导空白和 SQL 注释后，都以 `INSERT`、`UPDATE`、`DELETE` 或 `MERGE` 开头，Flydb 会把整份脚本与成功历史记录放入同一事务，仅在末尾提交一次。常见的多行表头注释不会使纯 DML 脚本退回逐条提交；注释和 SQL 原文仍原样交给 JDBC。含 DDL、过程块、显式事务控制、`WITH` 或未知语句的脚本保持原有非事务语义；不要依赖 Flydb 对迁移写入做自动重连或自动重放。
 
 不配置 `--version-selection` 时保持兼容行为：`--target-version` 精确匹配，起止版本按包含边界的版本顺序匹配。`family` 将目标版本作为 token 前缀版本族；`family-range` 包含结束版本族的所有子版本；`regex` 对版本文本做整串匹配。`--version-source=directory` 会把相同目录版本下的多个文件版本作为一个选择集合，例如精确目标 `20230531` 可选择 `V20230531.1`、`.2`、`.3`。注意 range 的结束版本不含其族子版本（`20260625` 不含 `20260625.3`），命中时 `migrate` 与 `--dry-run migrate` 会输出警告提示改用 `family-range`。显式版本选择不执行 `R__...sql`，且不会绕过 checksum、失败记录或 `out-of-order`。
 

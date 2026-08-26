@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "flydb",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "面向 JDBC 数据库的 Schema 版本化迁移工具：打包 flydb-cli Agent Skill，指导 Agent 安全执行 migrate、validate、dry-run、baseline、repair 等迁移操作。",
   "homepage": "https://github.com/zzxCoding/Flydb",
   "repository": "https://github.com/zzxCoding/Flydb",

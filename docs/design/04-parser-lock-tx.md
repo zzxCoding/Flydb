@@ -139,7 +139,7 @@ INSERT INTO flydb_schema_lock (lock_id) VALUES (1);   -- 初始化时插入，�
 补充规则：
 
 - 每条迁移各自一个事务边界（PG 系），**不把多个迁移合并进一个大事务**——失败时能精确知道停在哪个版本。
-- MySQL/Oracle 家族仅在解析后的全部语句都以 `INSERT`、`UPDATE`、`DELETE` 或 `MERGE` 开头时判定为纯 DML。采用严格允许列表而非 DDL 排除列表；`WITH`、`BEGIN`/`DECLARE`、`CALL`、显式事务控制及任何未知开头都保守回落到非事务路径，避免过程块或动态 SQL 隐藏隐式提交。
+- MySQL/Oracle 家族仅在解析后的全部语句剥离任意数量的前导空白与方言支持的注释后，第一个可执行 token 都是 `INSERT`、`UPDATE`、`DELETE` 或 `MERGE` 时判定为纯 DML。采用严格允许列表而非 DDL 排除列表；`WITH`、`BEGIN`/`DECLARE`、`CALL`、显式事务控制及任何未知开头都保守回落到非事务路径，避免过程块或动态 SQL 隐藏隐式提交。注释只影响判定视图，不改写交给 JDBC 的原 SQL。
 - 纯 DML 事务中，迁移数据与成功历史记录一同提交。连接中断时 Flydb 不自动重连重放；数据库最终只能同时提交二者或同时回滚二者，下一次 `migrate` 由历史记录安全判定是否需要重跑。客户端 `rollback()` 因断线失败时，服务端可能要等到检测到会话失效后才释放事务。
 - Java 迁移（JDBC 类型）同规则：PG 系包事务，失败回滚；其余记 `success=false`。
 - `MigrateResult.warnings` 在非事务性 DDL 方言上执行多语句脚本时不告警（正常场景），但在**脚本内混合 DML+DDL 且失败**时，错误消息明确指出"以下语句已生效且无法回滚"，列出已执行语句序号——可观测性弥补语义缺口。

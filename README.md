@@ -30,9 +30,9 @@ Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工
 前置条件：Java 8 或更高版本、一个已创建的目标数据库，以及与 Java 8 兼容的 JDBC 驱动。
 
 ```bash
-curl -LO https://github.com/zzxCoding/Flydb/releases/download/v0.3.1/flydb-cli-0.3.1.zip
-unzip flydb-cli-0.3.1.zip
-cd flydb-cli-0.3.1
+curl -LO https://github.com/zzxCoding/Flydb/releases/download/v0.3.2/flydb-cli-0.3.2.zip
+unzip flydb-cli-0.3.2.zip
+cd flydb-cli-0.3.2
 
 # 示例：把 mysql-connector-j.jar 放入 drivers/
 cp /path/to/mysql-connector-j.jar drivers/
@@ -112,7 +112,7 @@ flydb.migrate();
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-core</artifactId>
-  <version>0.3.1</version>
+  <version>0.3.2</version>
 </dependency>
 ```
 
@@ -123,13 +123,13 @@ Spring Boot 应用选择对应 starter，容器初始化期间执行 `migrate`�
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-3-starter</artifactId>
-  <version>0.3.1</version>
+  <version>0.3.2</version>
 </dependency>
 <!-- Spring Boot 2.7 / Java 8 -->
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-2-starter</artifactId>
-  <version>0.3.1</version>
+  <version>0.3.2</version>
 </dependency>
 ```
 
@@ -173,7 +173,7 @@ bin/flydb clean --clean-disabled=false --force   # clean 默认禁用；非交�
 ./mvnw verify
 ```
 
-CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.3.1.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
+CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.3.2.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
 
 本地集成契约默认只启动 MySQL 8；需要显式运行某个 CI 方言项时设置 `-Pmysql`/`-Ppostgresql` 与 `-Dflydb.integration.database=<dialect>`，完整矩阵由 `.github/workflows/ci.yml` 执行。
 

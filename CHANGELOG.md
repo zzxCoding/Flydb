@@ -3,6 +3,17 @@
 Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正式发行包与发布说明见
 [GitHub Releases](https://github.com/zzxCoding/Flydb/releases)。
 
+## [0.3.2] - 2026-08-26
+
+### 修复
+
+- 修复带前导表头注释的纯 DML 脚本被误判为非事务脚本：事务判定现在会线性跳过任意数量的前导空白、`--`、`/* ... */`，MySQL 家族同时识别 `#` 注释，再对第一个可执行 token 应用 `INSERT`/`UPDATE`/`DELETE`/`MERGE` 严格允许列表。
+- 判定过程不改写实际交给 JDBC 的 SQL，保留注释、脚本行号和错误定位；只有注释而没有 DML 的输入不会被误判为事务化数据脚本。
+
+### 验证边界
+
+- 回归测试从公开 `MigrateCommand` 契约覆盖多行 `--` 表头注释、块注释、失败整体回滚及历史无痕。真实 OceanBase 吞吐仍需在获授权实例上用 0.3.2 发行包复验。
+
 ## [0.3.1] - 2026-08-26
 
 ### 修复
@@ -91,6 +102,7 @@ Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正�
 - Flydb 不自动把任意厂商 SQL 转换为其他数据库语法。
 - 达梦、KingbaseES、openGauss 的公开证据为方言和驱动元数据契约测试，真实环境认证仍待补充。
 
+[0.3.2]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.2
 [0.3.1]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.1
 [0.3.0]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.0
 [0.2.1]: https://github.com/zzxCoding/Flydb/releases/tag/v0.2.1

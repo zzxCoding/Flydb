@@ -46,7 +46,7 @@ class FailureRecoveryCommandTest {
     @DisplayName("MySQL 失败写 FAILED 并阻断，repair 后可重跑")
     void mysqlFailureRequiresRepair() throws Exception {
         InMemoryFlydbDataSource dataSource = new InMemoryFlydbDataSource(false);
-        write("V1__init.sql", "CREATE TABLE ok(id INT); BROKEN;");
+        write("V1__init.sql", "-- DDL 脚本表头\nCREATE TABLE ok(id INT); BROKEN;");
         FlydbConfiguration cfg = configuration(dataSource);
 
         assertThatThrownBy(() -> new MigrateCommand(cfg).execute())
@@ -91,6 +91,26 @@ class FailureRecoveryCommandTest {
                 .containsExactly("V1__data.sql");
         assertThat(dataSource.history()).singleElement()
                 .satisfies(row -> assertThat(row.get("success")).isEqualTo(true));
+    }
+
+    @Test
+    @DisplayName("前导表头注释不改变纯 DML 脚本的事务语义")
+    void leadingCommentsDoNotDisablePureDmlTransaction() throws Exception {
+        InMemoryFlydbDataSource dataSource = new InMemoryFlydbDataSource(false);
+        write("V1__commented_data.sql", "INSERT INTO app_table VALUES (1);\n"
+                + "-- ========================================\n"
+                + "-- 表名：app_table\n"
+                + "-- ========================================\n"
+                + "/* 更新该表的测试数据 */\n"
+                + "# MySQL 数据修正\n"
+                + "UPDATE BROKEN_TABLE SET id = 2 WHERE id = 1;");
+        FlydbConfiguration cfg = configuration(dataSource);
+
+        assertThatThrownBy(() -> new MigrateCommand(cfg).execute())
+                .isInstanceOf(FlydbException.class)
+                .hasMessageContaining("V1__commented_data.sql");
+        assertThat(dataSource.history()).isEmpty();
+        assertThat(dataSource.rollbacks()).isEqualTo(1);
     }
 
     @Test
