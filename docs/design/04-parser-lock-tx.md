@@ -90,7 +90,7 @@ SELECT pg_advisory_unlock(${lockKey});   -- 释放
 
 ### 2.2 通用兜底：锁表行锁（MySQL 系 / Oracle 系 MVP 默认）
 
-**MVP 决策**：MySQL 系与 Oracle 系统一使用锁表方案，不做 `GET_LOCK`/`DBMS_LOCK` 的版本能力探测（TiDB 早期版本 no-op、OceanBase V4.3.1 前不支持、达梦无确认——探测矩阵的实现与测试成本大于收益）。原生命名锁作为性能优化留给二期。例外：OceanBase-Oracle 直接用已确认的 `DBMS_LOCK`。
+**MVP 决策**：MySQL 系与 Oracle 系统一使用锁表方案，不做 `GET_LOCK`/`DBMS_LOCK` 的版本能力探测（TiDB 早期版本 no-op、OceanBase 版本差异、达梦无确认——探测矩阵的实现与测试成本大于收益）。原生命名锁作为性能优化留给二期。OceanBase-Oracle 也遵循该家族默认；已验证的 OceanBase 4.2.1.2 中 `DBMS_LOCK.REQUEST/RELEASE` 不可用。
 
 锁表（随历史表一起初始化，见 [03 §5](03-dialects.md)）：
 
@@ -121,7 +121,7 @@ INSERT INTO flydb_schema_lock (lock_id) VALUES (1);   -- 初始化时插入，�
 | KingbaseES | 优先 `pg_advisory_lock`，实测不可用则降级锁表 | 低（待实测） |
 | MySQL / TiDB / OceanBase-MySQL | 锁表行锁 | —（通用 SQL，无探测依赖） |
 | 达梦 DM8 | 锁表行锁 | — |
-| OceanBase-Oracle | `DBMS_LOCK` | 高（官方 Oracle 兼容文档） |
+| OceanBase-Oracle | 锁表行锁 | —（目标版本实测） |
 
 ## 3. DDL 事务能力与 migrate 失败处理
 

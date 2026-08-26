@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import com.flydb.core.api.FlydbConfiguration;
 import com.flydb.core.history.SchemaHistoryDdl;
 import com.flydb.core.lock.AdvisoryLockMigrationLock;
-import com.flydb.core.lock.DbmsLockMigrationLock;
 import com.flydb.core.lock.MigrationLock;
 import com.flydb.core.lock.TableRowLockMigrationLock;
 import com.flydb.core.test.JdbcFakes;
@@ -49,13 +48,16 @@ class DatabaseCapabilitiesTest {
     }
 
     @Test
-    @DisplayName("OceanBase Oracle 租户使用 DBMS_LOCK")
-    void oceanBaseOracleUsesDbmsLock() throws Exception {
+    @DisplayName("Oracle 家族（含 OceanBase Oracle）使用锁表行锁")
+    void oracleFamilyUsesTableRowLock() throws Exception {
         Connection execution = JdbcFakes.recordingConnection(JdbcFakes.newCapture());
         FlydbConfiguration cfg = configuration(execution);
-        Database database = new OceanBaseOracleDatabase(execution);
+        Database oracle = new OracleDatabaseType().createDatabase(execution, cfg);
+        Database oceanBaseOracle = new OceanBaseOracleDatabase(execution);
 
-        assertThat(database.createLock(cfg)).isInstanceOf(DbmsLockMigrationLock.class);
+        assertThat(oracle.createLock(cfg)).isInstanceOf(TableRowLockMigrationLock.class);
+        assertThat(oceanBaseOracle.createLock(cfg))
+                .isInstanceOf(TableRowLockMigrationLock.class);
     }
 
     @Test

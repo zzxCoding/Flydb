@@ -74,7 +74,7 @@
 3. **OceanBase-MySQL**：`ob_compatibility_mode` 分派；本地用探测代理 + MySQL 跑兼容族契约，真实 OB 租户放到外部实例/显式 CI。
 4. **KingbaseES**（需外部实例或私有镜像）：实现 advisory 能力探测与锁表降级；本地用 PostgreSQL 验证 PG 家族路径，§5 实测清单第 2/3 项由环境变量门禁执行。
 5. **达梦 DM8**（需外部实例或私有镜像）：`CASE_SENSITIVE` 探测（[03 §4](03-dialects.md) 达梦行）；compatibleMode=oracle 防御由单测固化，真实实例由环境变量门禁执行。
-6. **OceanBase-Oracle**：实现 + `DBMS_LOCK` 锁；无自动化环境，标注实验性，测试用例写好但默认 Disabled。
+6. **OceanBase-Oracle**：复用 Oracle 家族默认锁表方案；无自动化环境，标注实验性，测试用例写好但默认 Disabled。
 7. **Oracle 官方方言**：补 `jdbc:oracle:` URL 探测与 Oracle 家族实现；真实 `ojdbc` 驱动和实例由授权环境变量门禁执行。
 
 **验收**：MySQL/PostgreSQL 两个本地容器上的四个新增兼容方言契约全绿；金仓/达梦/Oracle 在 `FLYDB_TEST_<DB>_URL` 指向的实例上执行只读契约（无实例则 Disabled 且原因清晰）。真实 TiDB/openGauss/OceanBase 的产品差异未验证前不得标注为“真实产品全绿”。
@@ -117,7 +117,7 @@
 
 > **Oracle 真实实例验证记录（2026-08-14）**：在授权真实 Oracle 实例完成端到端验证——validate、`--dry-run migrate`、clean、migrate（26 个脚本，含 `CREATE OR REPLACE EDITIONABLE TRIGGER` 的 PL/SQL 块、目录版本族 `family-range` 范围、`--placeholder-replacement=false` 业务模板保留）。该轮验证暴露并修复三处方言缺陷（提交 `4c5cd41`、`91fa3d8`、`d9e7142`）：历史表 DDL 的 `DEFAULT`/`NOT NULL` 顺序（ORA-00907）、clean 序列与回收站发现缺失（75 个用户序列残留导致 ORA-00955）、PL/SQL 块探测器不识别 `EDITIONABLE`（孤儿 `END;` 报 ORA-00900）。仍未做厂商认证，undo/baseline 未在真库演练。
 
-> **OceanBase-Oracle 真实实例验证记录（2026-08-14）**：在授权真实 OceanBase 实例的 Oracle 兼容租户完成端到端验证——validate、`--dry-run migrate`、clean、migrate，复用 Oracle 家族方言与同轮三项修复（`4c5cd41`、`91fa3d8`、`d9e7142`）；`DBMS_LOCK` 锁路径与 clean 的 `user_sequences`/`PURGE RECYCLEBIN` 流程随迁移覆盖。上手页由"实验性"升级为真实实例验证。MySQL 兼容租户仍为轻量兼容测试；不宣称厂商认证。
+> **OceanBase-Oracle 真实实例验证记录（2026-08-14）**：在授权真实 OceanBase 实例的 Oracle 兼容租户完成端到端验证——validate、`--dry-run migrate`、clean、migrate，复用 Oracle 家族方言与同轮三项修复（`4c5cd41`、`91fa3d8`、`d9e7142`）。后续针对 OceanBase 4.2.1.2 的 JDBC 探针确认 `DBMS_LOCK.REQUEST/RELEASE` 不可用，因此当前实现使用 Oracle 家族默认锁表行锁；`DbmsLockMigrationLock` 仅作为未启用的可选实现保留。上手页继续标注真实实例验证证据不等于厂商认证。MySQL 兼容租户仍为轻量兼容测试。
 
 > **Agent Skills 增补记录（2026-08-13）**：新增 [`flydb-skills`](../../flydb-skills/README.md)，首个 [`flydb-cli`](../../flydb-skills/skills/flydb-cli/SKILL.md) Skill 覆盖 CLI 定位、文档引用、dry-run 优先、驱动/方言选择、错误处理和安全汇报；Skill 通过源文档路径避免命令表漂移。
 

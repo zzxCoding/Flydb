@@ -3,7 +3,7 @@
 Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正式发行包与发布说明见
 [GitHub Releases](https://github.com/zzxCoding/Flydb/releases)。
 
-## [未发布]
+## [0.3.0] - 2026-08-26
 
 路线图阶段三：Agent 分发（MCP 适配 + Plan Artifact v1）。Java 8 字节码与依赖边界不变；Node 只进入可选的 MCP 分发层，普通 CLI/starter 用户不需要安装。
 
@@ -19,7 +19,7 @@ Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正�
 - 跨运行时端到端：真实 `flydb-cli` 发行包 + 官方 MCP client 驱动 `initialize`/`tools/list`/`tools/call`（含版本握手拒绝、写入工具默认不注册与开启态注册）。
 - 写入路径一次性测试库验证（Docker PostgreSQL 16）：默认态写入工具不可见且直接调用返回未知工具错误；开启态完成 `flydb_plan_migrate` → `flydb_migrate` → `flydb_info` → `flydb_validate` 闭环，`flydb_baseline`/`flydb_repair`/`flydb_undo` 各自 fixture 通过。未在生产或授权共享库上执行。
 
-## [0.3.0] - 2026-08-18
+### 阶段二：开发体验与机器契约
 
 路线图阶段二：开发体验与机器契约。让任何程序（CI、IDE、外部宿主、Agent）都能稳定消费 Flydb CLI 的结果，为阶段三 MCP 适配打地基。命令语义、锁行为与退出码不变。
 
@@ -34,6 +34,10 @@ Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正�
 
 - CLI 默认以 UTF-8 包装 `System.out`/`System.err`：JDK 18+ 行为不变（JEP 400）；旧 JDK 且控制台为 GBK 等本地编码时，中文文本输出由平台编码改为 UTF-8。机器输出契约要求 UTF-8。
 - 密码/URL 凭据脱敏逻辑移至 `com.flydb.cli.output.SecretRedactor`（行为不变），文本表格、dry-run 与 JSON 输出共用。
+
+### 修复
+
+- OceanBase 4.2.1.2 Oracle 模式不再调用不可用的 `DBMS_LOCK.REQUEST/RELEASE`，回落 Oracle 家族锁表行锁；`DbmsLockMigrationLock` 保留为未启用的可选实现。
 
 ## [0.2.1] - 2026-08-15
 

@@ -91,7 +91,7 @@ public interface Database extends AutoCloseable {
 | `supportsDdlTransactions()` | `false` |
 | 标识符引用 | 双引号（引用即大小写敏感） |
 | 语句切分 | 识别 PL/SQL 块（`CREATE [OR REPLACE] [EDITIONABLE\|NONEDITIONABLE] PROCEDURE/FUNCTION/TRIGGER/PACKAGE/TYPE`、裸 `DECLARE`/`BEGIN`），块终止符为独占一行的 `/`；`EDITIONABLE VIEW/SYNONYM` 仍是普通单语句 |
-| 锁 | 通用锁表方案（家族默认）；OceanBase-Oracle 覆写为 `DBMS_LOCK` |
+| 锁 | 通用锁表方案（家族默认） |
 | 历史表 DDL | 无 `IF NOT EXISTS` → "先查系统目录后建 + 建表异常兜底"的幂等策略；`success` 用 `NUMBER(1)`；`installed_on TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL`——Oracle 列定义要求 `DEFAULT` 在 `NOT NULL` 之前，反序报 `ORA-00907` |
 | clean | 专用 `OracleCleanStrategy`：序列查 `user_sequences`（跳过 `ISEQ$$_`/`BIN$`）——JDBC `getTables` 不返回序列且无 `information_schema`；`DROP TABLE ... PURGE` 并收尾 `PURGE RECYCLEBIN`（失败降级警告），避免回收站残留的表/LOB 段/索引占名导致 `CREATE` 撞名；记账表排除忽略大小写（非引用名大写存储） |
 | currentSchema | 查询会话当前 schema（达梦：`SELECT SYS_CONTEXT('USERENV','CURRENT_SCHEMA') FROM dual`，实施时确认） |
@@ -111,7 +111,7 @@ public interface Database extends AutoCloseable {
 | **MySQL** | 基准实现，无覆写 |
 | **TiDB** | ① 探测：`tidb_version()`；② DDL 为**异步在线 DDL**（后台 job）——执行耗时统计与超时语义与普通 MySQL 不同，MVP 记录为已知限制并在文档说明，实施阶段补大 DDL 场景实测（见 [08 §5 风险](08-testing-roadmap.md)）；③ 锁：家族默认锁表方案（`GET_LOCK` 在早期版本为 no-op，可信度：中） |
 | **OceanBase-MySQL** | ① `ob_compatibility_mode` 探测分派；② 不假设支持全部 MySQL 8 语法（切分器保守配置）；③ 锁：家族默认锁表方案（`GET_LOCK` 仅 V4.3.1+ 文档化支持，可信度：中） |
-| **OceanBase-Oracle** | ① 模式探测分派；② `createLock()` 覆写为 `DBMS_LOCK.ALLOCATE_UNIQUE/REQUEST/RELEASE`（可信度：高，OceanBase 官方 Oracle 兼容文档）；③ **标注"实验性"**：社区版无法创建 Oracle 租户，公共 CI 无法自动化验证（见 [08 §3](08-testing-roadmap.md)） |
+| **OceanBase-Oracle** | ① 模式探测分派；② 继承 Oracle 家族默认锁表方案——OceanBase 4.2.1.2 实测 `DBMS_LOCK.REQUEST/RELEASE` 不可用，暂不启用 DBMS_LOCK；③ **标注"实验性"**：公共 CI 无法自动化验证（见 [08 §3](08-testing-roadmap.md)） |
 | **达梦 DM8** | ① **大小写敏感模式探测**：DM 建库参数 `CASE_SENSITIVE`（建库后不可改）决定标识符处理——连接建立后探测（如 `SF_GET_CASE_SENSITIVE_FLAG()`，实施时确认函数名），据此决定历史表/锁表 DDL 是否加引号及查询系统目录的匹配方式，这是**最易被忽略的关键差异点**；② `compatibleMode=oracle` 伪装防御（§1.1）；③ 锁：家族默认锁表方案（无官方确认的 DBMS_LOCK，可信度：中）；④ PL/SQL 块语法与 Oracle 高度兼容，切分器直接用家族配置 |
 
 ## 5. 历史表/锁表的幂等创建

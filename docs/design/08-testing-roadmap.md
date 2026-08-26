@@ -50,7 +50,7 @@ public interface DatabaseTestSupport extends AutoCloseable {
 | openGauss | PostgreSQL 16 兼容族契约 | 外部 openGauss 实例或显式专用 CI job | 同上 |
 | KingbaseES | PostgreSQL 16 兼容族契约 | `FLYDB_TEST_KINGBASE_URL/_USER/_PASSWORD` | 自建 Runner/外部实例；公共 CI 跳过 |
 | 达梦 DM8 | Oracle 家族单元契约 | `FLYDB_TEST_DM_URL/_USER/_PASSWORD` | 自建 Runner/外部实例；公共 CI 跳过 |
-| OceanBase-Oracle | DBMS_LOCK 与 Oracle 家族单元契约 | 企业版 Oracle 租户 | 无法自动化；方言标注**实验性** |
+| OceanBase-Oracle | Oracle 家族锁表行锁单元契约 | 企业版 Oracle 租户 | 无法自动化；方言标注**实验性** |
 
 ### 2.3 CI（GitHub Actions）
 

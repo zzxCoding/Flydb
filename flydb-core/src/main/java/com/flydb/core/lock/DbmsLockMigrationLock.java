@@ -8,7 +8,7 @@ import java.sql.Types;
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
 
-/** OceanBase-Oracle 的 DBMS_LOCK 会话锁。 */
+/** 可选的 DBMS_LOCK 会话锁实现；OceanBase-Oracle 当前默认使用锁表行锁。 */
 public final class DbmsLockMigrationLock implements MigrationLock {
 
     private static final int SUCCESS = 0;

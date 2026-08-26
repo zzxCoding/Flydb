@@ -72,7 +72,7 @@ class MigrationLockTest {
     }
 
     @Test
-    @DisplayName("OceanBase-Oracle DBMS_LOCK 分配、获取并释放同一 handle")
+    @DisplayName("可选 DBMS_LOCK 实现分配、获取并释放同一 handle")
     void dbmsLockUsesAllocatedHandle() {
         RecordingDbmsJdbc jdbc = new RecordingDbmsJdbc();
         MigrationLock lock = new DbmsLockMigrationLock(jdbc.connection(),
