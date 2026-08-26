@@ -116,6 +116,7 @@ class SqlMigrationExecutorTest {
                         assertThat(msg).contains("第 2 条");        // 语句序号
                         assertThat(msg).contains("行 2");           // 起始行号
                         assertThat(msg).contains("column zzz does not exist"); // 驱动原始错误
+                        assertThat(fe.getCause()).isSameAs(driverError);
                     });
             // 第 1 条已成功执行
             assertThat(captured).containsExactly("CREATE TABLE a(id INT)");

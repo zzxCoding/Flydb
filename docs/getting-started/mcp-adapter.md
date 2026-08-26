@@ -52,7 +52,7 @@ npx flydb-mcp        # 一次性启动（发布后可用；registry 名称以发
       "command": "npx",
       "args": ["flydb-mcp"],
       "env": {
-        "FLYDB_CLI": "/opt/flydb-cli-0.3.0/bin/flydb",
+        "FLYDB_CLI": "/opt/flydb-cli-0.3.1/bin/flydb",
         "FLYDB_PASSWORD": "由宿主 secret 注入"
       }
     }

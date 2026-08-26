@@ -18,7 +18,7 @@
 | `FLYDB-2007` | baseline 前置不满足 | 已有迁移记录或 baseline 冲突 | 检查历史表与 baseline 版本 |
 | `FLYDB-2008` | 缺少 undo 脚本 | 最近版本没有对应 `U<version>__...sql` | 补齐撤销脚本 |
 | `FLYDB-2009` | 未定义占位符 | SQL 引用了未配置的迁移占位符，或业务运行时模板被误识别为迁移占位符 | 前者补 `flydb.placeholders.*`；后者设置 `flydb.placeholder-replacement=false` 原样保留 |
-| `FLYDB-2010` | 迁移执行失败 | 某条 SQL 被数据库拒绝 | 按脚本、语句序号和行号修正后重试；`flydb.batch-size>1` 时序号按批内已执行计数推算 |
+| `FLYDB-2010` | 迁移执行失败 | 某条 SQL 被数据库拒绝，或执行期间 JDBC 连接中断 | 按脚本、语句序号和行号核对原始 JDBC 异常；纯 DML 脚本的数据与历史记录同事务，可在连接恢复后重新运行；混合 DDL 脚本先核对已生效对象再决定 repair；`flydb.batch-size>1` 时序号按批内已执行计数推算 |
 | `FLYDB-3001` | 获取迁移锁超时 | 其他进程正在迁移或锁等待过短 | 确认并发任务，必要时调大锁超时 |
 | `FLYDB-4001` | 未知配置键 | 拼写错误或使用了未支持的键 | 删除或修正配置键 |
 | `FLYDB-4002` | 缺少必填配置项 | CLI 没有 URL，或 Spring Boot 没有 DataSource/`flydb.url` | 提供 JDBC URL 或应用 DataSource |

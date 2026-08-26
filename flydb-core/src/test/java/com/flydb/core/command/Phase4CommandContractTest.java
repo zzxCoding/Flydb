@@ -202,8 +202,10 @@ class Phase4CommandContractTest {
     @DisplayName("flydb.batch-size>1 时 migrate 语句经 JDBC batch 提交")
     void migrateExecutesStatementsInJdbcBatches() throws Exception {
         InMemoryFlydbDataSource dataSource = new InMemoryFlydbDataSource(false);
-        write("V1__one.sql", "SELECT 1;\nSELECT 2;\nSELECT 3;");
-        write("V2__two.sql", "SELECT 4;");
+        write("V1__one.sql", "INSERT INTO app_table VALUES (1);\n"
+                + "INSERT INTO app_table VALUES (2);\n"
+                + "INSERT INTO app_table VALUES (3);");
+        write("V2__two.sql", "INSERT INTO app_table VALUES (4);");
         FlydbConfiguration cfg = FlydbConfiguration.builder()
                 .dataSource(dataSource)
                 .locations("filesystem:" + migrations)
@@ -213,7 +215,10 @@ class Phase4CommandContractTest {
         new MigrateCommand(cfg).execute();
 
         assertThat(dataSource.executedSql()).containsSubsequence(
-                "SELECT 1", "SELECT 2", "SELECT 3", "SELECT 4");
+                "INSERT INTO app_table VALUES (1)",
+                "INSERT INTO app_table VALUES (2)",
+                "INSERT INTO app_table VALUES (3)",
+                "INSERT INTO app_table VALUES (4)");
         assertThat(dataSource.batches()).isEqualTo(3); // 3 条按批 2 → 2 批；末尾 1 条 → 1 批
     }
 

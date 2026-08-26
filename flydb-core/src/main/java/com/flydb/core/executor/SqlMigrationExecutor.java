@@ -153,7 +153,7 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
     private FlydbException failure(int index, SqlStatement statement, SQLException cause) {
         return new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
                 "脚本 " + scriptName + " 第 " + index + " 条语句（起始行 "
-                        + statement.lineNumber() + "）执行失败: " + cause.getMessage());
+                        + statement.lineNumber() + "）执行失败: " + cause.getMessage(), cause);
     }
 
     /** 完成与真实执行一致的占位符替换和词法解析，但不触碰 JDBC。 */

@@ -2,10 +2,11 @@ package com.flydb.core.command;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.List;
+import java.util.regex.Pattern;
 
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
-import com.flydb.core.executor.MigrationExecutor;
 import com.flydb.core.executor.SqlMigrationExecutor;
 import com.flydb.core.executor.SqlStatement;
 import com.flydb.core.migration.AppliedMigration;
@@ -14,14 +15,19 @@ import com.flydb.core.migration.ResolvedMigration;
 /** migrate/undo 共用的单脚本执行与历史记账。 */
 final class MigrationCommandSupport {
 
+    private static final Pattern TRANSACTION_SAFE_DML = Pattern.compile(
+            "^(?:INSERT|UPDATE|DELETE|MERGE)\\b", Pattern.CASE_INSENSITIVE);
+
     private MigrationCommandSupport() {
     }
 
     static void execute(final CommandRuntime runtime, final ResolvedMigration migration) {
-        MigrationExecutor executor = executor(runtime, migration);
+        SqlMigrationExecutor executor = executor(runtime, migration);
+        boolean transactional = runtime.database().supportsDdlTransactions()
+                || isTransactionSafeDml(executor.statements());
         try {
             MigrationExecutionTemplate.execute(runtime.connection(),
-                    runtime.database().supportsDdlTransactions(), executor,
+                    transactional, executor,
                     (success, elapsed) -> runtime.history().insert(record(
                             runtime, migration, success, elapsed)));
         } catch (SQLException e) {
@@ -30,9 +36,17 @@ final class MigrationCommandSupport {
         }
     }
 
-    static java.util.List<SqlStatement> preview(CommandRuntime runtime,
-                                                ResolvedMigration migration) {
+    static List<SqlStatement> preview(CommandRuntime runtime,
+                                      ResolvedMigration migration) {
         return executor(runtime, migration).statements();
+    }
+
+    private static boolean isTransactionSafeDml(List<SqlStatement> statements) {
+        if (statements.isEmpty()) return false;
+        for (SqlStatement statement : statements) {
+            if (!TRANSACTION_SAFE_DML.matcher(statement.sql()).find()) return false;
+        }
+        return true;
     }
 
     private static SqlMigrationExecutor executor(CommandRuntime runtime,

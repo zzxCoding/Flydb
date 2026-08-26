@@ -17,4 +17,6 @@ bin/flydb init --url 'jdbc:oceanbase://127.0.0.1:2881/demo' \
 
 ## 已知限制
 
-OceanBase 4.2.1.2（Oracle 模式）实测中，`DBMS_LOCK.ALLOCATE_UNIQUE` 可调用，但 `REQUEST`/`RELEASE` 不可用；Flydb 当前不启用该包，统一使用 Oracle 家族的锁表行锁。目录查询与 DDL 权限仍因环境而异，接入前建议先 `--dry-run migrate` 预演。MySQL 兼容租户见 [OceanBase-MySQL](oceanbase-mysql.md)，当前为轻量兼容测试。
+OceanBase 4.2.1.2（Oracle 模式）实测中，`DBMS_LOCK.ALLOCATE_UNIQUE` 可调用，但 `REQUEST`/`RELEASE` 不可用；Flydb 当前不启用该包，统一使用 Oracle 家族的锁表行锁。锁表按连接的当前 schema 解析，因此同一租户的 `SX_TRANS` 与 `SX_PARAMS` 可并行迁移；同一 schema 内的迁移仍互斥。若日志或源码显示锁名为 `flydb:flydb_schema_history`，说明运行的不是当前实现，应先用 `bin/flydb version` 并核对发行包来源。目录查询与 DDL 权限仍因环境而异，接入前建议先 `--dry-run migrate` 预演。MySQL 兼容租户见 [OceanBase-MySQL](oceanbase-mysql.md)，当前为轻量兼容测试。
+
+0.3.1 起，只有 `INSERT`、`UPDATE`、`DELETE`、`MERGE` 的纯 DML 脚本按单脚本事务执行，数据与 Flydb 历史记录在末尾一次提交；这避免远程 OceanBase 大批量数据迁移逐语句提交，并使 JDBC 连接中断后的最终状态保持为整脚本提交或整脚本回滚。Flydb 不会在迁移内部自动重连重放；连接恢复后重新运行 `migrate`，由历史记录判断该脚本是否仍待执行。含 DDL、PL/SQL、`WITH` 或未知语句的脚本保持非事务路径。

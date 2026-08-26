@@ -3,6 +3,20 @@
 Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正式发行包与发布说明见
 [GitHub Releases](https://github.com/zzxCoding/Flydb/releases)。
 
+## [0.3.1] - 2026-08-26
+
+### 修复
+
+- MySQL/Oracle 家族在脚本仅包含 `INSERT`、`UPDATE`、`DELETE`、`MERGE` 时，改为整份脚本与成功历史记录同事务、末尾一次提交。DDL、PL/SQL、显式事务控制、`WITH` 和未知语句继续保守使用非事务路径，避免动态 SQL 或隐式提交破坏原有失败语义。
+- 纯 DML 迁移失败或 JDBC 连接中断时整体回滚且不写 `success=false`，连接恢复后可由历史记录安全判断是否重跑；Flydb 不在迁移内部自动重连或自动重放，避免提交结果不确定时重复写入。
+- 逐条 SQL 执行失败时保留原始 `SQLException` cause，使 `--debug` 可继续追踪 SQLState、厂商异常类型与网络断线错误链。
+- 固化 OceanBase-Oracle 的 schema 内锁表语义：同一租户、不同当前 schema 使用各自的 `flydb_schema_lock`，可并行迁移；同一 schema 仍全程互斥。不会回退到实例级、仅含历史表名的 `DBMS_LOCK` 锁键。
+
+### 验证边界
+
+- 回归测试覆盖非事务 DDL 方言上的四类 DML、失败整体回滚、安全重跑、混合 DDL 原语义和 JDBC 原始异常链。发布流水线继续执行 Java 8/17、全 reactor、MCP Adapter、字节码、签名与发行包门禁。
+- 本次未在仓库内保存 OceanBase 凭据或厂商驱动；真实 OceanBase 吞吐与断线恢复需在获授权实例上复验，不能由单元测试替代。
+
 ## [0.3.0] - 2026-08-26
 
 路线图阶段三：Agent 分发（MCP 适配 + Plan Artifact v1）。Java 8 字节码与依赖边界不变；Node 只进入可选的 MCP 分发层，普通 CLI/starter 用户不需要安装。
@@ -77,6 +91,7 @@ Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正�
 - Flydb 不自动把任意厂商 SQL 转换为其他数据库语法。
 - 达梦、KingbaseES、openGauss 的公开证据为方言和驱动元数据契约测试，真实环境认证仍待补充。
 
+[0.3.1]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.1
 [0.3.0]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.0
 [0.2.1]: https://github.com/zzxCoding/Flydb/releases/tag/v0.2.1
 [0.2.0]: https://github.com/zzxCoding/Flydb/releases/tag/v0.2.0

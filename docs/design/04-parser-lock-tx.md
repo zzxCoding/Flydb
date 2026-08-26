@@ -92,6 +92,8 @@ SELECT pg_advisory_unlock(${lockKey});   -- 释放
 
 **MVP 决策**：MySQL 系与 Oracle 系统一使用锁表方案，不做 `GET_LOCK`/`DBMS_LOCK` 的版本能力探测（TiDB 早期版本 no-op、OceanBase 版本差异、达梦无确认——探测矩阵的实现与测试成本大于收益）。原生命名锁作为性能优化留给二期。OceanBase-Oracle 也遵循该家族默认；已验证的 OceanBase 4.2.1.2 中 `DBMS_LOCK.REQUEST/RELEASE` 不可用。
 
+锁表由当前 schema 解析：同一数据库或 OceanBase 租户内，`SX_TRANS.flydb_schema_lock` 与 `SX_PARAMS.flydb_schema_lock` 是两张独立锁表，允许并行迁移；只有同一 schema、同一历史表对应的命令互斥。不得使用仅由历史表名生成的实例级命名锁，否则默认表名相同的不同 schema 会发生无关阻塞。
+
 锁表（随历史表一起初始化，见 [03 §5](03-dialects.md)）：
 
 ```sql
@@ -125,23 +127,25 @@ INSERT INTO flydb_schema_lock (lock_id) VALUES (1);   -- 初始化时插入，�
 
 ## 3. DDL 事务能力与 migrate 失败处理
 
-`Database.supportsDdlTransactions()` 驱动两种截然不同的失败语义：
+`Database.supportsDdlTransactions()` 与单脚本语句类型共同决定失败语义：
 
 | | PG 系（`true`） | MySQL 系 / Oracle 系（`false`） |
 |---|---|---|
-| 执行边界 | 整份脚本的所有语句 + 历史记录插入包在**同一个事务** | 逐条语句执行即隐式提交；历史记录在**独立自动提交事务**中插入 |
-| 某语句失败 | `rollback()`——数据库**完全回到迁移前状态**，历史表无痕 | 前 N-1 条已永久生效，数据库处于"部分应用"第三态 |
-| 历史表记录 | 不写入（一并回滚） | 写入一行 `success=false`，忠实记账 |
-| 恢复路径 | 天然自愈：修复脚本后直接重跑 `migrate`，该版本仍是 PENDING | `FAILED` 记录阻塞后续 migrate；操作员人工核实/修复库状态 → `flydb repair` 清除失败标记 → 重跑。**生产最佳实践：新增迁移版本补救，而非编辑已应用脚本**（写入用户文档） |
+| 执行边界 | 整份脚本的所有语句 + 历史记录插入包在**同一个事务** | 纯 DML 脚本与历史记录包在**同一个事务**；含 DDL、过程块、事务控制或未知语句的脚本保持逐条自动提交 |
+| 某语句失败 | `rollback()`——数据库**完全回到迁移前状态**，历史表无痕 | 纯 DML 整体回滚且历史表无痕；其余脚本前 N-1 条可能已永久生效，数据库处于"部分应用"第三态 |
+| 历史表记录 | 不写入（一并回滚） | 纯 DML 失败不写入；其余脚本失败写入一行 `success=false`，忠实记账 |
+| 恢复路径 | 天然自愈：修复脚本后直接重跑 `migrate`，该版本仍是 PENDING | 纯 DML 可直接重跑；其余脚本由操作员核实/修复库状态 → `flydb repair` 清除失败标记 → 重跑。**生产最佳实践：新增迁移版本补救，而非编辑已应用脚本**（写入用户文档） |
 
 补充规则：
 
 - 每条迁移各自一个事务边界（PG 系），**不把多个迁移合并进一个大事务**——失败时能精确知道停在哪个版本。
+- MySQL/Oracle 家族仅在解析后的全部语句都以 `INSERT`、`UPDATE`、`DELETE` 或 `MERGE` 开头时判定为纯 DML。采用严格允许列表而非 DDL 排除列表；`WITH`、`BEGIN`/`DECLARE`、`CALL`、显式事务控制及任何未知开头都保守回落到非事务路径，避免过程块或动态 SQL 隐藏隐式提交。
+- 纯 DML 事务中，迁移数据与成功历史记录一同提交。连接中断时 Flydb 不自动重连重放；数据库最终只能同时提交二者或同时回滚二者，下一次 `migrate` 由历史记录安全判定是否需要重跑。客户端 `rollback()` 因断线失败时，服务端可能要等到检测到会话失效后才释放事务。
 - Java 迁移（JDBC 类型）同规则：PG 系包事务，失败回滚；其余记 `success=false`。
 - `MigrateResult.warnings` 在非事务性 DDL 方言上执行多语句脚本时不告警（正常场景），但在**脚本内混合 DML+DDL 且失败**时，错误消息明确指出"以下语句已生效且无法回滚"，列出已执行语句序号——可观测性弥补语义缺口。
 
 ## 4. 本篇对应的验收要点
 
 1. 切分器：对 [08 §1](08-testing-roadmap.md) 列出的 fixture 全绿（含 `$tag$` 嵌套引号、`DELIMITER` 存储过程、PL/SQL 触发器、CRLF 文件、`#` 注释、行号定位）。
-2. 锁：同库两进程并发 `migrate` 的集成测试——一方阻塞、双方结果一致、历史表无重复记录；杀掉持锁进程后另一方能在超时窗口内获锁。
+2. 锁：同库同 schema 两进程并发 `migrate` 时一方阻塞、双方结果一致、历史表无重复记录；同库不同 schema 可同时持有各自锁；杀掉持锁进程后同 schema 的等待方能在超时窗口内获锁。
 3. 失败处理：PG 系故意失败 → 历史表无记录、可直接重跑；MySQL 系故意失败 → `success=false` 记录存在、migrate 被阻塞、repair 后可重跑。

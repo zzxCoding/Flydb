@@ -66,6 +66,34 @@ class FailureRecoveryCommandTest {
     }
 
     @Test
+    @DisplayName("不支持 DDL 事务的数据库仍对纯 DML 脚本整体提交并在失败时自愈")
+    void pureDmlFailureIsSelfHealingOnNonTransactionalDdlDatabase() throws Exception {
+        InMemoryFlydbDataSource dataSource = new InMemoryFlydbDataSource(false);
+        write("V1__data.sql", "INSERT INTO app_table VALUES (1);\n"
+                + "UPDATE app_table SET id = 2 WHERE id = 1;\n"
+                + "DELETE FROM app_table WHERE id = 2;\n"
+                + "MERGE INTO BROKEN_TABLE target USING app_table source ON (1 = 1) "
+                + "WHEN MATCHED THEN UPDATE SET target.id = source.id;");
+        FlydbConfiguration cfg = configuration(dataSource);
+
+        assertThatThrownBy(() -> new MigrateCommand(cfg).execute())
+                .isInstanceOf(FlydbException.class)
+                .hasMessageContaining("V1__data.sql");
+        assertThat(dataSource.history()).isEmpty();
+        assertThat(dataSource.rollbacks()).isEqualTo(1);
+
+        write("V1__data.sql", "INSERT INTO app_table VALUES (1);\n"
+                + "UPDATE app_table SET id = 2 WHERE id = 1;\n"
+                + "DELETE FROM app_table WHERE id = 2;\n"
+                + "MERGE INTO app_table target USING app_table source ON (1 = 1) "
+                + "WHEN MATCHED THEN UPDATE SET target.id = source.id;");
+        assertThat(new MigrateCommand(cfg).execute().executed())
+                .containsExactly("V1__data.sql");
+        assertThat(dataSource.history()).singleElement()
+                .satisfies(row -> assertThat(row.get("success")).isEqualTo(true));
+    }
+
+    @Test
     @DisplayName("成功迁移可由 info 观察且重跑幂等")
     void successfulMigrateIsVisibleAndIdempotent() throws Exception {
         InMemoryFlydbDataSource dataSource = new InMemoryFlydbDataSource(true);
