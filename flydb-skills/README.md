@@ -67,6 +67,6 @@ python3 "${HOME}/.agents/skills/skill-creator/scripts/quick_validate.py" \
   flydb-skills/skills/flydb-cli
 ```
 
-评测提示词与可验证预期位于 [`skills/flydb-cli/evals/evals.json`](skills/flydb-cli/evals/evals.json)，覆盖基本迁移、外部 locations、范围/版本族选择、发现完整性、业务模板占位符、MISSING、驱动诊断和 clean 安全边界。
+评测提示词与可验证预期位于 [`skills/flydb-cli/evals/evals.json`](skills/flydb-cli/evals/evals.json)，覆盖基本迁移、长迁移后台托管、外部 locations、范围/版本族选择、发现完整性、业务模板占位符、MISSING、驱动诊断和 clean 安全边界。
 
 项目复用仓库根目录的 [Apache-2.0 许可证](../LICENSE)。

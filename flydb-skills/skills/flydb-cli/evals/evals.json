@@ -96,6 +96,18 @@
         "根据对象统计、逐对象进度、历史表和锁表日志判断推进状态",
         "报告退出码和完成状态且不扩展到其他 schema 或数据库"
       ]
+    },
+    {
+      "id": 9,
+      "prompt": "OceanBase 测试 schema 的 dry-run 显示 9 个脚本、6944 条 SQL，预计 migrate 需要 1 小时。我已明确授权这次写入，但你的 Agent 命令会话可能 10 分钟超时。请安全启动、监控并验证这次迁移。",
+      "expected_output": "读取长时间迁移文档，在 validate、dry-run、集合核对和写入授权已完成后，使用 nohup 包装器在前景会话之外运行 migrate；保存日志、PID 和退出码完成标记；命令会话超时只转入有界状态检查，不终止或重复启动迁移；读到完成退出码后再执行 info 和 validate。",
+      "files": [],
+      "expectations": [
+        "在长迁移前仍完成 validate、--dry-run migrate、集合核对和写入授权门",
+        "使用文档化的 nohup 包装器并保存绝对运行目录、日志、PID 和 exit-code 完成标记",
+        "命令会话超时或暂时无日志时保持原迁移进程，不擅自终止或启动重复 migrate",
+        "仅在进程结束且 exit-code 可读后执行 info 和 validate；无完成标记时按未知结果保留现场"
+      ]
     }
   ]
 }

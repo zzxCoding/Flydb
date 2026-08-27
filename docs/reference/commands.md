@@ -82,6 +82,41 @@ FLYDB_PASSWORD='...' bin/flydb validate
 
 执行 `migrate` 时会逐脚本输出进度（序号 `i/N` 与单脚本耗时），长迁移期间可据此判断是否仍在推进；`clean`、`baseline` 不解析本地迁移集合，迁移目录中的非法文件名不会阻断它们。`info` 表格列宽按内容自适应，宽版本号不会错位。
 
+### 长时间迁移与后台运行
+
+交互式终端、SSH 或 Agent 工具会话可能先于迁移超时或断开，从而终止前台的 `migrate` 子进程。已完成 `validate` 和 `--dry-run migrate`、已核对目标并获得写入授权后，如预计耗时可能超过当前会话上限，建议使用 `nohup` 托管进程生命周期，并同时保存日志、PID 和退出码。
+
+以下模板中三个路径都应替换为当前机器上的绝对路径；每次启动会在运行根目录下创建新目录，避免误读上一次的 PID 或退出码。从配置预期的工作目录启动，并优先使用 `flydb.password.file` 传递密码：
+
+```bash
+export FLYDB_RUN_ROOT=/absolute/path/to/flydb-runs
+export FLYDB_BIN=/absolute/path/to/flydb-cli/bin/flydb
+export FLYDB_CONFIG=/absolute/path/to/flydb.conf
+mkdir -p "$FLYDB_RUN_ROOT"
+FLYDB_RUN_DIR="$(mktemp -d "$FLYDB_RUN_ROOT/run-XXXXXXXX")"
+export FLYDB_RUN_DIR
+
+nohup sh -c '
+  "$FLYDB_BIN" -c "$FLYDB_CONFIG" --color=never --debug migrate
+  flydb_exit=$?
+  printf "%s\n" "$flydb_exit" > "$FLYDB_RUN_DIR/exit-code.tmp"
+  mv "$FLYDB_RUN_DIR/exit-code.tmp" "$FLYDB_RUN_DIR/exit-code"
+  exit "$flydb_exit"
+' > "$FLYDB_RUN_DIR/migrate.log" 2>&1 < /dev/null &
+printf "%s\n" "$!" > "$FLYDB_RUN_DIR/pid"
+```
+
+运行期间用有界查询观察状态，避免另一个长时间前台等待：
+
+```bash
+ps -p "$(cat "$FLYDB_RUN_DIR/pid")" -o pid=,etime=,stat=
+tail -n 50 "$FLYDB_RUN_DIR/migrate.log"
+```
+
+`exit-code` 文件是包装器已经收到 Flydb 退出状态的完成信号。在该文件出现之前，工具调用超时、暂时无新日志或定时检查到点都不代表迁移失败；保留现有 PID 并继续观察，不要启动重复的 `migrate`。只有在进程已结束且 `exit-code` 为 `0` 后，才执行 `info --color=never` 和 `validate`。如 PID 已消失但没有 `exit-code`，将结果视为未知，先保存日志并核对数据库历史与对象状态，不自动重放、`repair` 或 `clean`。
+
+`nohup` 只防止终端挂断中止进程，不提供 JDBC 断线重连、自动重试或主机重启后恢复。CI/CD 任务应保持 Flydb 在前台运行以可靠获取退出码，并将 Job 超时设置为大于最长迁移时间。
+
 MySQL/Oracle 家族虽然不支持 DDL 事务，但一份脚本若解析后的所有语句在忽略前导空白和 SQL 注释后，都以 `INSERT`、`UPDATE`、`DELETE` 或 `MERGE` 开头，Flydb 会把整份脚本与成功历史记录放入同一事务，仅在末尾提交一次。常见的多行表头注释不会使纯 DML 脚本退回逐条提交；注释和 SQL 原文仍原样交给 JDBC。含 DDL、过程块、显式事务控制、`WITH` 或未知语句的脚本保持原有非事务语义；不要依赖 Flydb 对迁移写入做自动重连或自动重放。
 
 不配置 `--version-selection` 时保持兼容行为：`--target-version` 精确匹配，起止版本按包含边界的版本顺序匹配。`family` 将目标版本作为 token 前缀版本族；`family-range` 包含结束版本族的所有子版本；`regex` 对版本文本做整串匹配。`--version-source=directory` 会把相同目录版本下的多个文件版本作为一个选择集合，例如精确目标 `20230531` 可选择 `V20230531.1`、`.2`、`.3`。注意 range 的结束版本不含其族子版本（`20260625` 不含 `20260625.3`），命中时 `migrate` 与 `--dry-run migrate` 会输出警告提示改用 `family-range`。显式版本选择不执行 `R__...sql`，且不会绕过 checksum、失败记录或 `out-of-order`。

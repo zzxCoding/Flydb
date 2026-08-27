@@ -3,6 +3,12 @@
 Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正式发行包与发布说明见
 [GitHub Releases](https://github.com/zzxCoding/Flydb/releases)。
 
+## [Unreleased]
+
+### 文档
+
+- 长时间 CLI 迁移推荐用 `nohup` 与前台 Agent/终端会话解耦，同时持久化日志、PID 和退出码完成标记；Agent Skill 同步要求工具超时时保留现有迁移，待进程真正结束后再执行 `info`/`validate`。
+
 ## [0.3.2] - 2026-08-26
 
 ### 修复
