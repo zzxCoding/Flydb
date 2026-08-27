@@ -92,7 +92,7 @@ SELECT pg_advisory_unlock(${lockKey});   -- 释放
 
 **MVP 决策**：MySQL 系与 Oracle 系统一使用锁表方案，不做 `GET_LOCK`/`DBMS_LOCK` 的版本能力探测（TiDB 早期版本 no-op、OceanBase 版本差异、达梦无确认——探测矩阵的实现与测试成本大于收益）。原生命名锁作为性能优化留给二期。OceanBase-Oracle 也遵循该家族默认；已验证的 OceanBase 4.2.1.2 中 `DBMS_LOCK.REQUEST/RELEASE` 不可用。
 
-锁表由当前 schema 解析：同一数据库或 OceanBase 租户内，`SX_TRANS.flydb_schema_lock` 与 `SX_PARAMS.flydb_schema_lock` 是两张独立锁表，允许并行迁移；只有同一 schema、同一历史表对应的命令互斥。不得使用仅由历史表名生成的实例级命名锁，否则默认表名相同的不同 schema 会发生无关阻塞。
+锁表由当前 schema 解析；Oracle 家族的专用锁连接执行 SQL 时使用包含该 schema 的全限定表名，不依赖新连接的默认 schema。同一数据库或 OceanBase 租户内，`SX_TRANS.flydb_schema_lock` 与 `SX_PARAMS.flydb_schema_lock` 是两张独立锁表，允许并行迁移；只有同一 schema、同一历史表对应的命令互斥。不得使用仅由历史表名生成的实例级命名锁，否则默认表名相同的不同 schema 会发生无关阻塞。
 
 锁表（随历史表一起初始化，见 [03 §5](03-dialects.md)）：
 

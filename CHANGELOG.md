@@ -5,9 +5,22 @@ Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正�
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-08-27
+
+### 修复
+
+- Oracle 家族 `clean` 改为按当前 schema 查询 `all_sequences`，修复当前 schema 与登录用户不一致、以及 OceanBase 4.2.1 Oracle 模式实测中 `user_sequences` 未返回待清理序列时的漏删问题。
+- Oracle 家族锁表行锁使用包含当前 schema 的全限定表名，避免独立锁连接的会话 schema 与迁移连接不一致时锁到错误对象；OceanBase Oracle `clean` 同时识别直接 `-4007` 与 vendor code `600` 的 `ORA-00600 arguments: -4007`，等待 `all_tab_columns` 列数稳定后有限重试，并跳过在线 DDL 暴露的 `_...hidden...` 中间表，其他错误仍立即失败。
+- JDBC batch 失败优先读取 `BatchUpdateException.updateCounts` 中的 `EXECUTE_FAILED` 标记；遇错即停驱动继续按失败前计数定位，驱动未提供可靠标记时只报告批次范围，不再伪造具体语句序号和行号。
+
 ### 文档
 
 - 长时间 CLI 迁移推荐用 `nohup` 与前台 Agent/终端会话解耦，同时持久化日志、PID 和退出码完成标记；Agent Skill 同步要求工具超时时保留现有迁移，待进程真正结束后再执行 `info`/`validate`。
+- 补充 OceanBase 4.2.x Oracle 模式的 `MODIFY` scale 限制、`ORA-01451`/`ORA-00955` 幂等边界、序列 clean 与 batch 错误定位差异。
+
+### 验证边界
+
+- 本地回归测试、JDK 17 全 reactor、JDK 8 兼容 reactor 和 Java 8/17 字节码门禁通过；OceanBase 4.2.1 Oracle 模式已实测当前 schema 序列清理、双 schema 锁隔离及 batch 错误定位边界。根据预发布包实测补充的 `ORA-00600 arguments: -4007` 重试和 `_...hidden...` 中间表过滤，仍需用正式 0.3.3 包在获授权测试 schema 复验。
 
 ## [0.3.2] - 2026-08-26
 
@@ -108,6 +121,7 @@ Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正�
 - Flydb 不自动把任意厂商 SQL 转换为其他数据库语法。
 - 达梦、KingbaseES、openGauss 的公开证据为方言和驱动元数据契约测试，真实环境认证仍待补充。
 
+[0.3.3]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.3
 [0.3.2]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.2
 [0.3.1]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.1
 [0.3.0]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.0

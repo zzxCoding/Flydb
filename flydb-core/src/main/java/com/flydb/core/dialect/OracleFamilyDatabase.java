@@ -78,8 +78,12 @@ public abstract class OracleFamilyDatabase implements Database {
     @Override
     public MigrationLock createLock(FlydbConfiguration configuration) {
         try {
+            String schema = currentSchema();
+            String lockTable = lockTableName(configuration);
+            String qualifiedLockTable = schema == null || schema.isEmpty()
+                    ? lockTable : quote(schema) + "." + lockTable;
             return new TableRowLockMigrationLock(configuration.dataSource().getConnection(),
-                    lockTableName(configuration), lockOwner(),
+                    qualifiedLockTable, lockOwner(),
                     configuration.lockTimeoutSeconds());
         } catch (SQLException e) {
             throw new FlydbException(ErrorCode.CONNECT_FAILED,

@@ -19,8 +19,9 @@ import com.flydb.core.placeholder.PlaceholderReplacer;
  * 逐条 {@link Statement#execute(String)}。失败时异常携带：脚本名、语句序号、起始行号、驱动原始错误。
  *
  * <p>{@code batchSize > 1} 时改用 JDBC batch（{@code addBatch}/{@code executeBatch}），
- * 减少远程库逐条往返；失败语句序号按 {@link BatchUpdateException} 的已执行计数推算，
- * 粒度可能退化到批内推算值。默认 {@code batchSize=1} 保持逐条执行与精确定位。
+ * 减少远程库逐条往返；失败语句优先按 {@link Statement#EXECUTE_FAILED} 标记定位，
+ * 遇错即停的驱动再按已执行计数推算，驱动没有提供可靠标记时只报告批次范围。
+ * 默认 {@code batchSize=1} 保持逐条执行与精确定位。
  *
  * <p>执行器只负责 SQL 路径，不管理事务边界——事务由命令层控制。
  */
@@ -140,14 +141,46 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
 
     private FlydbException batchFailure(int startIndex, List<SqlStatement> buffer,
                                         SQLException cause, int[] updateCounts) {
-        // 遇错即停的驱动会把失败前已执行的计数放在 updateCounts；继续执行的驱动则长度等于批大小。
+        int failedOffset = firstFailedOffset(updateCounts, buffer.size());
+        if (failedOffset >= 0) {
+            SqlStatement statement = buffer.get(failedOffset);
+            return new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
+                    "脚本 " + scriptName + " 第 " + (startIndex + failedOffset)
+                            + " 条语句（起始行 " + statement.lineNumber()
+                            + "）执行失败（batch-size=" + batchSize
+                            + "，由 JDBC EXECUTE_FAILED 标记定位）: "
+                            + cause.getMessage(), cause);
+        }
+
+        // 遇错即停的驱动只返回失败前的计数，此时数组长度就是失败语句的批内偏移。
         int applied = updateCounts == null ? 0 : updateCounts.length;
-        int failing = startIndex + applied;
-        SqlStatement statement = buffer.get(Math.min(applied, buffer.size() - 1));
+        if (applied < buffer.size()) {
+            SqlStatement statement = buffer.get(applied);
+            return new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
+                    "脚本 " + scriptName + " 第 " + (startIndex + applied)
+                            + " 条语句（起始行 " + statement.lineNumber()
+                            + "）执行失败（batch-size=" + batchSize
+                            + "，序号按批内已执行计数推算）: "
+                            + cause.getMessage(), cause);
+        }
+
+        int endIndex = startIndex + buffer.size() - 1;
         return new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
-                "脚本 " + scriptName + " 第 " + failing + " 条语句（起始行 "
-                        + statement.lineNumber() + "）执行失败（batch-size=" + batchSize
-                        + "，序号按批内已执行计数推算）: " + cause.getMessage(), cause);
+                "脚本 " + scriptName + " 第 " + startIndex + "-" + endIndex
+                        + " 条语句批量执行失败（batch-size=" + batchSize
+                        + "，JDBC 驱动未提供可识别的 EXECUTE_FAILED 标记，"
+                        + "无法可靠定位具体语句与行号）: " + cause.getMessage(), cause);
+    }
+
+    private static int firstFailedOffset(int[] updateCounts, int batchLength) {
+        if (updateCounts == null) return -1;
+        int length = Math.min(updateCounts.length, batchLength);
+        for (int i = 0; i < length; i++) {
+            if (updateCounts[i] == Statement.EXECUTE_FAILED) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private FlydbException failure(int index, SqlStatement statement, SQLException cause) {

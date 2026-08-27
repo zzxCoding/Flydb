@@ -50,7 +50,7 @@ class DatabaseCapabilitiesTest {
     @Test
     @DisplayName("Oracle 家族（含 OceanBase Oracle）使用锁表行锁")
     void oracleFamilyUsesTableRowLock() throws Exception {
-        Connection execution = JdbcFakes.recordingConnection(JdbcFakes.newCapture());
+        Connection execution = schemaAndPreparedSqlConnection("APP", new ArrayList<String>());
         FlydbConfiguration cfg = configuration(execution);
         Database oracle = new OracleDatabaseType().createDatabase(execution, cfg);
         Database oceanBaseOracle = new OceanBaseOracleDatabase(execution);
@@ -61,7 +61,23 @@ class DatabaseCapabilitiesTest {
     }
 
     @Test
-    @DisplayName("Oracle 家族 clean 使用 PURGE 与 user_sequences 的专用策略")
+    @DisplayName("Oracle 家族锁表引用包含当前 schema")
+    void oracleFamilyQualifiesLockTableWithCurrentSchema() {
+        List<String> sql = new ArrayList<String>();
+        Connection connection = schemaAndPreparedSqlConnection("APP", sql);
+        FlydbConfiguration cfg = configuration(connection);
+
+        new OceanBaseOracleDatabase(connection).createLock(cfg).acquire();
+
+        assertThat(sql).containsExactly(
+                "SELECT lock_id FROM \"APP\".flydb_schema_lock "
+                        + "WHERE lock_id = 1 FOR UPDATE",
+                "UPDATE \"APP\".flydb_schema_lock SET locked_by=?, "
+                        + "locked_at=CURRENT_TIMESTAMP WHERE lock_id=1");
+    }
+
+    @Test
+    @DisplayName("Oracle 家族 clean 使用 PURGE 与 all_sequences 的专用策略")
     void oracleFamilyUsesOracleCleanStrategy() throws Exception {
         Connection execution = JdbcFakes.recordingConnection(JdbcFakes.newCapture());
 
@@ -105,14 +121,15 @@ class DatabaseCapabilitiesTest {
     @DisplayName("达梦大小写敏感实例获取锁时引用带引号的锁表")
     void dmCaseSensitiveModeQuotesLockStatements() {
         List<String> sql = new ArrayList<String>();
-        Connection connection = preparedSqlConnection(sql);
+        Connection connection = schemaAndPreparedSqlConnection("APP", sql);
         FlydbConfiguration cfg = configuration(connection);
 
         new DmDatabase(connection, true).createLock(cfg).acquire();
 
         assertThat(sql).containsExactly(
-                "SELECT lock_id FROM \"flydb_schema_lock\" WHERE lock_id = 1 FOR UPDATE",
-                "UPDATE \"flydb_schema_lock\" SET locked_by=?, "
+                "SELECT lock_id FROM \"APP\".\"flydb_schema_lock\" "
+                        + "WHERE lock_id = 1 FOR UPDATE",
+                "UPDATE \"APP\".\"flydb_schema_lock\" SET locked_by=?, "
                         + "locked_at=CURRENT_TIMESTAMP WHERE lock_id=1");
     }
 
@@ -126,9 +143,20 @@ class DatabaseCapabilitiesTest {
                 });
     }
 
-    private static Connection preparedSqlConnection(final List<String> sql) {
+    private static Connection schemaAndPreparedSqlConnection(final String schema,
+                                                              final List<String> sql) {
         return (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(),
                 new Class<?>[]{Connection.class}, (proxy, method, args) -> {
+                    if ("createStatement".equals(method.getName())) {
+                        return Proxy.newProxyInstance(java.sql.Statement.class.getClassLoader(),
+                                new Class<?>[]{java.sql.Statement.class},
+                                (statement, statementMethod, statementArgs) -> {
+                                    if ("executeQuery".equals(statementMethod.getName())) {
+                                        return singleValueResultSet(schema);
+                                    }
+                                    return JdbcFakes.defaultValue(statementMethod.getReturnType());
+                                });
+                    }
                     if ("prepareStatement".equals(method.getName())) {
                         sql.add((String) args[0]);
                         return Proxy.newProxyInstance(java.sql.PreparedStatement.class.getClassLoader(),

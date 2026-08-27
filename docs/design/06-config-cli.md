@@ -53,7 +53,7 @@ CLI 参数  >  环境变量 FLYDB_*  >  配置文件 flydb.conf  >  内置默认
 | `flydb.callbacks` | `FLYDB_CALLBACKS` | `--callbacks` | 空 | Java 回调类名，逗号分隔 |
 | `flydb.clean-disabled` | `FLYDB_CLEAN_DISABLED` | `--clean-disabled` | `true` | 防呆 |
 | `flydb.lock-timeout-seconds` | `FLYDB_LOCK_TIMEOUT_SECONDS` | `--lock-timeout-seconds` | `60` | |
-| `flydb.batch-size` | `FLYDB_BATCH_SIZE` | `--batch-size` | `1` | SQL 语句 JDBC 批大小；`1` 逐条执行并精确定位失败语句，`>1` 减少远程往返但失败序号按批内计数推算 |
+| `flydb.batch-size` | `FLYDB_BATCH_SIZE` | `--batch-size` | `1` | SQL 语句 JDBC 批大小；`1` 逐条执行并精确定位失败语句，`>1` 减少远程往返；批量失败按 `EXECUTE_FAILED`、遇错即停计数或批次范围分级定位 |
 
 ## 3. 敏感信息处理
 

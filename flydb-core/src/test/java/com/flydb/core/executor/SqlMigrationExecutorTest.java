@@ -174,5 +174,44 @@ class SqlMigrationExecutorTest {
             // 同批中失败前的语句已应用，后续批次不再执行
             assertThat(captured).containsExactly("CREATE TABLE a(id INT)");
         }
+
+        @Test
+        @DisplayName("遇错继续型驱动按 EXECUTE_FAILED 标记定位批内失败语句")
+        void continuingBatchFailureUsesExecuteFailedMarker() {
+            List<String> captured = JdbcFakes.newCapture();
+            MigrationExecutor exec = batchExecutor("V3__data.sql",
+                    "SELECT 1;\nSELECT bad;\nSELECT 3;\nCOMMENT ON TABLE t IS 'ok';", 4);
+
+            assertThatThrownBy(() -> exec.execute(
+                    JdbcFakes.continuingBatchConnection(captured, "SELECT bad")))
+                    .isInstanceOf(FlydbException.class)
+                    .satisfies(ex -> {
+                        FlydbException fe = (FlydbException) ex;
+                        assertThat(fe.errorCode()).isEqualTo(ErrorCode.MIGRATION_EXECUTION_FAILED);
+                        assertThat(fe.getMessage()).contains("第 2 条");
+                        assertThat(fe.getMessage()).contains("行 2");
+                        assertThat(fe.getMessage()).contains("synthetic continuing batch failure");
+                    });
+            assertThat(captured).containsExactly("SELECT 1", "SELECT 3",
+                    "COMMENT ON TABLE t IS 'ok'");
+        }
+
+        @Test
+        @DisplayName("驱动未给失败标记时只报告批次范围")
+        void unmarkedBatchFailureReportsRangeInsteadOfInventedLine() {
+            List<String> captured = JdbcFakes.newCapture();
+            MigrationExecutor exec = batchExecutor("V4__data.sql",
+                    "SELECT 1;\nSELECT bad;\nCOMMENT ON TABLE t IS 'ok';", 3);
+
+            assertThatThrownBy(() -> exec.execute(
+                    JdbcFakes.unmarkedFailingBatchConnection(captured, "SELECT bad")))
+                    .isInstanceOf(FlydbException.class)
+                    .satisfies(ex -> {
+                        String msg = ((FlydbException) ex).getMessage();
+                        assertThat(msg).contains("第 1-3 条语句批量执行失败");
+                        assertThat(msg).contains("无法可靠定位具体语句与行号");
+                        assertThat(msg).doesNotContain("第 4 条");
+                    });
+        }
     }
 }

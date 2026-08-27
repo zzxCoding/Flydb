@@ -60,7 +60,7 @@ CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值
 | `flydb.callbacks` | `FLYDB_CALLBACKS` | `--callbacks` | 空 | Java Callback 类名，逗号分隔 |
 | `flydb.clean-disabled` | `FLYDB_CLEAN_DISABLED` | `--clean-disabled` | `true` | clean 防呆开关 |
 | `flydb.lock-timeout-seconds` | `FLYDB_LOCK_TIMEOUT_SECONDS` | `--lock-timeout-seconds` | `60` | 获取迁移锁的等待秒数 |
-| `flydb.batch-size` | `FLYDB_BATCH_SIZE` | `--batch-size` | `1` | SQL 语句 JDBC 批大小；`1`（默认）逐条执行并精确定位失败语句，`>1` 时按批提交减少远程库往返。远程库大批量 INSERT 可显著提速；MySQL 建议同时在 `flydb.url` 追加 `rewriteBatchedStatements=true` 才能获得改写合并收益。失败时语句序号按批内已执行计数推算，定位粒度略降 |
+| `flydb.batch-size` | `FLYDB_BATCH_SIZE` | `--batch-size` | `1` | SQL 语句 JDBC 批大小；`1`（默认）逐条执行并精确定位失败语句，`>1` 时按批提交减少远程库往返。远程库大批量 INSERT 可显著提速；MySQL 建议同时在 `flydb.url` 追加 `rewriteBatchedStatements=true` 才能获得改写合并收益。批量失败优先使用 JDBC `EXECUTE_FAILED` 标记定位；遇错即停驱动按失败前计数推算；没有可靠标记时只报告批次范围 |
 
 密码支持直接写入 `flydb.password=明文密码`，也支持 `${env:DB_PASSWORD}` 间接引用或 `flydb.password.file=/run/secrets/db_password`。明文配置会随文件备份、版本控制和权限错误而暴露，因此仅建议本地临时测试；生产和共享环境推荐环境变量或密码文件。Flydb 不会主动把密码写入日志、错误消息或 dry-run 输出。
 

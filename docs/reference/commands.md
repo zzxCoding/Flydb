@@ -37,7 +37,7 @@ flydb [全局选项] <命令> [命令选项]
 | `--directory-version-regex <regex>` | 从相对父目录提取版本；使用 `version` 命名组或第一个捕获组 |
 | `-D<key>=<value>` | SQL 占位符 |
 | `--placeholder-replacement[=true\|false]` | 是否替换 SQL 占位符，默认 `true` |
-| `--batch-size <n>` | SQL 语句 JDBC 批大小，默认 `1` 逐条执行；远程库大批量 INSERT 建议 `>1`，MySQL 可同时在 URL 加 `rewriteBatchedStatements=true` |
+| `--batch-size <n>` | SQL 语句 JDBC 批大小，默认 `1` 逐条执行；远程库大批量 INSERT 建议 `>1`，MySQL 可同时在 URL 加 `rewriteBatchedStatements=true`；批量失败仅在驱动提供可靠标记时定位到具体语句，否则报告批次范围 |
 | `-X, --debug` | 输出完整异常栈 |
 | `-q, --quiet` | 只输出必要结果和错误 |
 | `--color=auto\|always\|never` | 控制终端颜色 |
@@ -131,7 +131,7 @@ MySQL/Oracle 家族虽然不支持 DDL 事务，但一份脚本若解析后的�
 bin/flydb clean --clean-disabled=false --force
 ```
 
-执行 `clean` 时会先报告 schema 和待删除对象统计，再输出表、视图、序列及 Flydb 记账表的逐项进度，便于判断长时间清理是否仍在推进。Oracle 家族（Oracle/达梦/OceanBase-Oracle）会跳过随表生存的 identity 序列（`ISEQ$$_`），删除表时带 `PURGE` 并在收尾清空回收站，避免残留对象占用名称。
+执行 `clean` 时会先报告 schema 和待删除对象统计，再输出表、视图、序列及 Flydb 记账表的逐项进度，便于判断长时间清理是否仍在推进。Oracle 家族（Oracle/达梦/OceanBase-Oracle）按当前 schema 从 `all_sequences` 枚举序列，跳过随表生存的 identity 序列（`ISEQ$$_`），删除表时带 `PURGE` 并在收尾清空回收站，避免残留对象占用名称；OceanBase 删除表遇到直接的 `-4007`，或 vendor code `600` 且 `ORA-00600 arguments` 含 `-4007` 时，会等待 `all_tab_columns` 中的列数稳定后有限重试，并跳过 `_...hidden...` DDL 中间表，其他错误不重试。
 
 `init` 只会创建不存在的 `flydb.conf`、`db/migration/V1__init.sql` 和缺失的驱动说明；生成配置中的 `flydb.locations` 使用绝对路径，跨目录执行不会随 CWD 漂移。它不会覆盖已有配置或迁移文件，冲突时返回 `FLYDB-4004`。所有子命令均支持 `--help`，例如 `bin/flydb init --help`。
 

@@ -64,6 +64,37 @@ public final class JdbcFakes {
                 });
     }
 
+    /**
+     * 一个模拟“遇错继续、末尾汇总”的 JDBC 驱动：整批执行完后抛异常，updateCounts 与批大小
+     * 相同，并用 {@link Statement#EXECUTE_FAILED} 标记失败语句。
+     */
+    public static Connection continuingBatchConnection(List<String> captured, String failPrefix) {
+        return continuingBatchConnection(captured, failPrefix, true);
+    }
+
+    /** 模拟抛出 BatchUpdateException 但不给 EXECUTE_FAILED 标记的非标准驱动。 */
+    public static Connection unmarkedFailingBatchConnection(List<String> captured,
+                                                             String failPrefix) {
+        return continuingBatchConnection(captured, failPrefix, false);
+    }
+
+    private static Connection continuingBatchConnection(List<String> captured,
+                                                         String failPrefix,
+                                                         boolean markFailure) {
+        return (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(),
+                new Class<?>[]{Connection.class},
+                (proxy, method, args) -> {
+                    if ("createStatement".equals(method.getName())) {
+                        return newContinuingBatchStatement(captured, failPrefix, markFailure);
+                    }
+                    if ("close".equals(method.getName()) || "isClosed".equals(method.getName())) {
+                        return "isClosed".equals(method.getName()) ? false : null;
+                    }
+                    return defaultValue(method.getReturnType());
+                });
+    }
+
     private static Statement newBatchingStatement(List<String> captured, String failPrefix) {
         List<String> buffer = new ArrayList<String>();
         return (Statement) Proxy.newProxyInstance(
@@ -87,6 +118,50 @@ public final class JdbcFakes {
                         }
                         buffer.clear();
                         return new int[applied];
+                    }
+                    if ("clearBatch".equals(name)) {
+                        buffer.clear();
+                        return null;
+                    }
+                    if ("close".equals(name) || "isClosed".equals(name)) {
+                        return "isClosed".equals(name) ? false : null;
+                    }
+                    return defaultValue(method.getReturnType());
+                });
+    }
+
+    private static Statement newContinuingBatchStatement(List<String> captured,
+                                                          String failPrefix,
+                                                          boolean markFailure) {
+        List<String> buffer = new ArrayList<String>();
+        return (Statement) Proxy.newProxyInstance(
+                Statement.class.getClassLoader(),
+                new Class<?>[]{Statement.class},
+                (proxy, method, args) -> {
+                    String name = method.getName();
+                    if ("addBatch".equals(name) && args != null && args.length > 0) {
+                        buffer.add((String) args[0]);
+                        return null;
+                    }
+                    if ("executeBatch".equals(name)) {
+                        int[] counts = new int[buffer.size()];
+                        boolean failed = false;
+                        for (int i = 0; i < buffer.size(); i++) {
+                            String sql = buffer.get(i);
+                            if (failPrefix != null && sql.startsWith(failPrefix)) {
+                                counts[i] = markFailure ? Statement.EXECUTE_FAILED : 1;
+                                failed = true;
+                            } else {
+                                captured.add(sql);
+                                counts[i] = 1;
+                            }
+                        }
+                        if (failed) {
+                            throw new java.sql.BatchUpdateException(
+                                    "synthetic continuing batch failure", counts);
+                        }
+                        buffer.clear();
+                        return counts;
                     }
                     if ("clearBatch".equals(name)) {
                         buffer.clear();

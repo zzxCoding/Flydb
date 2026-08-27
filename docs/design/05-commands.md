@@ -80,7 +80,7 @@
 
 - `cleanDisabled=true`（默认）→ `FLYDB-4003` 直接拒绝。必须显式配置 `cleanDisabled=false` 才可用（CLI 上还需 `--i-know-what-i-am-doing` 式二次确认，见 [06 §4](06-config-cli.md)）。
 - **MVP 范围（明确缩减）**：删除当前 schema 中的表（含历史表/锁表）、视图、序列——按外键依赖拓扑排序删除（或按方言使用 CASCADE）。存储过程/触发器/自定义类型的清理列为二期增强。各内置方言全对等 Flyway clean 的工作量不应隐性打包进 MVP。
-- `CleanStrategy` 由各家族提供实现（[03 §2](03-dialects.md)）。Oracle 家族使用专用策略：序列经 `user_sequences` 发现（JDBC `getTables` 不返回 Oracle 序列）、`DROP TABLE ... PURGE` 并收尾 `PURGE RECYCLEBIN`，避免回收站残留对象占用名称；clean 收尾的记账表删除使用与建表一致的标识符形式（`SchemaHistoryDdl.dropTableSql`）。
+- `CleanStrategy` 由各家族提供实现（[03 §2](03-dialects.md)）。Oracle 家族使用专用策略：序列按待清理 schema 经 `all_sequences` 发现（JDBC `getTables` 不返回 Oracle 序列）、`DROP TABLE ... PURGE` 并收尾 `PURGE RECYCLEBIN`，避免回收站残留对象占用名称；OceanBase 直接返回 `-4007`，或以 vendor code `600` 的 `ORA-00600 arguments` 包装 `-4007` 时，仅对该表等待 `all_tab_columns` 列数连续稳定后有限重试，并跳过 `_...hidden...` DDL 中间表，其他错误立即失败；clean 收尾的记账表删除使用与建表一致的标识符形式（`SchemaHistoryDdl.dropTableSql`）。
 - clean 是纯破坏性维护操作，不解析本地迁移集合（Resolver 惰性），迁移目录缺失或含非法文件名都不阻断 clean。
 - 通过 core 日志抽象输出 schema、对象总数、逐对象删除进度、历史表/锁表删除和完成状态；CLI 默认可见，starter 通过 SLF4J 接收，避免大 schema 清理期间只有最终一行结果。
 
