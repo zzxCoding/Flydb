@@ -8,6 +8,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * flydb-core 单测用的 JDBC 桩（基于 JDK {@link Proxy}，零第三方依赖——enforcer 仅放行 JUnit/AssertJ）。
@@ -44,6 +46,22 @@ public final class JdbcFakes {
         }, null);
     }
 
+    /** execute(sql) 会阻塞到 release 打开，用于验证执行中遥测。 */
+    public static Connection blockingConnection(CountDownLatch started, CountDownLatch release) {
+        return connectionHandler((sql, stmt) -> {
+            started.countDown();
+            try {
+                if (!release.await(5, TimeUnit.SECONDS)) {
+                    throw new SQLException("synthetic blocking statement timed out");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new SQLException("synthetic blocking statement interrupted", e);
+            }
+            return false;
+        }, null);
+    }
+
     /**
      * 一个支持 JDBC batch 的连接：{@code addBatch} 缓冲语句，{@code executeBatch} 时按序应用并记入
      * captured（未走 {@code execute}，captured 非空即证明使用了 batch 路径）；命中 {@code failPrefix}
@@ -76,6 +94,22 @@ public final class JdbcFakes {
     public static Connection unmarkedFailingBatchConnection(List<String> captured,
                                                              String failPrefix) {
         return continuingBatchConnection(captured, failPrefix, false);
+    }
+
+    /** 模拟驱动返回调用方指定的 updateCounts 后抛出 BatchUpdateException。 */
+    public static Connection batchFailureWithUpdateCounts(int... updateCounts) {
+        return (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(),
+                new Class<?>[]{Connection.class},
+                (proxy, method, args) -> {
+                    if ("createStatement".equals(method.getName())) {
+                        return newBatchFailureStatement(updateCounts);
+                    }
+                    if ("close".equals(method.getName()) || "isClosed".equals(method.getName())) {
+                        return "isClosed".equals(method.getName()) ? false : null;
+                    }
+                    return defaultValue(method.getReturnType());
+                });
     }
 
     private static Connection continuingBatchConnection(List<String> captured,
@@ -169,6 +203,23 @@ public final class JdbcFakes {
                     }
                     if ("close".equals(name) || "isClosed".equals(name)) {
                         return "isClosed".equals(name) ? false : null;
+                    }
+                    return defaultValue(method.getReturnType());
+                });
+    }
+
+    private static Statement newBatchFailureStatement(int[] updateCounts) {
+        return (Statement) Proxy.newProxyInstance(
+                Statement.class.getClassLoader(),
+                new Class<?>[]{Statement.class},
+                (proxy, method, args) -> {
+                    if ("executeBatch".equals(method.getName())) {
+                        throw new java.sql.BatchUpdateException(
+                                "synthetic custom batch failure", updateCounts);
+                    }
+                    if ("close".equals(method.getName())
+                            || "isClosed".equals(method.getName())) {
+                        return "isClosed".equals(method.getName()) ? false : null;
                     }
                     return defaultValue(method.getReturnType());
                 });

@@ -29,7 +29,7 @@
 14. 返回 MigrateResult（executed / targetVersionReached / totalTime / warnings）
 ```
 
-步骤 11 通过 core 日志抽象输出逐脚本进度（`正在执行迁移 i/N` 与完成耗时），与 clean 的逐对象进度一致；CLI 默认 stderr 可见，starter 经 SLF4J 接收，避免长迁移期间全程不可观测。
+步骤 11 通过 core 日志抽象输出逐脚本进度（`正在执行迁移 i/N` 与完成耗时）；长脚本还会每 10 秒或从脚本开头每连续确认成功 1000 条 JDBC 语句报告 `confirmed/total`、耗时和平均速率。失败后在事务模板完成回滚尝试再输出执行快照，区分失败阶段、事务模式、确认执行数、精确/推算/批次范围定位和回滚结果；首个已定位失败项之后的 batch 返回项不计入 `confirmed`。CLI 默认在 stderr 可见，starter 经 SLF4J 接收；这些诊断不进入历史表，也不改变 `--json` stdout 信封。
 
 ### 1.1 pending 计算规则（`PendingCalculator`，纯函数）
 

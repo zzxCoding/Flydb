@@ -7,9 +7,12 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
 
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
+import com.flydb.core.log.Log;
 import com.flydb.core.placeholder.PlaceholderReplacer;
 
 /**
@@ -27,6 +30,10 @@ import com.flydb.core.placeholder.PlaceholderReplacer;
  */
 public final class SqlMigrationExecutor implements MigrationExecutor {
 
+    private static final long DEFAULT_PROGRESS_INTERVAL_NANOS =
+            TimeUnit.SECONDS.toNanos(10L);
+    private static final int DEFAULT_PROGRESS_STATEMENT_INTERVAL = 1000;
+
     private final String scriptName;
     private final String sql;
     private final SqlStatementBuilderConfig parserConfig;
@@ -35,6 +42,7 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
     private final String placeholderSuffix;
     private final Map<String, String> placeholders;
     private final Map<String, String> builtIns;
+    private final SqlExecutionTelemetry telemetry;
     private int batchSize = 1;
 
     public SqlMigrationExecutor(String scriptName, String sql,
@@ -60,6 +68,7 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
         this.placeholderSuffix = placeholderSuffix;
         this.placeholders = placeholders;
         this.builtIns = builtIns;
+        this.telemetry = new SqlExecutionTelemetry(scriptName);
     }
 
     /** 设置 JDBC 批大小；必须在 {@link #execute} 前调用。 */
@@ -68,23 +77,44 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
         return this;
     }
 
+    /** 启用诊断通道进度：默认每 10 秒或每 1000 条；已报告的脚本在完成时补最终计数。 */
+    public SqlMigrationExecutor reportProgressTo(Log log) {
+        return reportProgressTo(log, System::nanoTime,
+                DEFAULT_PROGRESS_INTERVAL_NANOS, DEFAULT_PROGRESS_STATEMENT_INTERVAL);
+    }
+
+    SqlMigrationExecutor reportProgressTo(Log log, LongSupplier nanoClock,
+                                          long intervalNanos, int statementInterval) {
+        telemetry.configure(log, nanoClock, intervalNanos, statementInterval);
+        return this;
+    }
+
+    /** 当前进程内的语句执行快照；“确认执行”不等于事务已经提交。 */
+    public String statementExecutionSnapshot() {
+        return telemetry.snapshot();
+    }
+
     @Override
     public void execute(Connection connection) throws SQLException {
         List<SqlStatement> statements = statements();
-
-        Statement stmt = connection.createStatement();
+        telemetry.start(statements.size());
         try {
-            if (batchSize <= 1) {
-                executeOneByOne(stmt, statements);
-            } else {
-                executeInBatches(stmt, statements);
+            Statement stmt = connection.createStatement();
+            try {
+                if (batchSize <= 1) {
+                    executeOneByOne(stmt, statements);
+                } else {
+                    executeInBatches(stmt, statements);
+                }
+            } finally {
+                try {
+                    stmt.close();
+                } catch (SQLException ignored) {
+                    // 关闭 Statement 异常不吞噬主异常
+                }
             }
         } finally {
-            try {
-                stmt.close();
-            } catch (SQLException ignored) {
-                // 关闭 Statement 异常不吞噬主异常
-            }
+            telemetry.stop();
         }
     }
 
@@ -96,8 +126,10 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
             try {
                 stmt.execute(statement.sql());
             } catch (SQLException e) {
+                telemetry.failExact(index, statement.lineNumber(), "逐条执行");
                 throw failure(index, statement, e);
             }
+            telemetry.confirm(1);
             index++;
         }
     }
@@ -120,8 +152,15 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
 
     private int flush(Statement stmt, List<SqlStatement> buffer, int startIndex)
             throws SQLException {
-        for (SqlStatement statement : buffer) {
-            stmt.addBatch(statement.sql());
+        for (int offset = 0; offset < buffer.size(); offset++) {
+            SqlStatement statement = buffer.get(offset);
+            try {
+                stmt.addBatch(statement.sql());
+            } catch (SQLException e) {
+                telemetry.failExact(startIndex + offset, statement.lineNumber(),
+                        "JDBC addBatch 拒绝接收");
+                throw failure(startIndex + offset, statement, e);
+            }
         }
         int nextIndex = startIndex + buffer.size();
         try {
@@ -129,11 +168,13 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
         } catch (BatchUpdateException e) {
             throw batchFailure(startIndex, buffer, e, e.getUpdateCounts());
         } catch (SQLException e) {
+            telemetry.failRange(startIndex, nextIndex - 1);
             throw new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
                     "脚本 " + scriptName + " 第 " + startIndex + "-" + (nextIndex - 1)
                             + " 条语句批量执行失败（batch-size=" + batchSize + "）: "
                             + e.getMessage(), e);
         }
+        telemetry.confirm(buffer.size());
         stmt.clearBatch();
         buffer.clear();
         return nextIndex;
@@ -144,6 +185,9 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
         int failedOffset = firstFailedOffset(updateCounts, buffer.size());
         if (failedOffset >= 0) {
             SqlStatement statement = buffer.get(failedOffset);
+            telemetry.confirmWithoutProgress(confirmedCount(updateCounts, failedOffset));
+            telemetry.failExact(startIndex + failedOffset, statement.lineNumber(),
+                    "JDBC EXECUTE_FAILED 明确标记");
             return new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
                     "脚本 " + scriptName + " 第 " + (startIndex + failedOffset)
                             + " 条语句（起始行 " + statement.lineNumber()
@@ -154,8 +198,10 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
 
         // 遇错即停的驱动只返回失败前的计数，此时数组长度就是失败语句的批内偏移。
         int applied = updateCounts == null ? 0 : updateCounts.length;
-        if (applied < buffer.size()) {
+        if (updateCounts != null && applied < buffer.size()) {
             SqlStatement statement = buffer.get(applied);
+            telemetry.confirmWithoutProgress(confirmedCount(updateCounts, applied));
+            telemetry.failInferred(startIndex + applied, statement.lineNumber());
             return new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
                     "脚本 " + scriptName + " 第 " + (startIndex + applied)
                             + " 条语句（起始行 " + statement.lineNumber()
@@ -165,6 +211,7 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
         }
 
         int endIndex = startIndex + buffer.size() - 1;
+        telemetry.failRange(startIndex, endIndex);
         return new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
                 "脚本 " + scriptName + " 第 " + startIndex + "-" + endIndex
                         + " 条语句批量执行失败（batch-size=" + batchSize
@@ -181,6 +228,17 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
             }
         }
         return -1;
+    }
+
+    private static int confirmedCount(int[] updateCounts, int limitExclusive) {
+        if (updateCounts == null) return 0;
+        int confirmed = 0;
+        int length = Math.min(updateCounts.length, limitExclusive);
+        for (int i = 0; i < length; i++) {
+            int updateCount = updateCounts[i];
+            if (updateCount >= 0 || updateCount == Statement.SUCCESS_NO_INFO) confirmed++;
+        }
+        return confirmed;
     }
 
     private FlydbException failure(int index, SqlStatement statement, SQLException cause) {

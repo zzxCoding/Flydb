@@ -9,6 +9,8 @@ import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
 import com.flydb.core.executor.SqlMigrationExecutor;
 import com.flydb.core.executor.SqlStatement;
+import com.flydb.core.log.Log;
+import com.flydb.core.log.LogFactory;
 import com.flydb.core.migration.AppliedMigration;
 import com.flydb.core.migration.ResolvedMigration;
 
@@ -26,14 +28,38 @@ final class MigrationCommandSupport {
         boolean transactional = runtime.database().supportsDdlTransactions()
                 || isTransactionSafeDml(executor.statements(),
                         runtime.database().statementBuilderConfig().hashLineCommentSupported());
+        Log log = LogFactory.getLog(MigrationCommandSupport.class);
+        executor.reportProgressTo(log);
+        MigrationExecutionTemplate.Outcome outcome = new MigrationExecutionTemplate.Outcome();
         try {
             MigrationExecutionTemplate.execute(runtime.connection(),
                     transactional, executor,
                     (success, elapsed) -> runtime.history().insert(record(
-                            runtime, migration, success, elapsed)));
+                            runtime, migration, success, elapsed)), outcome);
         } catch (SQLException e) {
+            logFailureSnapshot(log, migration, transactional, executor, outcome, e);
             throw new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
                     "脚本 " + migration.script() + " 执行失败: " + e.getMessage(), e);
+        } catch (RuntimeException e) {
+            logFailureSnapshot(log, migration, transactional, executor, outcome, e);
+            throw e;
+        }
+    }
+
+    private static void logFailureSnapshot(Log log, ResolvedMigration migration,
+                                           boolean transactional,
+                                           SqlMigrationExecutor executor,
+                                           MigrationExecutionTemplate.Outcome outcome,
+                                           Throwable original) {
+        String message = "迁移失败执行快照：脚本 " + migration.script()
+                + "；失败阶段：" + outcome.failurePhaseDescription()
+                + "；事务模式：" + (transactional ? "单脚本事务" : "非事务执行")
+                + "；" + executor.statementExecutionSnapshot()
+                + "；事务结果：" + outcome.transactionResultDescription(transactional);
+        try {
+            log.warn(message);
+        } catch (RuntimeException loggingFailure) {
+            original.addSuppressed(loggingFailure);
         }
     }
 

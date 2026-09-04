@@ -23,7 +23,7 @@
 ## 2. 输出通道分离（契约）
 
 - **stdout**：`--json` 下恰好一行紧凑 JSON 文档（信封），以 `\n` 结尾。不输出任何其他内容。
-- **stderr**：人类诊断。core 进度日志（`LogFactory` 默认 `SystemErrLog`）、错误原文、`-X` 异常栈都在 stderr。
+- **stderr**：人类诊断。core 的逐脚本/语句级进度、失败执行快照（`LogFactory` 默认 `SystemErrLog`）、错误原文、`-X` 异常栈都在 stderr；遥测不会给 stdout 信封增加第二行。
 - **编码**：JSON 内容为 UTF-8。CLI 默认以 UTF-8 包装 `System.out`/`System.err`（JDK 18+ 由 JEP 400 本就如此；旧 JDK 的 GBK 控制台上是行为变化，见 CHANGELOG）。
 - **`--help` 与用法文本永远是文本**，不受 `--json` 影响；机器不应解析帮助输出。
 - **SIGINT 例外**：Ctrl+C 走 `InterruptCoordinator` 直接 `System.exit(5)`，不保证输出信封。消费者必须把"没有信封 + 退出码 5"当作正常的中断信号。

@@ -26,6 +26,7 @@ import javax.sql.DataSource;
 final class InMemoryFlydbDataSource implements DataSource {
 
     private final boolean postgres;
+    private final boolean continueBatchAfterFailure;
     private final List<Map<String, Object>> history = new ArrayList<Map<String, Object>>();
     private final List<String> executedSql = new ArrayList<String>();
     private int commits;
@@ -33,7 +34,12 @@ final class InMemoryFlydbDataSource implements DataSource {
     private int batches;
 
     InMemoryFlydbDataSource(boolean postgres) {
+        this(postgres, false);
+    }
+
+    InMemoryFlydbDataSource(boolean postgres, boolean continueBatchAfterFailure) {
         this.postgres = postgres;
+        this.continueBatchAfterFailure = continueBatchAfterFailure;
     }
 
     List<Map<String, Object>> history() { return history; }
@@ -107,6 +113,25 @@ final class InMemoryFlydbDataSource implements DataSource {
             }
             if ("executeBatch".equals(name)) {
                 batches++;
+                if (continueBatchAfterFailure) {
+                    int[] counts = new int[batchBuffer.size()];
+                    boolean failed = false;
+                    for (int i = 0; i < batchBuffer.size(); i++) {
+                        String sql = batchBuffer.get(i);
+                        if (sql.contains("BROKEN")) {
+                            counts[i] = Statement.EXECUTE_FAILED;
+                            failed = true;
+                        } else {
+                            executedSql.add(sql);
+                            counts[i] = 1;
+                        }
+                    }
+                    if (failed) {
+                        throw new BatchUpdateException("synthetic continuing batch failure", counts);
+                    }
+                    batchBuffer.clear();
+                    return counts;
+                }
                 int applied = 0;
                 for (String sql : new ArrayList<String>(batchBuffer)) {
                     if (sql.contains("BROKEN")) {

@@ -1,9 +1,17 @@
 package com.flydb.core.executor;
 
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -11,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
+import com.flydb.core.log.Log;
 import com.flydb.core.test.JdbcFakes;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -72,6 +81,99 @@ class SqlMigrationExecutorTest {
         }
 
         @Test
+        @DisplayName("按时间或语句数周期报告已确认执行进度、耗时与速率")
+        void reportsConfirmedStatementProgress() throws Exception {
+            List<String> logs = new ArrayList<String>();
+            AtomicLong now = new AtomicLong(-1_000_000_000L);
+            SqlMigrationExecutor exec = (SqlMigrationExecutor) executor("V1__progress.sql",
+                    "SELECT 1;\nSELECT 2;\nSELECT 3;");
+            exec.reportProgressTo(recordingLog(logs),
+                    () -> now.addAndGet(1_000_000_000L), Long.MAX_VALUE, 2);
+
+            exec.execute(JdbcFakes.recordingConnection(JdbcFakes.newCapture()));
+
+            assertThat(logs).containsExactly(
+                    "迁移语句进度 V1__progress.sql：JDBC 已确认执行 2/3 条，"
+                            + "耗时 2.0 秒，平均速率 1.0 条/秒",
+                    "迁移语句进度 V1__progress.sql：JDBC 已确认执行 3/3 条，"
+                            + "耗时 3.0 秒，平均速率 1.0 条/秒");
+        }
+
+        @Test
+        @DisplayName("未达到语句阈值时仍按时间周期报告进度")
+        void reportsProgressAfterTimeInterval() throws Exception {
+            List<String> logs = new ArrayList<String>();
+            AtomicLong now = new AtomicLong(-1_000_000_000L);
+            SqlMigrationExecutor exec = (SqlMigrationExecutor) executor("V2__slow.sql",
+                    "SELECT 1;\nSELECT 2;\nSELECT 3;");
+            exec.reportProgressTo(recordingLog(logs),
+                    () -> now.addAndGet(1_000_000_000L), 2_000_000_000L, Integer.MAX_VALUE);
+
+            exec.execute(JdbcFakes.recordingConnection(JdbcFakes.newCapture()));
+
+            assertThat(logs).extracting(message -> message.substring(
+                    message.indexOf("JDBC 已确认执行")))
+                    .containsExactly(
+                            "JDBC 已确认执行 2/3 条，耗时 2.0 秒，平均速率 1.0 条/秒",
+                            "JDBC 已确认执行 3/3 条，耗时 3.0 秒，平均速率 1.0 条/秒");
+        }
+
+        @Test
+        @DisplayName("单条 SQL 尚未返回时仍周期报告存活进度且不增加确认数")
+        void reportsHeartbeatWhileStatementIsInFlight() throws Exception {
+            List<String> logs = new ArrayList<String>();
+            CountDownLatch statementStarted = new CountDownLatch(1);
+            CountDownLatch releaseStatement = new CountDownLatch(1);
+            CountDownLatch progressReported = new CountDownLatch(1);
+            SqlMigrationExecutor exec = (SqlMigrationExecutor) executor("V2_1__long_ddl.sql",
+                    "CREATE TABLE slow_table(id INT);");
+            exec.reportProgressTo(new Log() {
+                @Override public void debug(String message) { }
+                @Override public void info(String message) {
+                    logs.add(message);
+                    progressReported.countDown();
+                }
+                @Override public void warn(String message) { }
+                @Override public void error(String message, Throwable error) { }
+            }, System::nanoTime, TimeUnit.MILLISECONDS.toNanos(20), Integer.MAX_VALUE);
+
+            ExecutorService worker = Executors.newSingleThreadExecutor();
+            try {
+                Future<?> execution = worker.submit(() -> {
+                    exec.execute(JdbcFakes.blockingConnection(
+                            statementStarted, releaseStatement));
+                    return null;
+                });
+
+                assertThat(statementStarted.await(1, TimeUnit.SECONDS)).isTrue();
+                assertThat(progressReported.await(1, TimeUnit.SECONDS)).isTrue();
+                releaseStatement.countDown();
+                execution.get(1, TimeUnit.SECONDS);
+            } finally {
+                releaseStatement.countDown();
+                worker.shutdownNow();
+            }
+
+            assertThat(logs).anySatisfy(message -> assertThat(message)
+                    .contains("V2_1__long_ddl.sql")
+                    .contains("JDBC 已确认执行 0/1 条"));
+        }
+
+        @Test
+        @DisplayName("短小脚本未达到周期阈值时不增加语句级完成噪声")
+        void shortScriptDoesNotEmitPeriodicProgress() throws Exception {
+            List<String> logs = new ArrayList<String>();
+            SqlMigrationExecutor exec = (SqlMigrationExecutor) executor("V3__small.sql",
+                    "SELECT 1;");
+            exec.reportProgressTo(recordingLog(logs), () -> 0L,
+                    10_000_000_000L, 1000);
+
+            exec.execute(JdbcFakes.recordingConnection(JdbcFakes.newCapture()));
+
+            assertThat(logs).isEmpty();
+        }
+
+        @Test
         @DisplayName("空脚本（仅注释/空白）不执行任何语句")
         void emptyScriptExecutesNothing() throws Exception {
             List<String> captured = JdbcFakes.newCapture();
@@ -103,7 +205,7 @@ class SqlMigrationExecutorTest {
             // 第 2 条语句（INSERT，起始行号 2）失败
             List<String> captured = JdbcFakes.newCapture();
             SQLException driverError = new SQLException("column zzz does not exist", "42703");
-            MigrationExecutor exec = executor("V2__add.sql",
+            SqlMigrationExecutor exec = (SqlMigrationExecutor) executor("V2__add.sql",
                     "CREATE TABLE a(id INT);\nINSERT INTO a(zzz) VALUES (1);");
             assertThatThrownBy(() -> exec.execute(
                     JdbcFakes.failingConnection(captured, "INSERT INTO a(zzz)", driverError)))
@@ -120,6 +222,12 @@ class SqlMigrationExecutorTest {
                     });
             // 第 1 条已成功执行
             assertThat(captured).containsExactly("CREATE TABLE a(id INT)");
+            assertThat(exec.statementExecutionSnapshot())
+                    .contains("JDBC 已确认执行 1/2 条")
+                    .contains("不代表事务已提交")
+                    .contains("第 2 条")
+                    .contains("起始行 2")
+                    .contains("逐条执行");
         }
 
         @Test
@@ -156,7 +264,7 @@ class SqlMigrationExecutorTest {
         @DisplayName("批内失败报 FLYDB-2010，序号与起始行按批内已执行计数推算")
         void batchFailureReportsInferredIndexAndLine() {
             List<String> captured = JdbcFakes.newCapture();
-            MigrationExecutor exec = batchExecutor("V2__add.sql",
+            SqlMigrationExecutor exec = batchExecutor("V2__add.sql",
                     "CREATE TABLE a(id INT);\nINSERT INTO bad VALUES (1);\nSELECT 3;", 2);
             assertThatThrownBy(() -> exec.execute(
                     JdbcFakes.batchingConnection(captured, "INSERT INTO bad")))
@@ -173,13 +281,17 @@ class SqlMigrationExecutorTest {
                     });
             // 同批中失败前的语句已应用，后续批次不再执行
             assertThat(captured).containsExactly("CREATE TABLE a(id INT)");
+            assertThat(exec.statementExecutionSnapshot())
+                    .contains("JDBC 已确认执行 1/3 条")
+                    .contains("按 JDBC 已返回计数推算为第 2 条")
+                    .contains("不是驱动明确失败标记");
         }
 
         @Test
         @DisplayName("遇错继续型驱动按 EXECUTE_FAILED 标记定位批内失败语句")
         void continuingBatchFailureUsesExecuteFailedMarker() {
             List<String> captured = JdbcFakes.newCapture();
-            MigrationExecutor exec = batchExecutor("V3__data.sql",
+            SqlMigrationExecutor exec = batchExecutor("V3__data.sql",
                     "SELECT 1;\nSELECT bad;\nSELECT 3;\nCOMMENT ON TABLE t IS 'ok';", 4);
 
             assertThatThrownBy(() -> exec.execute(
@@ -194,13 +306,51 @@ class SqlMigrationExecutorTest {
                     });
             assertThat(captured).containsExactly("SELECT 1", "SELECT 3",
                     "COMMENT ON TABLE t IS 'ok'");
+            assertThat(exec.statementExecutionSnapshot())
+                    .contains("JDBC 已确认执行 1/4 条")
+                    .contains("第 2 条")
+                    .contains("JDBC EXECUTE_FAILED 明确标记");
+        }
+
+        @Test
+        @DisplayName("批内首条失败时不把失败后的成功项计入确认前缀")
+        void firstBatchFailureDoesNotInflateConfirmedPrefix() {
+            SqlMigrationExecutor exec = batchExecutor("V3_1__first_failure.sql",
+                    "INSERT INTO bad VALUES (1);\nINSERT INTO later VALUES (2);", 2);
+
+            assertThatThrownBy(() -> exec.execute(
+                    JdbcFakes.batchFailureWithUpdateCounts(
+                            Statement.EXECUTE_FAILED, 1)))
+                    .isInstanceOf(FlydbException.class);
+
+            assertThat(exec.statementExecutionSnapshot())
+                    .contains("JDBC 已确认执行 0/2 条")
+                    .contains("第 1 条")
+                    .contains("JDBC EXECUTE_FAILED 明确标记");
+        }
+
+        @Test
+        @DisplayName("只统计首个明确失败之前的标准成功前缀")
+        void countsOnlyStandardSuccessfulUpdateCounts() {
+            SqlMigrationExecutor exec = batchExecutor("V3_1__counts.sql",
+                    "SELECT unknown;\nSELECT bad;\nSELECT successful;", 3);
+
+            assertThatThrownBy(() -> exec.execute(
+                    JdbcFakes.batchFailureWithUpdateCounts(
+                            -4, Statement.EXECUTE_FAILED, Statement.SUCCESS_NO_INFO)))
+                    .isInstanceOf(FlydbException.class);
+
+            assertThat(exec.statementExecutionSnapshot())
+                    .contains("JDBC 已确认执行 0/3 条")
+                    .contains("第 2 条")
+                    .contains("JDBC EXECUTE_FAILED 明确标记");
         }
 
         @Test
         @DisplayName("驱动未给失败标记时只报告批次范围")
         void unmarkedBatchFailureReportsRangeInsteadOfInventedLine() {
             List<String> captured = JdbcFakes.newCapture();
-            MigrationExecutor exec = batchExecutor("V4__data.sql",
+            SqlMigrationExecutor exec = batchExecutor("V4__data.sql",
                     "SELECT 1;\nSELECT bad;\nCOMMENT ON TABLE t IS 'ok';", 3);
 
             assertThatThrownBy(() -> exec.execute(
@@ -212,6 +362,19 @@ class SqlMigrationExecutorTest {
                         assertThat(msg).contains("无法可靠定位具体语句与行号");
                         assertThat(msg).doesNotContain("第 4 条");
                     });
+            assertThat(exec.statementExecutionSnapshot())
+                    .contains("JDBC 已确认执行 0/3 条")
+                    .contains("无法可靠定位具体语句")
+                    .contains("候选批次为第 1-3 条");
         }
+    }
+
+    private static Log recordingLog(List<String> messages) {
+        return new Log() {
+            @Override public void debug(String message) { messages.add(message); }
+            @Override public void info(String message) { messages.add(message); }
+            @Override public void warn(String message) { messages.add(message); }
+            @Override public void error(String message, Throwable error) { messages.add(message); }
+        };
     }
 }

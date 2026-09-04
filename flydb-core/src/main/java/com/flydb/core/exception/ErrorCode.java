@@ -52,8 +52,8 @@ public enum ErrorCode {
             "脚本中引用了未在 flydb.placeholders.* 配置的占位符。",
             "在 flydb.conf 补充该占位符的值，或修正脚本中的引用（详情含占位符与行号）。"),
     MIGRATION_EXECUTION_FAILED("FLYDB-2010", "迁移执行失败", "Migration execution failed",
-            "迁移脚本中的某条 SQL 语句执行时数据库返回错误。",
-            "根据详情中的脚本名、语句序号与起始行号定位语句，修正脚本后重跑 migrate（详情含驱动原始错误）。"),
+            "迁移脚本中的某条 SQL 被数据库拒绝；或执行、记账、提交期间 JDBC 连接中断。",
+            "先查看迁移失败执行快照与驱动原始错误；只有明确显示已回滚时才可按整体回滚处置，其他状态先核验数据库，禁止自动重放。"),
 
     // ---------------- 3xxx 并发锁 ----------------
     LOCK_ACQUISITION_TIMEOUT("FLYDB-3001", "获取迁移锁超时", "Lock acquisition timed out",

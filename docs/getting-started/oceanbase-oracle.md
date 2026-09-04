@@ -22,11 +22,15 @@ OceanBase 4.2.1.2（Oracle 模式）实测中，`DBMS_LOCK.ALLOCATE_UNIQUE` 可�
 OceanBase 4.2.x（Oracle 模式）还有以下已实测差异：
 
 - `ALTER TABLE ... MODIFY` 不支持只变更数值类型的 scale；不要把真 Oracle 可执行的精度/小数位调整直接复用到该版本，应拆分数据库家族迁移并在目标版本先做无害验证。
+- 同一个 `MODIFY` 子句内组合“修改列类型/长度”和“修改可空性”可能返回 `-4007`。例如不要直接写 `ALTER TABLE t MODIFY c VARCHAR2(32) NOT NULL`；应拆成 `ALTER TABLE t MODIFY c VARCHAR2(32)` 与 `ALTER TABLE t MODIFY c NOT NULL` 两条，改回可空同理拆成类型变更与 `MODIFY c NULL`。拆分只降低该已知兼容风险，执行前仍需在目标 OceanBase 版本验证实际 DDL。
 - `ORA-01451` 与 `ORA-00955` 采用 Oracle 兼容错误码，但触发条件和可安全忽略的幂等边界不能按真 Oracle 推断。`ORA-01451` 出现时先核对列的实际 nullability/约束，`ORA-00955` 出现时按对象类型查清同名表、序列等对象；仅凭错误码吞掉异常可能掩盖未完成或定义不一致的迁移。
 - `clean` 的表/视图按当前 schema 枚举，序列同样必须按该 schema 查询 `all_sequences`；`user_sequences` 只覆盖登录用户，在当前 schema 与登录用户不同时会漏删序列。
+- `ALTER SESSION SET CURRENT_SCHEMA=...` 不会把登录用户变成目标 schema 的属主。以 `sys@tenant` 等账号登录、但 `CURRENT_SCHEMA=SX_PARAMS` 时，PL/SQL 中的 `USER_TAB_COLUMNS` 等 `USER_*` 视图可能查不到目标对象并触发 `NO_DATA_FOUND` / `ORA-01403`。需要按目标 schema 查询时，使用对应的 `ALL_*` 视图并显式约束属主，例如 `ALL_TAB_COLUMNS WHERE OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')`；同时保证登录账号具有所需目录查询权限。
 - OceanBase 服务端 DDL 进入异步队列后，即使客户端退出也可能继续执行；驱动可能直接返回 `-4007`，也可能返回 `ORA-00600`（vendor code `600`）并把 `-4007` 放在 `arguments` 中。`clean` 会识别这两种形态，查询 `all_tab_columns`，等待该表列数连续稳定后最多尝试删除三次；枚举时跳过 OB 在线 DDL 暴露的 `_...hidden...` 中间表。每次等待中列数未在 30 秒窗口内稳定、目录查询失败或出现其他错误时立即失败，避免无边界重试或吞掉永久错误。
 
-OceanBase JDBC 驱动可在 batch 中遇错继续并于末尾汇总。Flydb 会优先读取 `BatchUpdateException.updateCounts` 中的 `EXECUTE_FAILED` 标记；若驱动没有提供可识别标记，只报告失败批次范围，不再伪造具体语句序号或行号。需要稳定、精确定位时使用默认 `flydb.batch-size=1`。
+OceanBase JDBC 驱动可在 batch 中遇错继续并于末尾汇总。Flydb 会优先读取 `BatchUpdateException.updateCounts` 中的首个 `EXECUTE_FAILED` 标记；失败快照的 `confirmed` 只统计该标记之前的连续成功前缀，不把失败后的返回项计入。若驱动没有提供可识别标记，只报告失败批次范围，不再伪造具体语句序号或行号。需要稳定、精确定位时使用默认 `flydb.batch-size=1`。
+
+0.3.4 起，长脚本会在诊断通道周期报告 JDBC 已确认执行数、总语句数、耗时和平均速率；失败后补充事务模式、回滚结果与定位可信度。该快照刻意不把 batch 返回计数或非事务 DDL 描述成“已经提交”，也不会自动逐条重放定位——在 OceanBase 异步 DDL 与连接状态不确定时，重放可能造成重复副作用。无可靠失败标记时仍应按候选批次和库内现状排查。
 
 0.3.1 起，只有 `INSERT`、`UPDATE`、`DELETE`、`MERGE` 的纯 DML 脚本按单脚本事务执行，数据与 Flydb 历史记录在末尾一次提交；这避免远程 OceanBase 大批量数据迁移逐语句提交，并使 JDBC 连接中断后的最终状态保持为整脚本提交或整脚本回滚。Flydb 不会在迁移内部自动重连重放；连接恢复后重新运行 `migrate`，由历史记录判断该脚本是否仍待执行。含 DDL、PL/SQL、`WITH` 或未知语句的脚本保持非事务路径。
 

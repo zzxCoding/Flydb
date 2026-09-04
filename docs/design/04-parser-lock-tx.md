@@ -63,7 +63,9 @@ public interface MigrationExecutor {
 }
 ```
 
-SQL 迁移执行器：占位符替换（对原始全文，**在词法解析之前**，见 [05 §9](05-commands.md)）→ `SqlScriptParser.parse()` → 逐条 `Statement.execute(sql)`。失败时异常携带：脚本名、语句序号、**起始行号**、驱动原始错误——错误定位到行是易用性的关键一环。
+SQL 迁移执行器：占位符替换（对原始全文，**在词法解析之前**，见 [05 §9](05-commands.md)）→ `SqlScriptParser.parse()` → 默认逐条 `Statement.execute(sql)`；`batch-size>1` 时按批调用 `addBatch` / `executeBatch`。失败时异常携带脚本名、语句序号、**起始行号**和驱动原始错误；批量驱动没有可靠失败标记时只给候选批次范围，不伪造具体行号。
+
+真实执行还维护一份仅存在于当前进程的语句遥测：长脚本每 10 秒或每 1000 条 JDBC 确认成功的语句向日志报告当前脚本、`confirmed/total`、耗时和平均速率。时间心跳独立于 JDBC 调用返回，单条 SQL 或 batch 执行期间可重复报告不变的确认数；只有一次短执行且未达到任一阈值时不增加日志，已经报告过周期进度的脚本在结束时补最终计数。该计数只表示 `Statement.execute` / `executeBatch` 已返回成功，**不表示事务已经提交**，也不进入历史表或 Plan Artifact。
 
 ## 2. 并发迁移锁
 
@@ -142,10 +144,12 @@ INSERT INTO flydb_schema_lock (lock_id) VALUES (1);   -- 初始化时插入，�
 - MySQL/Oracle 家族仅在解析后的全部语句剥离任意数量的前导空白与方言支持的注释后，第一个可执行 token 都是 `INSERT`、`UPDATE`、`DELETE` 或 `MERGE` 时判定为纯 DML。采用严格允许列表而非 DDL 排除列表；`WITH`、`BEGIN`/`DECLARE`、`CALL`、显式事务控制及任何未知开头都保守回落到非事务路径，避免过程块或动态 SQL 隐藏隐式提交。注释只影响判定视图，不改写交给 JDBC 的原 SQL。
 - 纯 DML 事务中，迁移数据与成功历史记录一同提交。连接中断时 Flydb 不自动重连重放；数据库最终只能同时提交二者或同时回滚二者，下一次 `migrate` 由历史记录安全判定是否需要重跑。客户端 `rollback()` 因断线失败时，服务端可能要等到检测到会话失效后才释放事务。
 - Java 迁移（JDBC 类型）同规则：PG 系包事务，失败回滚；其余记 `success=false`。
-- `MigrateResult.warnings` 在非事务性 DDL 方言上执行多语句脚本时不告警（正常场景），但在**脚本内混合 DML+DDL 且失败**时，错误消息明确指出"以下语句已生效且无法回滚"，列出已执行语句序号——可观测性弥补语义缺口。
+- `MigrateResult.warnings` 在非事务性 DDL 方言上执行多语句脚本时不告警（正常场景）。执行失败会另行输出当前脚本、失败阶段、事务模式、JDBC 已确认执行数、定位可信度和回滚结果：`confirmed` 是首个已定位失败项之前的连续成功前缀，不统计失败后的 batch 返回项；逐条执行与 `EXECUTE_FAILED` 标记可精确定位；遇错即停驱动只能按返回计数推算；无可靠标记时只报告候选批次。非事务路径一律要求人工核验数据库状态，不把“JDBC 返回成功”表述为“已提交/已生效”。
+- 单脚本事务在 SQL 执行或历史记账阶段失败、且 JDBC `rollback()` 返回成功时可报告“已回滚”；回滚失败时报告“数据库状态未知”。`commit()` 本身报错时，即使随后 `rollback()` 返回成功，也不能证明服务端未提交，必须保留“提交结果未知”并禁止自动重放。
 
 ## 4. 本篇对应的验收要点
 
 1. 切分器：对 [08 §1](08-testing-roadmap.md) 列出的 fixture 全绿（含 `$tag$` 嵌套引号、`DELIMITER` 存储过程、PL/SQL 触发器、CRLF 文件、`#` 注释、行号定位）。
 2. 锁：同库同 schema 两进程并发 `migrate` 时一方阻塞、双方结果一致、历史表无重复记录；同库不同 schema 可同时持有各自锁；杀掉持锁进程后同 schema 的等待方能在超时窗口内获锁。
 3. 失败处理：PG 系故意失败 → 历史表无记录、可直接重跑；MySQL 系故意失败 → `success=false` 记录存在、migrate 被阻塞、repair 后可重跑。
+4. 执行遥测：逐条与 batch 路径均只累计 JDBC 确认成功数；周期日志进入诊断通道；失败快照覆盖已回滚、回滚失败、提交结果未知以及批次范围无法定位，且不改变历史表 schema。

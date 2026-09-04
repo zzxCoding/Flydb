@@ -53,7 +53,7 @@ CLI 参数  >  环境变量 FLYDB_*  >  配置文件 flydb.conf  >  内置默认
 | `flydb.callbacks` | `FLYDB_CALLBACKS` | `--callbacks` | 空 | Java 回调类名，逗号分隔 |
 | `flydb.clean-disabled` | `FLYDB_CLEAN_DISABLED` | `--clean-disabled` | `true` | 防呆 |
 | `flydb.lock-timeout-seconds` | `FLYDB_LOCK_TIMEOUT_SECONDS` | `--lock-timeout-seconds` | `60` | |
-| `flydb.batch-size` | `FLYDB_BATCH_SIZE` | `--batch-size` | `1` | SQL 语句 JDBC 批大小；`1` 逐条执行并精确定位失败语句，`>1` 减少远程往返；批量失败按 `EXECUTE_FAILED`、遇错即停计数或批次范围分级定位 |
+| `flydb.batch-size` | `FLYDB_BATCH_SIZE` | `--batch-size` | `1` | SQL 语句 JDBC 批大小；`1` 逐条执行并精确定位失败语句，`>1` 减少远程往返；批量失败按 `EXECUTE_FAILED`、遇错即停计数或批次范围分级定位，`confirmed` 只统计首个失败之前的连续成功前缀 |
 
 ## 3. 敏感信息处理
 
@@ -129,7 +129,7 @@ flydb 0.2.1 · 达梦 DM8 · jdbc:dm://10.0.0.1:5236 · 历史表: flydb_schema_
 | 区段 | 含义 | 代表 |
 |---|---|---|
 | `FLYDB-1xxx` | 连接与探测 | 1001 连接失败；1002 无法识别数据库类型；1003 驱动未找到（提示 drivers/ 用法） |
-| `FLYDB-2xxx` | 迁移与校验 | 2001 非法版本号；2002 重复版本；2003 checksum 不匹配；2004 存在失败记录需 repair；2005 旧式 R 前缀命名；2006 乱序迁移；2007 baseline 前置不满足；2008 缺少 undo 脚本；2009 未定义占位符 |
+| `FLYDB-2xxx` | 迁移与校验 | 2001 非法版本号；2002 重复版本；2003 checksum 不匹配；2004 存在失败记录需 repair；2005 旧式 R 前缀命名；2006 乱序迁移；2007 baseline 前置不满足；2008 缺少 undo 脚本；2009 未定义占位符；2010 迁移执行失败（先读执行快照，未知状态禁止自动重放） |
 | `FLYDB-3xxx` | 并发锁 | 3001 获取锁超时 |
 | `FLYDB-4xxx` | 配置 | 4001 未知配置键；4002 缺少必填项；4003 clean 被禁用；4004 init 目标文件已存在；4005 迁移位置不存在 |
 

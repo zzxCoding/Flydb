@@ -5,6 +5,24 @@ Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正�
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-09-04
+
+### 新增
+
+- 长迁移语句级遥测：单脚本每 10 秒或从脚本开头每连续确认成功 1000 条 JDBC 语句向诊断通道报告当前脚本、`confirmed/total`、耗时与平均速率；单条 SQL 或 batch 尚未返回时仍按时间报告存活进度但不增加确认数，短脚本未达到阈值时不增加日志，已产生周期日志的脚本在结束时补最终计数。CLI `--json` stdout 仍保持单行信封，starter 继续通过 SLF4J 接收日志。
+- 迁移失败执行快照：事务模板完成回滚尝试后报告失败阶段、事务模式、JDBC 已确认执行数、精确/推算/批次范围定位及事务结果。快照不把 JDBC 成功返回等同于已提交；回滚失败与提交响应丢失明确保留“数据库状态未知”，且提交失败后不会因随后 `rollback()` 返回成功而宣称服务端未提交。
+- batch 计数按证据强度处理：`EXECUTE_FAILED` 标记可确认具体失败项，`confirmed` 只统计首个明确失败之前的连续成功前缀，不采信失败后的返回项；遇错即停的短 `updateCounts` 只把失败前已返回的成功项计入确认数，失败位置明确标成推算；无可靠标记时不采信当前批次为已成功，只给候选范围。
+
+### 文档
+
+- 补充 OceanBase 4.2.1.2 Oracle 模式实测限制：同一 `MODIFY` 中组合类型/长度与可空性变更应拆句；登录用户与 `CURRENT_SCHEMA` 不同时，`USER_*` 视图可能查不到目标 schema 对象，应使用 `ALL_*` 并显式约束 `OWNER`。
+- 命令、错误码、JSON 通道、事务设计与 Agent Skill 同步说明进度和失败快照边界；语句遥测仅驻留当前进程，不修改历史表 schema，不提供自动重放、partial undo 或跨进程 progress。
+
+### 验证边界
+
+- 本地 JDK 17 全 reactor、JDK 8 兼容 reactor、core 80% JaCoCo 门禁和 Java 8/17 字节码检查通过；core 共 350 个测试通过。MCP Adapter 58 个测试及真实 0.3.4 CLI 发行包端到端 7 个用例通过，另有 5 个需数据库 profile 的写入用例按预期跳过。
+- 本地 Maven deploy 演练及 JAR、sources、javadoc、CLI ZIP 发行产物门禁通过。获授权 OceanBase 4.2.1.2 Oracle 模式 BJ_POC 测试 schema 完成 4 脚本预发布验证，覆盖 1201 条批量 DML 长迁移、逐条 DML、DDL、失败即停、失败记录阻断、事务回滚及库内实态探针；实测发现的非事务 batch 首条失败时 `confirmed` 虚增问题已用执行器单测和事务/非事务命令层对照用例修复，修复候选包经复验后确认可发布。
+
 ## [0.3.3] - 2026-08-27
 
 ### 修复
@@ -121,6 +139,7 @@ Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正�
 - Flydb 不自动把任意厂商 SQL 转换为其他数据库语法。
 - 达梦、KingbaseES、openGauss 的公开证据为方言和驱动元数据契约测试，真实环境认证仍待补充。
 
+[0.3.4]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.4
 [0.3.3]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.3
 [0.3.2]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.2
 [0.3.1]: https://github.com/zzxCoding/Flydb/releases/tag/v0.3.1
