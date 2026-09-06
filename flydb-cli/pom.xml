@@ -28,7 +28,7 @@
     <dependencies>
         <dependency>
             <groupId>io.github.zzxcoding</groupId>
-            <artifactId>flydb-core</artifactId>
+            <artifactId>flydb-web</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

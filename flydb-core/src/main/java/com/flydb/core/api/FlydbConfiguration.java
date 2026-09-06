@@ -64,6 +64,7 @@ public final class FlydbConfiguration {
     private final String databaseType;
     private final ClassLoader classLoader;
     private final List<Callback> callbacks;
+    private final ExecutionObserver executionObserver;
     private final String sqlMigrationPrefix;
     private final String repeatableMigrationPrefix;
     private final String undoMigrationPrefix;
@@ -71,6 +72,7 @@ public final class FlydbConfiguration {
     private final String sqlMigrationSuffix;
 
     private FlydbConfiguration(Builder b) {
+        this.executionObserver = b.executionObserver;
         this.dataSource = b.dataSource;
         this.url = b.url;
         this.user = b.user;
@@ -148,6 +150,7 @@ public final class FlydbConfiguration {
     public String databaseType() { return databaseType; }
     public ClassLoader classLoader() { return classLoader; }
     public List<Callback> callbacks() { return callbacks; }
+    public ExecutionObserver executionObserver() { return executionObserver; }
     public String sqlMigrationPrefix() { return sqlMigrationPrefix; }
     public String repeatableMigrationPrefix() { return repeatableMigrationPrefix; }
     public String undoMigrationPrefix() { return undoMigrationPrefix; }
@@ -158,6 +161,12 @@ public final class FlydbConfiguration {
      * 可变构建器（设计 02 §2）。每个 setter 返回 {@code this}；{@link #load()} 校验并产出不可变配置。
      */
     public static final class Builder {
+        private ExecutionObserver executionObserver = ExecutionObserver.NONE;
+
+        public Builder executionObserver(ExecutionObserver observer) {
+            this.executionObserver = java.util.Objects.requireNonNull(observer, "observer");
+            return this;
+        }
 
         private DataSource dataSource;
         private String url;

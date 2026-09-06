@@ -45,6 +45,19 @@ public final class Flydb {
         return new MigrateCommand(configuration).execute();
     }
 
+    public com.flydb.core.api.PreparedMigrationPlan prepareMigrate() {
+        return new DryRunCommand(configuration).prepareMigrate();
+    }
+    public com.flydb.core.api.PreparedMigrationPlan prepareUndo() {
+        return new DryRunCommand(configuration).prepareUndo();
+    }
+    public MigrateResult migrate(com.flydb.core.api.PreparedMigrationPlan plan) {
+        return new MigrateCommand(configuration).execute(java.util.Objects.requireNonNull(plan, "plan"));
+    }
+    public UndoResult undo(com.flydb.core.api.PreparedMigrationPlan plan) {
+        return new UndoCommand(configuration).execute(java.util.Objects.requireNonNull(plan, "plan"));
+    }
+
     public MigrationInfoService info() {
         return new InfoCommand(configuration).execute();
     }

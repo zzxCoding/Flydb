@@ -1,8 +1,8 @@
 ---
 name: flydb-cli
 description: >-
-  使用和排查 Flydb CLI 完成数据库迁移、初始化、校验、状态查看、baseline、repair、clean、undo 和驱动接入。当用户提到 Flydb、bin/flydb、flydb.conf、drivers/、JDBC 驱动、--driver、--database-type，或需要把信创/新型 JDBC 数据库接入 Flydb CLI 时使用。先读取 Flydb 仓库内对应 CLI 文档，再执行最小、可验证的操作；涉及真实数据库写入时保留明确的授权和安全边界。
-compatibility: Flydb CLI 0.3，Java 8 或更高版本；需要 Flydb CLI 发行包或源码仓库，以及目标数据库的 JDBC 驱动。
+  使用和排查 Flydb CLI 完成数据库迁移、初始化、校验、状态查看、本机图形工作台、baseline、repair、clean、undo 和驱动接入。当用户提到 Flydb、flydb web、GUI 管理配置、bin/flydb、flydb.conf、drivers/、JDBC 驱动、--driver、--database-type，或需要把信创/新型 JDBC 数据库接入 Flydb CLI 时使用。先读取 Flydb 仓库内对应 CLI 文档，再执行最小、可验证的操作；涉及真实数据库写入时保留明确的授权和安全边界。
+compatibility: Flydb CLI 0.3.x；本机 Web 工作台需要 0.3.5 或更高版本。Java 8 或更高版本；需要 Flydb CLI 发行包或源码仓库，以及目标数据库的 JDBC 驱动。
 ---
 
 # Flydb CLI
@@ -14,6 +14,7 @@ compatibility: Flydb CLI 0.3，Java 8 或更高版本；需要 Flydb CLI 发行�
 1. 先确认用户要求使用的是 Flydb CLI，并区分 Flydb 源码仓库、已构建发行包和外部迁移脚本仓库。迁移脚本位于 Flyway 或其他项目中，不代表要改用那个项目的迁移工具；不要只凭目录名猜测执行入口。
 2. 定位与目标 CLI 版本匹配的文档。源码仓库应能看到 `flydb-core/`、`flydb-cli/` 和 `docs/`；发行包优先使用包内 `docs/`。先读 [`docs/reference/commands.md`](../../../docs/reference/commands.md)，确认全局选项、命令语义、锁范围和 `--dry-run` 支持范围。
 3. 根据任务读取：
+   - 本机 GUI、多配置管理或图形化查看进度：[`docs/getting-started/web.md`](../../../docs/getting-started/web.md)；直接调用本机接口时再读 [`web-api.md`](../../../docs/reference/web-api.md)
    - 配置或环境变量：[`docs/reference/configuration.md`](../../../docs/reference/configuration.md)
    - 错误或退出码：[`docs/reference/errors.md`](../../../docs/reference/errors.md)
    - `--json` 机器输出与 protocolVersion 契约：[`docs/reference/json-output.md`](../../../docs/reference/json-output.md)
@@ -50,6 +51,7 @@ bin/flydb version
 | 用户目标 | 命令 | 默认动作 |
 |---|---|---|
 | 创建配置和迁移目录 | `init` | 只生成本地文件，不连接数据库 |
+| 图形化管理配置、查看预览和执行进度 | `web` | 启动本机界面；启动本身不执行迁移 |
 | 查看迁移状态 | `info` | 读取数据库和本地脚本，不持有迁移锁 |
 | 校验 checksum、失败记录和迁移集合 | `validate` | 只读校验 |
 | 预演迁移 | `--dry-run migrate` | 探测、解析并打印 SQL，不执行 SQL |
@@ -62,6 +64,13 @@ bin/flydb version
 命令细节不要在 Skill 中重新维护；以上表格只帮助选择入口，实际参数以命令参考为准。需要程序化消费结果（CI 脚本、结构化汇报）时加 `--json`：stdout 是单行 JSON 信封，stderr 仍是人类日志；schema 以 JSON 输出参考为准，不要解析中文文本表格。
 
 ## 4. 推荐执行流程
+
+### 本机图形工作台
+
+1. 先运行目标发行包的 `version`，确认该版本包含 `web`，再按 GUI 指南启动；旧版本缺少入口时报告升级要求。运行发行包不需要 Node.js 或大模型。
+2. 人与 Agent 管理同一份原始配置。新建使用 `init` 的共享模板和初始化规则；已有配置直接导入，不重新初始化。创建时的文件清单、V1 示例及路径行为以 GUI 指南为准。
+3. Agent 可继续使用 CLI 和原文件，人通过 GUI 查看状态与进度；遇到外部修改冲突先核对文件和草稿，使用最新修订后再保存。主动文件编辑会显示原文，按原文件保管凭据，不将其复制到报告或对话。
+4. 启动 GUI、修改配置或用户打开浏览器，不扩大数据库写入授权。具体数据库操作沿用下方迁移流程。向用户报告普通本机地址和进程状态；启动密钥、Cookie 和密码保持私密。
 
 ### 只读任务
 

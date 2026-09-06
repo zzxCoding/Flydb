@@ -8,6 +8,8 @@
 flydb/                                   根 POM（packaging=pom，统一版本与插件管理）
 ├── pom.xml
 ├── flydb-core/                          纯 Java 8，零第三方运行时依赖
+├── flydb-runtime/                       Java 8，共享配置、驱动与本地执行记录
+├── flydb-web/                           Java 8 本机 HTTP，内嵌 Vue 静态资源
 ├── flydb-cli/                           picocli 可执行发行包（Java 8）
 ├── flydb-spring-boot-2-starter/         Spring Boot 2.7.x / Java 8
 ├── flydb-spring-boot-3-starter/         Spring Boot 3.x / Java 17（可选交付，见 07）
@@ -17,13 +19,15 @@ flydb/                                   根 POM（packaging=pom，统一版本�
 | 模块 | Java 目标 | 运行时依赖 | 发布到 Maven 仓库 |
 |---|---|---|---|
 | `flydb-core` | 8 | **无**（仅 JDK 自带 API） | 是 |
-| `flydb-cli` | 8 | flydb-core、picocli | 是（同时发布 zip 发行包） |
+| `flydb-runtime` | 8 | flydb-core、Jackson 2 | 是 |
+| `flydb-web` | 8 | flydb-runtime、JDK HttpServer | 是 |
+| `flydb-cli` | 8 | flydb-web、picocli（传递依赖 runtime/core） | 是（同时发布 zip 发行包） |
 | `flydb-spring-boot-2-starter` | 8 | flydb-core、spring-boot 2.7（provided 语义由 starter 机制承接） | 是 |
 | `flydb-spring-boot-3-starter` | 17 | flydb-core、spring-boot 3.x | 是 |
 | `flydb-integration-tests` | 17（或 CI 环境 JDK） | 测试期：testcontainers、junit5、各数据库驱动 | 否（`maven.deploy.skip=true`） |
 
 根 POM 关键配置：
-- `maven-compiler-plugin`：core/cli/starter-2 使用 `<release>8</release>`（在新 JDK 上编译也能保证不误用高版本 API，比 source/target 组合更严格）。
+- `maven-compiler-plugin`：core/runtime/web/cli/starter-2 使用 `<release>8</release>`（在新 JDK 上编译也能保证不误用高版本 API，比 source/target 组合更严格）。
 - `maven-enforcer-plugin`：禁止 flydb-core 出现任何非 test 作用域依赖（用 `bannedDependencies` 白名单强制"零依赖"承诺，防止未来 PR 无意打破）。
 - `jacoco-maven-plugin`：行覆盖率 ≥80% 门禁（integration-tests 模块除外，其覆盖率并入统计但不单独设卡）。
 
@@ -110,7 +114,7 @@ public interface Log {
 - 版本号：`0.2.0` 起步（0.x 表示初始开发期、公共 API 未承诺稳定；1.0 留给迁移引擎与机器契约稳定后发布），语义化版本。
 - 所有模块统一版本号，由根 POM `revision` 属性管理（`flatten-maven-plugin` 处理发布）。
 - 发布物：
-  1. Maven 仓库：flydb-core、flydb-cli（jar）、两个 starter；
+  1. Maven 仓库：flydb-core、flydb-runtime、flydb-web、flydb-cli（jar）、两个 starter；
   2. GitHub Releases：`flydb-cli-<版本>.zip` 发行包（布局见 [06 §7](06-config-cli.md)）。
 
 ## 7. 旧代码处置

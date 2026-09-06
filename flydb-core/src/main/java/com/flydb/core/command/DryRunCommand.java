@@ -23,7 +23,9 @@ public final class DryRunCommand {
         this.configuration = configuration;
     }
 
-    public DryRunResult migrate() {
+    public DryRunResult migrate() { return prepareMigrate().preview(); }
+
+    public com.flydb.core.api.PreparedMigrationPlan prepareMigrate() {
         Log log = LogFactory.getLog(DryRunCommand.class);
         try (CommandRuntime runtime = CommandRuntime.open(configuration, false)) {
             List<AppliedMigration> applied = runtime.applied();
@@ -33,33 +35,20 @@ public final class DryRunCommand {
             if (configuration.validateOnMigrate()) {
                 MigrateCommand.validate(runtime, applied);
             }
-            return preview(runtime, PendingCalculator.compute(
+            return new PreparedExecution(runtime, PendingCalculator.compute(
                     migrations, applied, configuration.outOfOrder(),
-                    configuration.versionSelection()), "migrate");
+                    configuration.versionSelection()), "migrate", null).plan();
         }
     }
 
-    public DryRunResult undo() {
+    public DryRunResult undo() { return prepareUndo().preview(); }
+
+    public com.flydb.core.api.PreparedMigrationPlan prepareUndo() {
         try (CommandRuntime runtime = CommandRuntime.open(configuration, false)) {
             ResolvedMigration undo = UndoCommand.findUndo(runtime.resolved(),
                     UndoCommand.latestAppliedVersion(runtime.applied()));
-            return preview(runtime, java.util.Collections.singletonList(undo), "undo");
+            return new PreparedExecution(runtime, java.util.Collections.singletonList(undo), "undo", null).plan();
         }
-    }
-
-    private static DryRunResult preview(CommandRuntime runtime,
-                                        List<ResolvedMigration> migrations, String direction) {
-        List<DryRunMigration> result = new ArrayList<DryRunMigration>();
-        for (ResolvedMigration migration : migrations) {
-            List<DryRunStatement> statements = new ArrayList<DryRunStatement>();
-            for (SqlStatement statement : MigrationCommandSupport.preview(runtime, migration)) {
-                statements.add(new DryRunStatement(statement.lineNumber(), statement.sql()));
-            }
-            result.add(new DryRunMigration(migration.script(), migration.type(),
-                    migration.version(), migration.description(), migration.checksum(),
-                    statements));
-        }
-        return new DryRunResult(direction, result);
     }
 
 }

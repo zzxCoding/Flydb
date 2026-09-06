@@ -1,2 +1,9 @@
 Flydb
 Copyright 2024 FlyDB
+
+The optional CLI/Web distribution includes picocli and Jackson, licensed under
+Apache License 2.0. Their notices and licenses are retained inside their JARs.
+The Web interface includes Vue, vue-i18n, Naive UI and their runtime dependencies.
+Frontend license notices are bundled in the Web JAR at
+web/THIRD_PARTY_NOTICES.txt and served at /THIRD_PARTY_NOTICES.txt.
+No vendor JDBC drivers are included in the distribution.

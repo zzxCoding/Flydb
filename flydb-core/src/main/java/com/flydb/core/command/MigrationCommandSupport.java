@@ -24,7 +24,11 @@ final class MigrationCommandSupport {
     }
 
     static void execute(final CommandRuntime runtime, final ResolvedMigration migration) {
-        SqlMigrationExecutor executor = executor(runtime, migration);
+        execute(runtime, migration, executor(runtime, migration));
+    }
+
+    static void execute(final CommandRuntime runtime, final ResolvedMigration migration,
+                        SqlMigrationExecutor executor) {
         boolean transactional = runtime.database().supportsDdlTransactions()
                 || isTransactionSafeDml(executor.statements(),
                         runtime.database().statementBuilderConfig().hashLineCommentSupported());
@@ -43,6 +47,10 @@ final class MigrationCommandSupport {
         } catch (RuntimeException e) {
             logFailureSnapshot(log, migration, transactional, executor, outcome, e);
             throw e;
+        } finally {
+            com.flydb.core.api.ExecutionObserver.notify(runtime.configuration().executionObserver(),
+                    com.flydb.core.api.ExecutionEvent.transaction(migration.script(),
+                            outcome.phaseName(), outcome.transactionResult(transactional)));
         }
     }
 
@@ -116,7 +124,7 @@ final class MigrationCommandSupport {
         return sql.regionMatches(offset, prefix, 0, prefix.length());
     }
 
-    private static SqlMigrationExecutor executor(CommandRuntime runtime,
+    static SqlMigrationExecutor executor(CommandRuntime runtime,
                                                  ResolvedMigration migration) {
         String sql = ScriptLoader.load(runtime.configuration(), migration.script());
         return new SqlMigrationExecutor(migration.script(), sql,
@@ -125,7 +133,8 @@ final class MigrationCommandSupport {
                 runtime.configuration().placeholderPrefix(),
                 runtime.configuration().placeholderSuffix(),
                 runtime.configuration().placeholders(), runtime.builtIns())
-                .batchSize(runtime.configuration().batchSize());
+                .batchSize(runtime.configuration().batchSize())
+                .observe(runtime.configuration().executionObserver());
     }
 
     private static AppliedMigration record(CommandRuntime runtime,

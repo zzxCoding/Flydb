@@ -58,6 +58,12 @@ jobs:
       - name: Build and test MCP adapter
         run: npm ci && npm run typecheck && npm test && npm run build
         working-directory: flydb-skills/mcp
+      - name: Set up Node for bundled GUI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: flydb-web/frontend/package-lock.json
       - name: Assert tag matches pom revision
         run: |
           tag_version="${RELEASE_TAG#v}"
@@ -97,6 +103,8 @@ jobs:
           ./scripts/check-bytecode.sh 52
           flydb-core/target/classes
           flydb-cli/target/classes
+          flydb-runtime/target/classes
+          flydb-web/target/classes
           flydb-spring-boot-2-starter/target/classes
           examples/boot2-demo/target/classes
       - name: Assert Java 17 bytecode boundary
@@ -109,7 +117,7 @@ jobs:
           staging="$(mktemp -d)/flydb-staging"
           mkdir -p "$staging"
           # 只收集当前版本的产物，避免 target 中的陈旧文件干扰签名门禁
-          for module in flydb-core flydb-cli flydb-spring-boot-2-starter flydb-spring-boot-3-starter; do
+          for module in flydb-core flydb-runtime flydb-web flydb-cli flydb-spring-boot-2-starter flydb-spring-boot-3-starter; do
             cp "$module"/target/*-"${RELEASE_TAG#v}"*.jar "$module"/target/*-"${RELEASE_TAG#v}"*.zip \
                "$module"/target/*-"${RELEASE_TAG#v}"*.asc "$staging"/ 2>/dev/null || true
           done

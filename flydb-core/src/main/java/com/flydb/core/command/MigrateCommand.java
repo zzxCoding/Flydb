@@ -44,11 +44,16 @@ public final class MigrateCommand {
         this.configuration = configuration;
     }
 
-    public MigrateResult execute() {
+    public MigrateResult execute() { return execute(null); }
+
+    public MigrateResult execute(com.flydb.core.api.PreparedMigrationPlan expected) {
         long started = System.nanoTime();
         Log log = LogFactory.getLog(MigrateCommand.class);
         try (CommandRuntime runtime = CommandRuntime.open(configuration, true);
              MigrationLock lock = runtime.database().createLock(configuration)) {
+            com.flydb.core.api.ExecutionObserver.notify(configuration.executionObserver(),
+                    com.flydb.core.api.ExecutionEvent.progress(
+                            com.flydb.core.api.ExecutionEvent.Type.WAITING_FOR_LOCK, null, 0, 0));
             lock.acquire();
             List<AppliedMigration> applied = runtime.applied();
             List<ResolvedMigration> migrations = executableMigrations(runtime.resolved());
@@ -59,11 +64,13 @@ public final class MigrateCommand {
             List<ResolvedMigration> pending = PendingCalculator.compute(
                     migrations, applied, configuration.outOfOrder(),
                     configuration.versionSelection());
+            PreparedExecution prepared = expected == null ? null
+                    : new PreparedExecution(runtime, pending, "migrate", expected);
             List<String> executed = new ArrayList<String>();
             CommandCallbacks callbacks = CommandCallbacks.create(runtime);
             callbacks.fire(Event.BEFORE_MIGRATE);
             try {
-                executePending(runtime, pending, executed, callbacks, log);
+                executePending(runtime, pending, executed, callbacks, log, prepared);
                 callbacks.fire(Event.AFTER_MIGRATE);
             } catch (RuntimeException e) {
                 callbacks.fire(Event.AFTER_MIGRATE_ERROR);
@@ -92,16 +99,21 @@ public final class MigrateCommand {
                                        List<ResolvedMigration> pending,
                                        List<String> executed,
                                        CommandCallbacks callbacks,
-                                       Log log) {
+                                       Log log, PreparedExecution prepared) {
         int total = pending.size();
         int index = 1;
         for (ResolvedMigration migration : pending) {
+            publish(runtime, com.flydb.core.api.ExecutionEvent.Type.SCRIPT_STARTED,
+                    migration.script(), index - 1, total);
             log.info("正在执行迁移 " + index + "/" + total + ": " + migration.script());
             long started = System.nanoTime();
             callbacks.fire(Event.BEFORE_EACH_MIGRATE);
             try {
-                MigrationCommandSupport.execute(runtime, migration);
+                if (prepared == null) MigrationCommandSupport.execute(runtime, migration);
+                else MigrationCommandSupport.execute(runtime, migration, prepared.executor(migration));
                 executed.add(migration.script());
+                publish(runtime, com.flydb.core.api.ExecutionEvent.Type.SCRIPT_COMPLETED,
+                        migration.script(), index, total);
                 log.info("完成迁移 " + index + "/" + total + ": " + migration.script()
                         + "（耗时 " + elapsedMillis(started) + " ms）");
                 index++;
@@ -111,6 +123,12 @@ public final class MigrateCommand {
                 throw e;
             }
         }
+    }
+
+    private static void publish(CommandRuntime runtime, com.flydb.core.api.ExecutionEvent.Type type,
+                                String script, int confirmed, int total) {
+        com.flydb.core.api.ExecutionObserver.notify(runtime.configuration().executionObserver(),
+                com.flydb.core.api.ExecutionEvent.progress(type, script, confirmed, total));
     }
 
     private static MigrationVersion targetVersion(List<AppliedMigration> applied,

@@ -12,17 +12,17 @@
 
 ## 本地构建
 
-完整 reactor 使用 JDK 17：
+完整 reactor 使用 JDK 17、Node.js 22.12+ 和 npm。Node 只用于编译随包提供的 GUI：
 
 ```bash
 ./mvnw -B verify
 ```
 
-core、CLI、Boot 2 starter 和 Boot 2 示例必须保持 Java 8 字节码。涉及这些模块或发行边界时，额外运行：
+core、runtime、web、CLI、Boot 2 starter 和 Boot 2 示例必须保持 Java 8 字节码。涉及这些模块或发行边界时，额外运行：
 
 ```bash
 ./scripts/check-bytecode.sh 52 \
-  flydb-core/target/classes flydb-cli/target/classes \
+  flydb-core/target/classes flydb-runtime/target/classes flydb-web/target/classes flydb-cli/target/classes \
   flydb-spring-boot-2-starter/target/classes examples/boot2-demo/target/classes
 ./scripts/check-bytecode.sh 61 \
   flydb-spring-boot-3-starter/target/classes examples/boot3-demo/target/classes

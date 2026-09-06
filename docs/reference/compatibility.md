@@ -9,6 +9,8 @@ Maven 坐标 groupId 统一为 `io.github.zzxcoding`（Central Portal 经 GitHub
 | 模块 | 坐标 | Java 运行时 | 依赖框架 | 发布到 Central |
 |---|---|---:|---|---|
 | Core（Java API） | `io.github.zzxcoding:flydb-core` | 8+ | 无（零第三方运行时依赖） | 是 |
+| Runtime（待发布） | `io.github.zzxcoding:flydb-runtime` | 8+ | Core、Jackson 2 | 用户验收后随下一版发布 |
+| Web（待发布） | `io.github.zzxcoding:flydb-web` | 8+ | Runtime、JDK HttpServer、内嵌静态界面 | 用户验收后随下一版发布 |
 | CLI | `io.github.zzxcoding:flydb-cli` | 8+ | picocli | 是（jar；发行 ZIP 经 GitHub Release 分发） |
 | Spring Boot 2 Starter | `io.github.zzxcoding:flydb-spring-boot-2-starter` | 8+ | Spring Boot 2.7.x（以 2.7.18 验证） | 是 |
 | Spring Boot 3 Starter | `io.github.zzxcoding:flydb-spring-boot-3-starter` | 17+ | Spring Boot 3.x（以 3.5.16 验证） | 是 |
@@ -18,7 +20,7 @@ Maven 坐标 groupId 统一为 `io.github.zzxcoding`（Central Portal 经 GitHub
 约束与依据：
 
 - core、CLI、Boot 2 starter 的字节码基线为 Java 8，构建时以 release 8 交叉编译校验；Boot 3 starter 为 Java 17。
-- 构建整个 reactor 需要 JDK 17 与 Maven 3.6.3+；Java 8 模块可在 JDK 8 上单独构建（见 `.github/workflows/ci.yml`）。
+- 构建整个 reactor 需要 JDK 17、Maven 3.6.3+、Node.js 22.12+（含 npm）；Java 8 模块可在 JDK 8 上单独构建（见 `.github/workflows/ci.yml`）。
 - Spring Boot 2.7 是其系列最后一个开源支持版本，新项目应优先 Boot 3 starter。
 - CLI 发行包为平台无关 ZIP（`bin/flydb`、`bin/flydb.bat`），要求 Java 8+。
 

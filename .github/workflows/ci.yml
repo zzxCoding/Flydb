@@ -26,6 +26,12 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+      - name: Set up Node for bundled GUI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: flydb-web/frontend/package-lock.json
       - name: Verify reactor
         run: ./mvnw -B verify
       - name: Assert Java 8 bytecode boundary
@@ -33,6 +39,8 @@ jobs:
           ./scripts/check-bytecode.sh 52
           flydb-core/target/classes
           flydb-cli/target/classes
+          flydb-runtime/target/classes
+          flydb-web/target/classes
           flydb-spring-boot-2-starter/target/classes
           examples/boot2-demo/target/classes
       - name: Assert Java 17 bytecode boundary
@@ -81,6 +89,12 @@ jobs:
       - name: Build adapter bundle
         run: npm run build
         working-directory: flydb-skills/mcp
+      - name: Set up Node for bundled GUI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: flydb-web/frontend/package-lock.json
       - name: Build CLI distribution
         run: ./mvnw -B -pl flydb-cli -am package -DskipTests
       - name: Cross-runtime e2e (real CLI + official MCP client)
@@ -123,6 +137,12 @@ jobs:
           npm test
           npm run build
         working-directory: flydb-skills/mcp
+      - name: Set up Node for bundled GUI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: flydb-web/frontend/package-lock.json
       - name: Build CLI distribution
         shell: pwsh
         run: .\mvnw.cmd -B -pl flydb-cli -am package -DskipTests
@@ -148,6 +168,12 @@ jobs:
           distribution: temurin
           java-version: '8'
           cache: maven
+      - name: Set up Node for bundled GUI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: flydb-web/frontend/package-lock.json
       - name: Verify Java 8 modules
         run: >-
           ./mvnw -B verify

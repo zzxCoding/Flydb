@@ -55,7 +55,7 @@
     </ciManagement>
 
     <properties>
-        <revision>0.3.4</revision>
+        <revision>0.3.5</revision>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -90,6 +90,8 @@
 
     <modules>
         <module>flydb-core</module>
+        <module>flydb-runtime</module>
+        <module>flydb-web</module>
         <module>flydb-cli</module>
         <module>flydb-spring-boot-2-starter</module>
         <module>flydb-spring-boot-3-starter</module>
@@ -284,7 +286,7 @@
                     </plugin>
                     <!--
                         extensions=true 接管默认 deploy；发布范围遵循设计 01 §1：
-                        parent/core/cli(jar+zip)/两 starter；demo 与 integration-tests 排除
+                        parent/core/runtime/web/cli(jar+zip)/两 starter；demo 与 integration-tests 排除
                         （它们同时设置了 maven.deploy.skip=true，双保险）。
                     -->
                     <plugin>

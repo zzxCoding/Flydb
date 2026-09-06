@@ -44,6 +44,7 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
     private final Map<String, String> builtIns;
     private final SqlExecutionTelemetry telemetry;
     private int batchSize = 1;
+    private List<SqlStatement> parsedStatements;
 
     public SqlMigrationExecutor(String scriptName, String sql,
                                 SqlStatementBuilderConfig parserConfig,
@@ -92,6 +93,11 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
     /** 当前进程内的语句执行快照；“确认执行”不等于事务已经提交。 */
     public String statementExecutionSnapshot() {
         return telemetry.snapshot();
+    }
+
+    public SqlMigrationExecutor observe(com.flydb.core.api.ExecutionObserver observer) {
+        telemetry.observe(observer);
+        return this;
     }
 
     @Override
@@ -249,6 +255,7 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
 
     /** 完成与真实执行一致的占位符替换和词法解析，但不触碰 JDBC。 */
     public List<SqlStatement> statements() {
+        if (parsedStatements != null) return parsedStatements;
         // 1) 占位符替换
         String resolved = placeholderReplacement
                 ? PlaceholderReplacer.replace(sql, scriptName,
@@ -257,6 +264,7 @@ public final class SqlMigrationExecutor implements MigrationExecutor {
 
         // 2) 词法解析
         SqlScriptParser parser = new SqlScriptParser(parserConfig);
-        return parser.parse(resolved);
+        parsedStatements = java.util.Collections.unmodifiableList(parser.parse(resolved));
+        return parsedStatements;
     }
 }

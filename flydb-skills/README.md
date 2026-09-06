@@ -18,7 +18,7 @@ MCP server 把 Flydb 暴露为 9 个领域工具（写入工具默认不注册�
 
 | Skill | 用途 | 入口 |
 |---|---|---|
-| `flydb-cli` | 使用和排查 Flydb CLI，覆盖初始化、驱动接入、迁移、校验、状态、修复和撤销 | [`skills/flydb-cli/SKILL.md`](skills/flydb-cli/SKILL.md) |
+| `flydb-cli` | 使用和排查 Flydb CLI，覆盖本机 GUI、初始化、驱动接入、迁移、校验、状态、修复和撤销 | [`skills/flydb-cli/SKILL.md`](skills/flydb-cli/SKILL.md) |
 
 ## 多 Agent 兼容
 
@@ -48,6 +48,7 @@ MCP server 把 Flydb 暴露为 9 个领域工具（写入工具默认不注册�
 
 `flydb-cli` 是一个薄的操作编排 Skill，不复制命令表。它引用以下仓库文档：
 
+- [本机 GUI 指南](../docs/getting-started/web.md)（0.3.5+）
 - [CLI 命令参考](../docs/reference/commands.md)
 - [配置项参考](../docs/reference/configuration.md)
 - [错误码参考](../docs/reference/errors.md)
@@ -67,6 +68,6 @@ python3 "${HOME}/.agents/skills/skill-creator/scripts/quick_validate.py" \
   flydb-skills/skills/flydb-cli
 ```
 
-评测提示词与可验证预期位于 [`skills/flydb-cli/evals/evals.json`](skills/flydb-cli/evals/evals.json)，覆盖基本迁移、长迁移后台托管、外部 locations、范围/版本族选择、发现完整性、业务模板占位符、MISSING、驱动诊断和 clean 安全边界。
+评测提示词与可验证预期位于 [`skills/flydb-cli/evals/evals.json`](skills/flydb-cli/evals/evals.json)，覆盖 GUI 版本与启动、人机共用配置、写入边界、基本迁移、长迁移后台托管、外部 locations、范围/版本族选择、发现完整性、业务模板占位符、MISSING、驱动诊断和 clean 安全边界。
 
 项目复用仓库根目录的 [Apache-2.0 许可证](../LICENSE)。

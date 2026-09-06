@@ -30,9 +30,9 @@ Flydb 是面向任意支持 JDBC 驱动的数据库的 Schema 版本化迁移工
 前置条件：Java 8 或更高版本、一个已创建的目标数据库，以及与 Java 8 兼容的 JDBC 驱动。
 
 ```bash
-curl -LO https://github.com/zzxCoding/Flydb/releases/download/v0.3.4/flydb-cli-0.3.4.zip
-unzip flydb-cli-0.3.4.zip
-cd flydb-cli-0.3.4
+curl -LO https://github.com/zzxCoding/Flydb/releases/download/v0.3.5/flydb-cli-0.3.5.zip
+unzip flydb-cli-0.3.5.zip
+cd flydb-cli-0.3.5
 
 # 示例：把 mysql-connector-j.jar 放入 drivers/
 cp /path/to/mysql-connector-j.jar drivers/
@@ -51,6 +51,11 @@ bin/flydb validate
 ```
 
 `init` 会生成 `flydb.conf`、`db/migration/V1__init.sql` 和 `drivers/README.md`，并拒绝覆盖已有文件。密码也可通过 `flydb.password=${env:DB_PASSWORD}` 或 `flydb.password.file=/run/secrets/db_password` 提供；明文写入 `flydb.password` 仅建议本地临时测试。
+
+## 本机 GUI
+
+0.3.5 起提供 `bin/flydb web`，支持配置导入与编辑、迁移预览、真实执行进度、CLI 记录共用、
+中英文和明暗主题。只做本机 GUI，不设账户、角色或审批页面。使用方法见 [GUI 指南](docs/getting-started/web.md)。
 
 ## 数据库支持
 
@@ -112,7 +117,7 @@ flydb.migrate();
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-core</artifactId>
-  <version>0.3.4</version>
+  <version>0.3.5</version>
 </dependency>
 ```
 
@@ -123,13 +128,13 @@ Spring Boot 应用选择对应 starter，容器初始化期间执行 `migrate`�
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-3-starter</artifactId>
-  <version>0.3.4</version>
+  <version>0.3.5</version>
 </dependency>
 <!-- Spring Boot 2.7 / Java 8 -->
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-2-starter</artifactId>
-  <version>0.3.4</version>
+  <version>0.3.5</version>
 </dependency>
 ```
 
@@ -167,22 +172,22 @@ bin/flydb clean --clean-disabled=false --force   # clean 默认禁用；非交�
 
 ## 从源码构建
 
-完整 reactor（含 Boot 3）使用 Java 17 构建；Boot 2 starter、Boot 2 示例、core 与 CLI 保持 Java 8 字节码。如果终端通过 shell 函数切换 JDK，可先执行 `jdk17`：
+完整 reactor（含 Boot 3）使用 Java 17 和 Node.js 22.12+ 构建（npm 随 Node 提供）；Boot 2 starter、Boot 2 示例、core 与 CLI 保持 Java 8 字节码。如果终端通过 shell 函数切换 JDK，可先执行 `jdk17`：
 
 ```bash
 ./mvnw verify
 ```
 
-CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.3.4.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
+CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.3.5.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
 
-本地集成契约默认只启动 MySQL 8；需要显式运行某个 CI 方言项时设置 `-Pmysql`/`-Ppostgresql` 与 `-Dflydb.integration.database=<dialect>`，完整矩阵由 `.github/workflows/ci.yml` 执行。
+数据库集成契约默认跳过；显式设置 `-Pmysql`/`-Ppostgresql` 与 `-Dflydb.integration.database=<dialect>` 后，才会启动临时数据库执行对应测试。完整矩阵由 `.github/workflows/ci.yml` 执行。
 
 <details>
 <summary>发布前检查（阶段 8）</summary>
 
 ```bash
 ./scripts/check-bytecode.sh 52 \
-  flydb-core/target/classes flydb-cli/target/classes \
+  flydb-core/target/classes flydb-runtime/target/classes flydb-web/target/classes flydb-cli/target/classes \
   flydb-spring-boot-2-starter/target/classes examples/boot2-demo/target/classes
 ./scripts/check-bytecode.sh 61 \
   flydb-spring-boot-3-starter/target/classes examples/boot3-demo/target/classes

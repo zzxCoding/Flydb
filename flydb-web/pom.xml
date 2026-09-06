@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent><groupId>io.github.zzxcoding</groupId><artifactId>flydb-parent</artifactId><version>${revision}</version></parent>
+    <artifactId>flydb-web</artifactId>
+    <name>Flydb :: Local Web</name>
+    <properties><flydb.web.skipBuild>false</flydb.web.skipBuild><skipTests>false</skipTests></properties>
+    <dependencies>
+        <dependency><groupId>io.github.zzxcoding</groupId><artifactId>flydb-runtime</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>${junit.version}</version><scope>test</scope></dependency>
+        <dependency><groupId>org.assertj</groupId><artifactId>assertj-core</artifactId><version>${assertj.version}</version><scope>test</scope></dependency>
+    </dependencies>
+    <build>
+        <resources>
+            <resource><directory>src/main/resources</directory></resource>
+            <resource><directory>target/frontend</directory><targetPath>web</targetPath></resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-antrun-plugin</artifactId><version>3.1.0</version>
+                <executions><execution><id>build-offline-ui</id><phase>generate-resources</phase><goals><goal>run</goal></goals>
+                    <configuration><skip>${flydb.web.skipBuild}</skip><target>
+                        <exec executable="node" dir="${project.basedir}" failonerror="true">
+                            <arg value="frontend/build.mjs"/><arg value="--skip-tests=${skipTests}"/>
+                        </exec>
+                    </target></configuration>
+                </execution></executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
+                <configuration><systemPropertyVariables><sun.net.http.allowRestrictedHeaders>true</sun.net.http.allowRestrictedHeaders></systemPropertyVariables></configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

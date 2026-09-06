@@ -28,6 +28,7 @@ final class CommandRuntime implements AutoCloseable {
     private final Database database;
     private final SchemaHistory history;
     private List<ResolvedMigration> resolved;
+    private Map<String, String> builtInValues;
 
     private CommandRuntime(FlydbConfiguration configuration, Connection connection,
                            Database database, SchemaHistory history) {
@@ -83,17 +84,20 @@ final class CommandRuntime implements AutoCloseable {
     List<AppliedMigration> applied() { return history.findAll(); }
 
     Map<String, String> builtIns() {
-        return builtIns(database, configuration);
+        if (builtInValues == null) builtInValues = builtIns(database, configuration);
+        return builtInValues;
     }
+
+    void previewTimestamp(String value) { builtIns().put("timestamp", value); }
 
     static Map<String, String> builtIns(Database database, FlydbConfiguration configuration) {
         Map<String, String> values = new HashMap<String, String>();
         try {
-            values.put("flydb:database", database.name());
-            values.put("flydb:schema", nullToEmpty(database.currentSchema()));
-            values.put("flydb:user", nullToEmpty(database.currentUser()));
-            values.put("flydb:table", configuration.table());
-            values.put("flydb:timestamp", Instant.now().toString());
+            values.put("database", database.name());
+            values.put("schema", nullToEmpty(database.currentSchema()));
+            values.put("user", nullToEmpty(database.currentUser()));
+            values.put("table", configuration.table());
+            values.put("timestamp", Instant.now().toString());
             return values;
         } catch (SQLException e) {
             throw new FlydbException(ErrorCode.CONNECT_FAILED,

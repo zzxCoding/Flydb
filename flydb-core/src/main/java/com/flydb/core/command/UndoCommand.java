@@ -21,16 +21,21 @@ public final class UndoCommand {
         this.configuration = configuration;
     }
 
-    public UndoResult execute() {
+    public UndoResult execute() { return execute(null); }
+
+    public UndoResult execute(com.flydb.core.api.PreparedMigrationPlan expected) {
         long started = System.nanoTime();
         try (CommandRuntime runtime = CommandRuntime.open(configuration, true);
              MigrationLock lock = runtime.database().createLock(configuration)) {
             lock.acquire();
             MigrationVersion latest = latestAppliedVersion(runtime.applied());
             ResolvedMigration undo = findUndo(runtime.resolved(), latest);
+            PreparedExecution prepared = expected == null ? null : new PreparedExecution(runtime,
+                    java.util.Collections.singletonList(undo), "undo", expected);
             CommandCallbacks callbacks = CommandCallbacks.create(runtime);
             callbacks.fire(Event.BEFORE_UNDO);
-            MigrationCommandSupport.execute(runtime, undo);
+            if (prepared == null) MigrationCommandSupport.execute(runtime, undo);
+            else MigrationCommandSupport.execute(runtime, undo, prepared.executor(undo));
             callbacks.fire(Event.AFTER_UNDO);
             return new UndoResult(latest, elapsedMillis(started));
         }

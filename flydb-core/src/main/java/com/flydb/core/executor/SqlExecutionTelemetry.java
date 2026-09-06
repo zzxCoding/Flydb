@@ -8,6 +8,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
 import com.flydb.core.log.Log;
+import com.flydb.core.api.ExecutionEvent;
+import com.flydb.core.api.ExecutionObserver;
 
 /** 单份 SQL 脚本的内存执行遥测；不持久化，也不推断事务提交状态。 */
 final class SqlExecutionTelemetry {
@@ -15,6 +17,7 @@ final class SqlExecutionTelemetry {
     private static final ScheduledThreadPoolExecutor REPORTER = createReporter();
 
     private final String scriptName;
+    private ExecutionObserver observer = ExecutionObserver.NONE;
     private Log log;
     private LongSupplier nanoClock;
     private long reportIntervalNanos;
@@ -32,6 +35,13 @@ final class SqlExecutionTelemetry {
 
     SqlExecutionTelemetry(String scriptName) {
         this.scriptName = scriptName;
+    }
+
+    void observe(ExecutionObserver observer) { this.observer = observer; }
+
+    private void publishProgress() {
+        ExecutionObserver.notify(observer, ExecutionEvent.progress(
+                ExecutionEvent.Type.SQL_PROGRESS, scriptName, confirmed, total));
     }
 
     void configure(Log log, LongSupplier nanoClock,
@@ -59,6 +69,7 @@ final class SqlExecutionTelemetry {
         started = true;
         active = true;
         reported = false;
+        publishProgress();
         if (log != null) {
             startedNanos = nanoClock.getAsLong();
             lastReportedNanos = startedNanos;
@@ -101,16 +112,22 @@ final class SqlExecutionTelemetry {
 
     synchronized void failExact(int index, int lineNumber, String evidence) {
         failureLocation = "第 " + index + " 条（起始行 " + lineNumber + "，" + evidence + "）";
+        ExecutionObserver.notify(observer, ExecutionEvent.failure(scriptName, confirmed,
+                total, index, index, lineNumber, "EXACT"));
     }
 
     synchronized void failInferred(int index, int lineNumber) {
         failureLocation = "按 JDBC 已返回计数推算为第 " + index + " 条（起始行 "
                 + lineNumber + "），不是驱动明确失败标记";
+        ExecutionObserver.notify(observer, ExecutionEvent.failure(scriptName, confirmed,
+                total, index, index, lineNumber, "INFERRED"));
     }
 
     synchronized void failRange(int startIndex, int endIndex) {
         failureLocation = "无法可靠定位具体语句，候选批次为第 "
                 + startIndex + "-" + endIndex + " 条";
+        ExecutionObserver.notify(observer, ExecutionEvent.failure(scriptName, confirmed,
+                total, startIndex, endIndex, 0, "RANGE"));
     }
 
     synchronized String snapshot() {
@@ -129,6 +146,7 @@ final class SqlExecutionTelemetry {
     }
 
     synchronized void stop() {
+        publishProgress();
         active = false;
         cancelScheduledReport();
     }
@@ -148,6 +166,7 @@ final class SqlExecutionTelemetry {
     }
 
     private void report(long now) {
+        publishProgress();
         long elapsedNanos = elapsed(now, startedNanos);
         double elapsedSeconds = elapsedNanos / 1_000_000_000.0d;
         double rate = elapsedNanos == 0L

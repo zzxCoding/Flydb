@@ -142,6 +142,17 @@ final class MigrationExecutionTemplate {
             }
         }
 
+        String phaseName() { return phase.name(); }
+
+        String transactionResult(boolean transactional) {
+            if (!transactional) return "NON_TRANSACTIONAL";
+            if (phase == Phase.COMPLETE) return "COMMITTED";
+            if (phase == Phase.COMMIT) return "COMMIT_UNKNOWN";
+            if (rollback == Rollback.SUCCEEDED) return "ROLLED_BACK";
+            if (rollback == Rollback.FAILED) return "ROLLBACK_FAILED";
+            return "UNKNOWN";
+        }
+
         String transactionResultDescription(boolean transactional) {
             if (!transactional) {
                 return "未执行整体回滚；JDBC 已确认执行不等于已提交，数据库状态需人工核验";

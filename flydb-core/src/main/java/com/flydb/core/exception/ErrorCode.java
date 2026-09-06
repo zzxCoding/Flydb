@@ -55,6 +55,10 @@ public enum ErrorCode {
             "迁移脚本中的某条 SQL 被数据库拒绝；或执行、记账、提交期间 JDBC 连接中断。",
             "先查看迁移失败执行快照与驱动原始错误；只有明确显示已回滚时才可按整体回滚处置，其他状态先核验数据库，禁止自动重放。"),
 
+    PLAN_CHANGED("FLYDB-2011", "执行计划已变化", "Execution plan changed",
+            "预演之后目标、待执行集合或解析后的 SQL 发生变化。",
+            "重新预演并核对目标与脚本后再执行。"),
+
     // ---------------- 3xxx 并发锁 ----------------
     LOCK_ACQUISITION_TIMEOUT("FLYDB-3001", "获取迁移锁超时", "Lock acquisition timed out",
             "另一个 flydb 进程正在对该数据库执行迁移；或前次迁移进程异常终止后锁尚未释放。",

@@ -13,14 +13,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
-import com.flydb.cli.config.CliConfiguration;
-import com.flydb.cli.config.ConfigLoader;
-import com.flydb.cli.driver.DriverContext;
-import com.flydb.cli.driver.DriverLoader;
-import com.flydb.cli.init.InitScaffolder;
-import com.flydb.cli.output.InfoTableRenderer;
-import com.flydb.cli.output.SecretRedactor;
-import com.flydb.cli.output.json.JsonRenderers;
+import com.flydb.runtime.config.CliConfiguration;
+import com.flydb.runtime.config.ConfigLoader;
+import com.flydb.runtime.driver.DriverContext;
+import com.flydb.runtime.driver.DriverLoader;
+import com.flydb.runtime.init.InitScaffolder;
+import com.flydb.runtime.output.InfoTableRenderer;
+import com.flydb.runtime.output.SecretRedactor;
+import com.flydb.runtime.output.json.JsonRenderers;
 import com.flydb.core.Flydb;
 import com.flydb.core.api.MigrateResult;
 import com.flydb.core.api.DryRunMigration;
@@ -101,7 +101,7 @@ public final class FlydbCli {
             description = "面向各类 JDBC 数据库的 Schema 版本化迁移工具",
             subcommands = {MigrateCommand.class, InfoCommand.class, ValidateCommand.class,
                     BaselineCommand.class, RepairCommand.class, CleanCommand.class,
-                    UndoCommand.class, InitCommand.class, VersionCommand.class})
+                    UndoCommand.class, InitCommand.class, VersionCommand.class, WebCommand.class})
     final class RootCommand implements Runnable {
         @Option(names = {"-c", "--config"}, description = "显式配置文件",
                 scope = CommandLine.ScopeType.INHERIT)
@@ -274,7 +274,40 @@ public final class FlydbCli {
         PrintWriter out() { return FlydbCli.this.out; }
         Path workingDirectory() { return FlydbCli.this.workingDirectory; }
 
-        ConfiguredFlydb open() {
+        int web(int port, boolean noOpen, Path stateDirectory) throws Exception {
+            if (json) throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
+                    "web 是持续运行的图形界面服务，不支持 --json；请直接运行 flydb web");
+            Path state = stateDirectory == null ? com.flydb.runtime.state.RunStore.defaultDirectory(environment)
+                    : workingDirectory.resolve(stateDirectory).toAbsolutePath().normalize();
+            try (com.flydb.web.WebServer server = new com.flydb.web.WebServer(
+                    state, workingDirectory, installDirectory, environment, port, version())) {
+                Path initial = config == null ? workingDirectory.resolve("flydb.conf") : workingDirectory.resolve(config);
+                if (java.nio.file.Files.isRegularFile(initial)) server.importConfiguration(initial);
+                server.start();
+                Thread shutdown = new Thread(server::close, "flydb-web-shutdown");
+                Runtime.getRuntime().addShutdownHook(shutdown);
+                try {
+                    out.println("Flydb Web · " + version());
+                    out.println(server.uri());
+                    out.println("浏览器关闭不影响执行；使用 Ctrl+C 停止本机服务。 / Ctrl+C stops the local service.");
+                    out.flush();
+                    if (!noOpen) {
+                        try {
+                            if (java.awt.Desktop.isDesktopSupported()) java.awt.Desktop.getDesktop().browse(server.uri());
+                        } catch (Exception e) { err.println("请手动打开上方地址。 / Open the address above in your browser."); }
+                    }
+                    server.await(); return 0;
+                } finally {
+                    try { Runtime.getRuntime().removeShutdownHook(shutdown); } catch (IllegalStateException ignored) { }
+                }
+            }
+        }
+
+        CliRunRecorder recorder;
+
+        void record(String json) { if (recorder != null) recorder.result(json); }
+
+        ConfiguredFlydb open(String command) {
             Map<String, String> overrides = overrides();
             CliConfiguration configuration = new ConfigLoader().load(config, workingDirectory,
                     installDirectory, environment, overrides);
@@ -288,18 +321,21 @@ public final class FlydbCli {
             configuration = promptForPassword(configuration, overrides);
             DriverContext driver = new DriverLoader().open(
                     installDirectory.resolve("drivers"), configuration);
+            recorder = new CliRunRecorder(command, dryRun, configuration, config,
+                    workingDirectory, installDirectory, environment, err);
             ClassLoader previousClassLoader = Thread.currentThread().getContextClassLoader();
             Thread.currentThread().setContextClassLoader(driver.classLoader());
             try {
                 ConfiguredFlydb configured = new ConfiguredFlydb(driver, configuration,
                         new Flydb(configuration.toCoreConfiguration(
-                                driver.dataSource(), driver.classLoader())), previousClassLoader,
-                        FlydbCli.this.interrupts);
+                                driver.dataSource(), driver.classLoader(), recorder)), previousClassLoader,
+                        FlydbCli.this.interrupts, recorder);
                 FlydbCli.this.interrupts.register(configured);
                 return configured;
             } catch (RuntimeException e) {
                 Thread.currentThread().setContextClassLoader(previousClassLoader);
                 driver.close();
+                recorder.failure(e); recorder.close();
                 throw e;
             }
         }
@@ -375,9 +411,10 @@ public final class FlydbCli {
         @ParentCommand RootCommand root;
 
         @Override public final Integer call() {
-            try (ConfiguredFlydb configured = root.open()) {
-                run(configured);
-                return 0;
+            try (ConfiguredFlydb configured = root.open(getClass().getAnnotation(Command.class).name())) {
+                try {
+                    run(configured); configured.recorder.success(); return 0;
+                } catch (RuntimeException e) { configured.recorder.failure(e); throw e; }
             }
         }
 
@@ -390,6 +427,7 @@ public final class FlydbCli {
         @Override void run(ConfiguredFlydb configured) {
             if (root.dryRun) {
                 DryRunResult result = configured.flydb.dryRunMigrate();
+                root.record(JsonRenderers.dryRun("migrate", result, configured.configuration.password()));
                 if (root.json) {
                     root.out().println(JsonRenderers.dryRun("migrate", result,
                             configured.configuration.password()));
@@ -399,6 +437,7 @@ public final class FlydbCli {
                 return;
             }
             MigrateResult result = configured.flydb.migrate();
+            root.record(JsonRenderers.migrate(result));
             if (root.json) {
                 root.out().println(JsonRenderers.migrate(result));
                 return;
@@ -413,6 +452,8 @@ public final class FlydbCli {
     static final class InfoCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             com.flydb.core.api.MigrationInfoService information = configured.flydb.info();
+            root.record(JsonRenderers.info(information.databaseName(), configured.configuration.url(),
+                    configured.configuration.table(), information));
             if (root.json) {
                 root.out().println(JsonRenderers.info(information.databaseName(),
                         configured.configuration.url(), configured.configuration.table(),
@@ -432,6 +473,7 @@ public final class FlydbCli {
     static final class ValidateCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             configured.flydb.validate();
+            root.record(JsonRenderers.validate());
             if (root.json) {
                 root.out().println(JsonRenderers.validate());
                 return;
@@ -445,6 +487,7 @@ public final class FlydbCli {
     static final class BaselineCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             configured.flydb.baseline();
+            root.record(JsonRenderers.baseline(configured.configuration.baselineVersion()));
             if (root.json) {
                 root.out().println(JsonRenderers.baseline(
                         configured.configuration.baselineVersion()));
@@ -459,6 +502,7 @@ public final class FlydbCli {
     static final class RepairCommand extends DatabaseCommand {
         @Override void run(ConfiguredFlydb configured) {
             RepairResult result = configured.flydb.repair();
+            root.record(JsonRenderers.repair(result));
             if (root.json) {
                 root.out().println(JsonRenderers.repair(result));
                 return;
@@ -490,6 +534,7 @@ public final class FlydbCli {
                 }
             }
             configured.flydb.clean();
+            root.record(JsonRenderers.clean());
             if (root.json) {
                 root.out().println(JsonRenderers.clean());
                 return;
@@ -504,6 +549,7 @@ public final class FlydbCli {
         @Override void run(ConfiguredFlydb configured) {
             if (root.dryRun) {
                 DryRunResult result = configured.flydb.dryRunUndo();
+                root.record(JsonRenderers.dryRun("undo", result, configured.configuration.password()));
                 if (root.json) {
                     root.out().println(JsonRenderers.dryRun("undo", result,
                             configured.configuration.password()));
@@ -513,6 +559,7 @@ public final class FlydbCli {
                 return;
             }
             UndoResult result = configured.flydb.undo();
+            root.record(JsonRenderers.undo(result));
             if (root.json) {
                 root.out().println(JsonRenderers.undo(result));
                 return;
@@ -576,6 +623,16 @@ public final class FlydbCli {
             String value = console.readLine(label + suffix);
             return value == null || value.trim().isEmpty() ? current : value.trim();
         }
+    }
+
+    @Command(name = "web", mixinStandardHelpOptions = true,
+            description = "启动本机图形工作台 / Start the local GUI")
+    static final class WebCommand implements Callable<Integer> {
+        @ParentCommand RootCommand root;
+        @Option(names = "--port", defaultValue = "0", description = "本机端口，0 自动选择 / Local port, 0 selects a free port") int port;
+        @Option(names = "--no-open", description = "不自动打开浏览器 / Do not open a browser") boolean noOpen;
+        @Option(names = "--state-dir", description = "本地配置列表和执行记录目录 / Local workbench state directory") Path stateDirectory;
+        @Override public Integer call() throws Exception { return root.web(port, noOpen, stateDirectory); }
     }
 
     @Command(name = "version", mixinStandardHelpOptions = true,
@@ -693,7 +750,7 @@ public final class FlydbCli {
     private static String version() {
         Package pkg = FlydbCli.class.getPackage();
         String implementation = pkg == null ? null : pkg.getImplementationVersion();
-        return implementation != null ? implementation : "0.3.4";
+        return implementation != null ? implementation : "0.3.5";
     }
 
     private static Path detectInstallDirectory() {
@@ -714,19 +771,22 @@ public final class FlydbCli {
         private final Flydb flydb;
         private final ClassLoader previousClassLoader;
         private final InterruptCoordinator interrupts;
+        private final CliRunRecorder recorder;
 
         private ConfiguredFlydb(DriverContext driver, CliConfiguration configuration, Flydb flydb,
                                 ClassLoader previousClassLoader,
-                                InterruptCoordinator interrupts) {
+                                InterruptCoordinator interrupts, CliRunRecorder recorder) {
             this.driver = driver;
             this.configuration = configuration;
             this.flydb = flydb;
             this.previousClassLoader = previousClassLoader;
             this.interrupts = interrupts;
+            this.recorder = recorder;
         }
 
         @Override public void close() {
             interrupts.clear(this);
+            recorder.close();
             try {
                 driver.close();
             } finally {

@@ -57,6 +57,33 @@ flydb [全局选项] <命令> [命令选项]
 | `undo` | 撤销最近一次版本化迁移 | 是 |
 | `init` | 生成 `flydb.conf`、迁移目录和驱动说明 | 否 |
 | `version` | 输出 Flydb 版本 | 否 |
+| `web` | 启动可选本机图形工作台，管理配置与迁移 | 启动时不连接数据库；具体操作沿用对应命令 |
+
+### 本机图形工作台
+
+```bash
+bin/flydb web
+bin/flydb web --no-open --port 8317
+bin/flydb --config /path/to/flydb.conf web --state-dir /path/to/workbench-state
+# Windows
+bin\flydb.bat web
+```
+
+`web` 默认选择空闲的回环端口并尝试打开浏览器；无浏览器时手动打开终端中的地址。
+只监听 `127.0.0.1`，不支持外网监听。`--port` 为 `0..65535`，默认 `0`；
+`--no-open` 关闭自动打开浏览器；`--state-dir` 指定本地配置列表和运行记录目录。
+启动会登记显式 `--config` 或当前目录存在的 `flydb.conf`，不会移动原文件或自动连接数据库。
+`web` 是持续运行的服务，不接受 `--json`；其他命令的 JSON 契约保持不变。
+
+界面无账户、角色权限和登录步骤，支持中文/英文与明暗主题。关闭浏览器不会停止后台
+操作；Ctrl+C 或关闭本机 Flydb 进程会停止服务，不能承诺未完成的数据库操作继续。
+未留下终态的执行记录显示为待核验，不自动重放。
+
+默认本地状态目录为 `~/.flydb/workbench`。可用 `FLYDB_WORKBENCH_DIR` 同时指定 CLI
+与 GUI 的记录目录；`web --state-dir` 只影响该 Web 进程。普通数据库 CLI 命令会保存
+脱敏的本地执行记录，无需先启动 Web；记录不可写时 stderr 提示，原命令结果和
+stdout JSON 不变。GUI 只能观察同机、同状态目录中当前版本留下的记录，不能观察
+旧版本、其他机器或任意外部终端日志。详见[图形工作台指南](../getting-started/web.md)。
 
 ## 常用流程
 
