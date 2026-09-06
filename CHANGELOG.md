@@ -5,6 +5,18 @@ Flydb 的重要变更记录在本文件中。版本遵循语义化版本；正�
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-09-06
+
+### 安全修复
+
+- 将 `flydb-runtime` 的 `jackson-databind` 从 2.21.4 升级至 2.21.5，随 CLI/Web 发行包交付。该上游补丁修复对象反序列化中属性忽略、视图约束和 `InetAddress` DNS 解析相关问题，详见 [Jackson 2.21.5 发布说明](https://github.com/FasterXML/jackson/wiki/Jackson-Release-2.21.5)。
+- 当前 Flydb 使用 JSON 树读取配置登记与执行记录，未使用上述对象绑定路径。本次不改变 CLI 命令、GUI 操作、迁移语义或数据库支持范围。
+
+### 发行说明
+
+- 产品与随包插件版本同步为 0.3.6；Skill 操作说明不变，Web 最低版本仍为 0.3.5。MCP Adapter 独立版本保持 0.1.0。
+- 已发布的 0.3.5 产物保持原样；使用新版 CLI ZIP 或升级 Maven 依赖版本以获得修复。
+
 ## [0.3.5] - 2026-09-06
 
 ### 新增
