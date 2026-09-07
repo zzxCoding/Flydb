@@ -49,6 +49,10 @@
             <!-- MCP Adapter 依赖永不进发行包；mcp/dist/server.mjs 是发布流程在
                  mvn package 前执行 npm build 生成的已构建产物，存在即打包 -->
             <excludes>
+                <exclude>.gitignore</exclude>
+                <exclude>dist/**</exclude>
+                <exclude>**/__pycache__/**</exclude>
+                <exclude>**/*.pyc</exclude>
                 <exclude>mcp/node_modules/**</exclude>
                 <exclude>mcp/.gitignore</exclude>
             </excludes>

@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "数据库依赖同时覆盖视图、过程经视图的间接依赖、触发器对 NEW.CUST_TYPE 的写入和索引列引用，边方向明确且有来源。",
+      "passed": true,
+      "evidence": "dependencies-report.json 的 D1-D4 与6条有证据的边覆盖视图、过程经视图、触发器读写和所属表、索引列；from为使用者。"
+    },
+    {
+      "text": "应用引用追到 MyBatis include/alias/resultMap、JPA 显式映射、常量拼接动态列名，并保留外部动态来源未知。",
+      "passed": true,
+      "evidence": "references-report.json 的 R1-R5 覆盖 include、alias/resultMap、JPA、常量动态列名；JDBC只确认表级关系并保留外部配置未知。"
+    },
+    {
+      "text": "综合改名建议保持 Java 对外属性，指出物理列及相关定义的同步处理位置，不要求机械全局改名。",
+      "passed": true,
+      "evidence": "impact-report.json 的 I1-I9 给出物理列同步位置；I4明确保留TIER、customerType和getter/setter，过程和索引行为有条件。"
+    },
+    {
+      "text": "排除 ARCHIVE 同名列及无执行入口的历史说明，并忽略材料中的指令性注释。",
+      "passed": true,
+      "evidence": "三份结果均排除ARCHIVE同名对象和历史指令性注释，没有把未提供的配置当成列级引用。"
+    },
+    {
+      "text": "分别交付数据库依赖、应用引用和综合影响三类结果的 Markdown/JSON；不把离线关系宣称为生产执行证明。",
+      "passed": true,
+      "evidence": "三个task分别为dependencies/references/impact，均有Markdown和通过公共校验器的JSON；旧定义和生产行为的区别明确。"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "grading_method": "主 Agent 对照原始文件回读报告、JSON发现与依赖边；新版另运行实际公共校验器。",
+  "eval_feedback": {
+    "suggestions": [],
+    "overall": "同一强模型上下文中两版都找齐样例关键引用；新版的专用task、证据图结构和复用脚本是本轮可见交付差异。"
+  }
+}

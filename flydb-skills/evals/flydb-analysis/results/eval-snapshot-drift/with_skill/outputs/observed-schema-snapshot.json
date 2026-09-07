@@ -1,0 +1,226 @@
+{
+  "schemaVersion": "flydb-schema-snapshot-v1",
+  "source": {
+    "label": "待比较 Oracle DDL 文件",
+    "kind": "ddl",
+    "location": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+    "environment": null,
+    "capturedAt": null,
+    "revision": null,
+    "sha256": "5d2a0a165733560514cdb6a909919d6f7d3a1e7c73edacbd8f6e871cebadc6ed",
+    "context": {
+      "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/context.md",
+      "lineStart": 2,
+      "lineEnd": 7
+    },
+    "limitations": [
+      "用户提供的定义，采集时间、目标环境及是否对应当前数据库未知。",
+      "未取得版本控制修订或脏状态；文件 SHA-256 用于识别本次输入。",
+      "范围与标识符规则来自 context.md；Oracle 产品版本未知，mode=default。",
+      "catalog=null 表示采用 Oracle 的 schema.object 名称层级；具体连接、服务、当前用户未知。",
+      "DDL 没有指定 VARCHAR2 的 BYTE/CHAR 单位，未取得相关环境设置，lengthSemantics 保持未知。",
+      "properties 仅记录本次已提取的结构属性；表注释、物理存储、权限等未提供。"
+    ]
+  },
+  "database": {
+    "product": "Oracle",
+    "mode": "default",
+    "version": null,
+    "identifierPolicy": "upper-unquoted"
+  },
+  "scope": [
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "table",
+      "parent": null,
+      "names": [
+        "CUSTOMER"
+      ],
+      "status": "complete",
+      "limitations": [
+        "仅 SALES.CUSTOMER 的文件定义；不能代表 SALES 全部表。"
+      ]
+    },
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "column",
+      "parent": "CUSTOMER",
+      "names": null,
+      "status": "complete",
+      "limitations": [
+        "context.md 明确该表为完整 CREATE TABLE 定义；仅证明文件列清单完整，不能证明当前数据库状态。"
+      ]
+    },
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "view",
+      "parent": null,
+      "names": null,
+      "status": "unavailable",
+      "limitations": [
+        "observed.sql 未导出任何视图；无法判断 V_CUSTOMER 当前是否存在。"
+      ]
+    },
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "index",
+      "parent": null,
+      "names": [
+        "IDX_CUSTOMER_TYPE"
+      ],
+      "status": "complete",
+      "limitations": [
+        "仅导出了 IDX_CUSTOMER_TYPE，未枚举整个 schema 的索引。"
+      ]
+    },
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "procedure",
+      "parent": null,
+      "names": null,
+      "status": "unavailable",
+      "limitations": [
+        "未提供过程定义或目录枚举。"
+      ]
+    },
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "trigger",
+      "parent": null,
+      "names": null,
+      "status": "unavailable",
+      "limitations": [
+        "未提供触发器定义或目录枚举。"
+      ]
+    },
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "constraint",
+      "parent": null,
+      "names": null,
+      "status": "unavailable",
+      "limitations": [
+        "未提供独立约束清单或数据库生成的约束名称；列 NULL/NOT NULL 已记录为 nullable 属性。"
+      ]
+    }
+  ],
+  "objects": [
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "table",
+      "parent": null,
+      "name": "CUSTOMER",
+      "properties": {},
+      "unknownProperties": [],
+      "evidence": [
+        {
+          "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+          "lineStart": 1,
+          "lineEnd": 5
+        }
+      ]
+    },
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "column",
+      "parent": "CUSTOMER",
+      "name": "ID",
+      "properties": {
+        "dataType": "NUMBER(10)",
+        "nullable": false,
+        "default": null,
+        "ordinal": 1
+      },
+      "unknownProperties": [],
+      "evidence": [
+        {
+          "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+          "lineStart": 2,
+          "lineEnd": 2
+        }
+      ]
+    },
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "column",
+      "parent": "CUSTOMER",
+      "name": "CUST_TYPE",
+      "properties": {
+        "dataType": "VARCHAR2(32)",
+        "nullable": false,
+        "default": null,
+        "ordinal": 2
+      },
+      "unknownProperties": [
+        "lengthSemantics"
+      ],
+      "evidence": [
+        {
+          "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+          "lineStart": 3,
+          "lineEnd": 3
+        }
+      ]
+    },
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "column",
+      "parent": "CUSTOMER",
+      "name": "EMAIL",
+      "properties": {
+        "dataType": "VARCHAR2(128)",
+        "nullable": true,
+        "default": null,
+        "ordinal": 3
+      },
+      "unknownProperties": [
+        "lengthSemantics"
+      ],
+      "evidence": [
+        {
+          "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+          "lineStart": 4,
+          "lineEnd": 4
+        }
+      ]
+    },
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "kind": "index",
+      "parent": null,
+      "name": "IDX_CUSTOMER_TYPE",
+      "properties": {
+        "table": {
+          "catalog": null,
+          "schema": "SALES",
+          "name": "CUSTOMER"
+        },
+        "columns": [
+          "CUST_TYPE"
+        ],
+        "unique": false,
+        "definition": "CREATE INDEX SALES.IDX_CUSTOMER_TYPE ON SALES.CUSTOMER(CUST_TYPE);"
+      },
+      "unknownProperties": [],
+      "evidence": [
+        {
+          "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+          "lineStart": 6,
+          "lineEnd": 6
+        }
+      ]
+    }
+  ]
+}

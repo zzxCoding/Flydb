@@ -1,6 +1,6 @@
 # flydb-skills
 
-Flydb 的 Agent Skills 集合。Skill 负责把重复的操作流程交给 Agent，项目文档仍然是命令、配置和数据库接入行为的唯一事实来源，避免 Skill 内复制一份会过期的 CLI 手册。
+Flydb 的 Agent Skills 集合，统一维护迁移操作与存量分析能力。Skill 负责把重复的操作流程交给 Agent，项目文档仍然是 CLI 命令、配置和数据库接入行为的唯一事实来源，避免 Skill 内复制一份会过期的 CLI 手册。
 
 本目录同时是一个合法的 [Agent Plugins 1.0.0](https://agent-plugins.org/specification) 插件包：根目录的 [`plugin.json`](plugin.json) 是插件清单，`skills/` 下是组件技能，[`mcp.json`](mcp.json) 声明 stdio MCP server（入口 [`mcp/dist/server.mjs`](mcp/dist/server.mjs)，需先在 `mcp/` 内构建）。支持该规范的宿主（ChatGPT、Codex、Cursor、Copilot、VS Code 等）可以直接以插件形式装载本目录。`plugin.json` 的 `version` 随 Flydb 发布版本同步维护，`name: flydb` 是规范层面永不重分配的包标识。
 
@@ -8,7 +8,7 @@ MCP server 把 Flydb 暴露为 9 个领域工具（写入工具默认不注册�
 
 ## Agent 首次接入
 
-请先阅读仓库根目录的 [`AGENTS.md`](../AGENTS.md)。它会引导你安装或启用 `flydb-cli`、读取 CLI/JDBC 文档，并从 `version`、`validate`、`--dry-run migrate` 开始；如果当前环境不能自动发现 Skill，直接读取下面的 `SKILL.md` 即可。
+请先阅读仓库根目录的 [`AGENTS.md`](../AGENTS.md)，再根据任务选择下面的 Skill。迁移操作使用 `flydb-cli`，读取 CLI/JDBC 文档，并从 `version`、`validate`、`--dry-run migrate` 开始；结构与代码分析使用 `flydb-analysis`，可从离线材料开始。如果当前环境不能自动发现 Skill，直接读取对应的 `SKILL.md` 即可。
 
 如果你是人类用户，也可以把下面这段话复制给 Agent：
 
@@ -19,10 +19,13 @@ MCP server 把 Flydb 暴露为 9 个领域工具（写入工具默认不注册�
 | Skill | 用途 | 入口 |
 |---|---|---|
 | `flydb-cli` | 使用和排查 Flydb CLI，覆盖本机 GUI、初始化、驱动接入、迁移、校验、状态、修复和撤销 | [`skills/flydb-cli/SKILL.md`](skills/flydb-cli/SKILL.md) |
+| `flydb-analysis` | 方言预检、Schema 快照与漂移、数据库依赖、应用引用和变更影响分析；支持离线材料及未使用 Flydb 的项目 | [`skills/flydb-analysis/SKILL.md`](skills/flydb-analysis/SKILL.md) |
+
+`flydb-analysis` 当前为 **0.2.0 preview**，使用说明与请求示例见 [分析指南](docs/flydb-analysis.md)。它的 `metadata.version` 独立于 Flydb JAR 和插件包版本，整个技能目录可以单独复制更新。
 
 ## 多 Agent 兼容
 
-`flydb-cli` 使用开放的 Agent Skills 目录格式：一个技能目录包含 `SKILL.md`，可选 `references/`、`scripts/` 和 `assets/`。因此同一份 Skill 面向以下主流 Agent 提供跨工具复用：
+本目录的技能使用开放的 Agent Skills 目录格式：一个技能目录包含 `SKILL.md`，可选 `references/`、`scripts/` 和 `assets/`。因此同一份 Skill 面向以下主流 Agent 提供跨工具复用：
 
 | Agent | 兼容方式 | 常见发现/安装位置 |
 |---|---|---|
@@ -40,9 +43,11 @@ MCP server 把 Flydb 暴露为 9 个领域工具（写入工具默认不注册�
 
 ## 使用方式
 
+独立分析可直接让 Agent 读取 [`skills/flydb-analysis/SKILL.md`](skills/flydb-analysis/SKILL.md)，或复制整个 [`skills/flydb-analysis`](skills/flydb-analysis) 目录到宿主的技能目录。离线分析只需文件读取与搜索能力；Python 3.9+ 仅用于可选的快照比较和产物校验，具体材料与示例见 [分析指南](docs/flydb-analysis.md)。
+
 将 [`skills/flydb-cli`](skills/flydb-cli) 复制到支持 Agent Skills 的技能目录，或在 Flydb 源码仓库/CLI 发行包中直接使用。发行包同时附带版本匹配的 `docs/`；复制 Skill 后应保留发行包路径，Agent 会优先从目标发行包读取文档，再决定 CLI 命令。它不会把密码写进命令行、日志或迁移脚本。
 
-使用本 Skill 处理信创或新型 JDBC 数据库时，先阅读[JDBC 数据库快速接入](../docs/getting-started/jdbc-integration.md)，确认驱动、方言和迁移语义，再执行 CLI 操作。
+使用 `flydb-cli` 处理信创或新型 JDBC 数据库时，先阅读[JDBC 数据库快速接入](../docs/getting-started/jdbc-integration.md)，确认驱动、方言和迁移语义，再执行 CLI 操作。
 
 ## 文档来源
 
@@ -66,8 +71,13 @@ MCP server 把 Flydb 暴露为 9 个领域工具（写入工具默认不注册�
 ```bash
 python3 "${HOME}/.agents/skills/skill-creator/scripts/quick_validate.py" \
   flydb-skills/skills/flydb-cli
+python3 "${HOME}/.agents/skills/skill-creator/scripts/quick_validate.py" \
+  flydb-skills/skills/flydb-analysis
+python3 -m unittest discover -s flydb-skills/evals/flydb-analysis -p 'test_*.py' -v
 ```
 
 评测提示词与可验证预期位于 [`skills/flydb-cli/evals/evals.json`](skills/flydb-cli/evals/evals.json)，覆盖 GUI 版本与启动、人机共用配置、写入边界、基本迁移、长迁移后台托管、外部 locations、范围/版本族选择、发现完整性、业务模板占位符、MISSING、驱动诊断和 clean 安全边界。
+
+分析 Skill 的样例、测试、历史受测副本与结果归档在 [`evals/flydb-analysis`](evals/flydb-analysis)，验证范围见 [验证记录](evals/flydb-analysis/VALIDATION.md)。冻结副本放在组件技能目录之外，避免被当作当前技能发现。本地生成的独立 `.skill` 包放在 `dist/`，不纳入 Git 或重复嵌入 CLI 发行包。
 
 项目复用仓库根目录的 [Apache-2.0 许可证](../LICENSE)。

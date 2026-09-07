@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "eval_name": "compatibility",
+  "prompt": "请检查提供的 dry-run 计划在说明的目标数据库上的方言兼容风险，输出中文 Markdown 和诊断 JSON，保留计划身份，并说明静态材料不能确定的条件。仅使用给定离线材料，不执行 SQL、不改输入、不连接数据库。",
+  "assertions": [
+    "识别组合 MODIFY 的兼容风险，定位 migration.sql 第2行，保留版本与静态材料限定。",
+    "将 AMOUNT 的 NUMBER(10,2) 到 NUMBER(10,4) 识别为仅 scale 变化，并引用旧定义。",
+    "关联 OPS 与 SALES 的区别，说明目标 schema 使用 USER_TAB_COLUMNS 的目录可见性风险。",
+    "没有把注释或字符串字面量中的示例当成实际 MODIFY，也没有把单独类型修改当成组合 MODIFY。",
+    "JSON 原样保留给定 plan.algorithm/id，且没有宣称目标 SQL 已执行或生产必然失败。"
+  ]
+}

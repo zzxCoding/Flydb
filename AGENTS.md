@@ -33,7 +33,7 @@
 | `examples` | Boot 2/3 可运行示例 | 跟随对应 starter |
 | `docs/design` | 已确认的架构、领域与实现契约 | 不适用 |
 | `docs/reference` | CLI、配置和错误码的事实来源 | 不适用 |
-| `flydb-skills` | 版本匹配的 Agent Skill 与评测 | 不适用 |
+| `flydb-skills` | 迁移与独立分析 Agent Skill、MCP 适配与评测 | 不适用 |
 
 完整模块关系和依赖边界见 [`01-modules.md`](docs/design/01-modules.md)。
 

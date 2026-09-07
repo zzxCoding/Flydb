@@ -1,0 +1,20 @@
+{
+  "result": "PASS",
+  "checks": [
+    "三个 JSON 均可解析",
+    "报告必需字段存在及枚举合法",
+    "来源/证据/发现 id 唯一",
+    "全部证据引用可解析且摘录与输入行号匹配",
+    "严格语法提取处理全部 SQL 输入行",
+    "检测到四项表结构差异，未将视图/索引材料缺口作为确定差异",
+    "生成与检查期间三份输入 SHA-256 未变化"
+  ],
+  "limitations": [
+    "这是本地结构检查，不能认证业务语义或数据库兼容性。"
+  ],
+  "sourceSha256": {
+    "context.md": "04dbd8b73f02a905c1d2d68783f3b2af0584db518d97c6c906bf442cf91b760d",
+    "baseline.sql": "aaa6560adc654693ff892378fc890b21b2c33cd5119b94df7217f4d1a369422f",
+    "observed.sql": "5d2a0a165733560514cdb6a909919d6f7d3a1e7c73edacbd8f6e871cebadc6ed"
+  }
+}

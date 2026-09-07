@@ -1,0 +1,668 @@
+{
+  "schemaVersion": "flydb-analysis-report-v1",
+  "task": "compatibility",
+  "analysisStatus": "completed",
+  "request": {
+    "objective": "检查给定 dry-run 计划在说明的目标数据库上的方言兼容风险，保留计划身份并列出静态未知条件。",
+    "scope": "仅给定的四份离线材料与 Skill 内置的三条 OceanBase-Oracle 规则。",
+    "constraints": [
+      "不执行 SQL",
+      "不连接数据库",
+      "不修改输入及 Skill",
+      "不访问网络"
+    ],
+    "targetDatabase": {
+      "product": "OceanBase",
+      "mode": "Oracle",
+      "version": "4.2.1.2",
+      "loginUser": "OPS",
+      "currentSchema": "SALES",
+      "targetSchema": "SALES",
+      "catalog": null,
+      "identitySource": "用户提供的 context.md:2，未现场核验"
+    }
+  },
+  "generatedAt": "2026-09-07T02:29:30.327110+00:00",
+  "sources": [
+    {
+      "id": "S-context",
+      "kind": "user-statement",
+      "location": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/context.md",
+      "revision": null,
+      "dirtyState": "unknown",
+      "capturedAt": null,
+      "readAt": "2026-09-07T02:29:30.327110+00:00",
+      "environment": null,
+      "limitations": [
+        "目标身份来自用户说明，没有现场核验。"
+      ]
+    },
+    {
+      "id": "S-plan",
+      "kind": "synthetic-dry-run-plan",
+      "location": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/plan.json",
+      "revision": null,
+      "dirtyState": "unknown",
+      "capturedAt": null,
+      "readAt": "2026-09-07T02:29:30.327110+00:00",
+      "environment": null,
+      "limitations": [
+        "合成成功信封，不证明真实 Core 生成或数据库执行；来源修订、完整性认证与采集时间未知。"
+      ]
+    },
+    {
+      "id": "S-before",
+      "kind": "user-provided-ddl",
+      "location": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/before.sql",
+      "revision": null,
+      "dirtyState": "unknown",
+      "capturedAt": null,
+      "readAt": "2026-09-07T02:29:30.327110+00:00",
+      "environment": null,
+      "limitations": [
+        "用户提供的旧定义，采集时间、实际目标一致性未知；不是本次实时元数据。"
+      ]
+    },
+    {
+      "id": "S-migration",
+      "kind": "sql-source",
+      "location": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+      "revision": null,
+      "dirtyState": "unknown",
+      "capturedAt": null,
+      "readAt": "2026-09-07T02:29:30.327110+00:00",
+      "environment": null,
+      "limitations": [
+        "只覆盖给定文件；已与计划中五个 SQL 文本和起始行核对。"
+      ]
+    },
+    {
+      "id": "S-rules",
+      "kind": "skill-bundled-rule-reference",
+      "location": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/skill-snapshots/0.2.0-tested/flydb-analysis/references/compatibility.md",
+      "revision": null,
+      "dirtyState": "unknown",
+      "capturedAt": null,
+      "readAt": "2026-09-07T02:29:30.327110+00:00",
+      "environment": null,
+      "limitations": [
+        "只读取本地参考；未访问固定修订链接或任何厂商文档，未实时核验。"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E-context",
+      "sourceId": "S-context",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/context.md",
+        "lineStart": 2,
+        "lineEnd": 5
+      },
+      "excerpt": "目标是 OceanBase 4.2.1.2 Oracle 模式，登录用户 OPS，current schema SALES。\nbefore.sql 是用户提供的旧定义，并非本次实时查询；本次只有离线材料。\nplan.json 是合成的 Flydb dry-run 成功信封，用于计划消费和 id 透传测试，不代表真实 Core 生成或数据库执行。\n这里没有连接凭据。只输出分析，不运行 SQL。"
+    },
+    {
+      "id": "E-plan-id",
+      "sourceId": "S-plan",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/plan.json",
+        "lineStart": 2,
+        "lineEnd": 13
+      },
+      "excerpt": "{\"algorithm\": \"flydb-plan-v1\", \"direction\": \"migrate\", \"id\": \"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\", \"targetVersion\": \"2\", \"migrationCount\": 1, \"statementCount\": 5}"
+    },
+    {
+      "id": "E-old-cust",
+      "sourceId": "S-before",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/before.sql",
+        "lineStart": 1,
+        "lineEnd": 3
+      },
+      "excerpt": "SALES.CUSTOMER.CUST_TYPE VARCHAR2(16) NULL"
+    },
+    {
+      "id": "E-old-amount",
+      "sourceId": "S-before",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/before.sql",
+        "lineStart": 1,
+        "lineEnd": 4
+      },
+      "excerpt": "SALES.CUSTOMER.AMOUNT NUMBER(10,2)"
+    },
+    {
+      "id": "E-mixed",
+      "sourceId": "S-migration",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 2,
+        "lineEnd": 2
+      },
+      "excerpt": "ALTER TABLE SALES.CUSTOMER MODIFY CUST_TYPE VARCHAR2(32) NOT NULL;"
+    },
+    {
+      "id": "E-scale",
+      "sourceId": "S-migration",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 3,
+        "lineEnd": 3
+      },
+      "excerpt": "ALTER TABLE SALES.CUSTOMER MODIFY AMOUNT NUMBER(10,4);"
+    },
+    {
+      "id": "E-user-catalog",
+      "sourceId": "S-migration",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 4,
+        "lineEnd": 8
+      },
+      "excerpt": "DECLARE\n  n NUMBER;\nBEGIN\n  SELECT COUNT(*) INTO n FROM USER_TAB_COLUMNS WHERE TABLE_NAME = 'CUSTOMER';\nEND;"
+    },
+    {
+      "id": "E-widen",
+      "sourceId": "S-migration",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 9,
+        "lineEnd": 9
+      },
+      "excerpt": "ALTER TABLE SALES.CUSTOMER MODIFY CUST_TYPE VARCHAR2(64);"
+    },
+    {
+      "id": "E-string",
+      "sourceId": "S-migration",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 10,
+        "lineEnd": 10
+      },
+      "excerpt": "SELECT 'ALTER TABLE X MODIFY Y VARCHAR2(20) NOT NULL' AS EXAMPLE FROM DUAL;"
+    },
+    {
+      "id": "E-comment",
+      "sourceId": "S-migration",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 1,
+        "lineEnd": 1
+      },
+      "excerpt": "-- 注释里出现 USER_TAB_COLUMNS 和 MODIFY c VARCHAR2(20) NOT NULL，不是执行语句。"
+    },
+    {
+      "id": "E-plan-statements",
+      "sourceId": "S-plan",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/plan.json",
+        "lineStart": 15,
+        "lineEnd": 43
+      },
+      "excerpt": "migration.sql，version=2；5 个 statements，起始行依次为 2、3、4、9、10。"
+    },
+    {
+      "id": "E-rule001",
+      "sourceId": "S-rules",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/skill-snapshots/0.2.0-tested/flydb-analysis/references/compatibility.md",
+        "lineStart": 20,
+        "lineEnd": 20
+      },
+      "excerpt": "同一 ALTER TABLE MODIFY 子句同时修改类型/长度和 NULL/NOT NULL 属性。"
+    },
+    {
+      "id": "E-rule002",
+      "sourceId": "S-rules",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/skill-snapshots/0.2.0-tested/flydb-analysis/references/compatibility.md",
+        "lineStart": 21,
+        "lineEnd": 21
+      },
+      "excerpt": "旧定义与新定义可比，精度不变而 scale 改变。"
+    },
+    {
+      "id": "E-rule003",
+      "sourceId": "S-rules",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/skill-snapshots/0.2.0-tested/flydb-analysis/references/compatibility.md",
+        "lineStart": 22,
+        "lineEnd": 22
+      },
+      "excerpt": "对目标 schema 的目录检查使用 USER_*，且登录用户与该 current schema 不同。"
+    },
+    {
+      "id": "E-rule-scope",
+      "sourceId": "S-rules",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/skill-snapshots/0.2.0-tested/flydb-analysis/references/compatibility.md",
+        "lineStart": 16,
+        "lineEnd": 26
+      },
+      "excerpt": "本地规则转述项目实测范围 4.2.x / 4.2.1.2；4.2.1.x Oracle 模式适用，非厂商全版本承诺。"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-001",
+      "target": "SALES.CUSTOMER.CUST_TYPE",
+      "claim": "同一 MODIFY 将 CUST_TYPE 从 VARCHAR2(16) NULL 改为 VARCHAR2(32) NOT NULL，同时改变长度与可空性，命中已知组合变更风险。",
+      "basis": "confirmed",
+      "impact": "在目标版本可能不接受该组合变更；静态命中不证明数据库必然报错。",
+      "conditions": [
+        "before.sql 的旧定义与待执行目标一致。",
+        "采用 context.md 声明的 OceanBase 4.2.1.2 Oracle 模式。"
+      ],
+      "evidenceIds": [
+        "E-context",
+        "E-old-cust",
+        "E-mixed",
+        "E-plan-statements",
+        "E-rule001",
+        "E-rule-scope"
+      ],
+      "nextActions": [
+        "核对目标列的实时定义及现有 NULL 数据；在另行授权的验证环境评估分开修改长度和可空性。拆分后的业务数据条件仍需验证。"
+      ]
+    },
+    {
+      "id": "F-002",
+      "target": "SALES.CUSTOMER.AMOUNT",
+      "claim": "旧定义 NUMBER(10,2) 与计划中的 NUMBER(10,4) 可比：precision 均为 10，scale 从 2 变为 4，命中仅改变 scale 的已知风险。",
+      "basis": "confirmed",
+      "impact": "目标版本可能不支持该直接变更；还需评估现有数据是否满足新精度和 scale 的表示范围。",
+      "conditions": [
+        "before.sql 提供的是待迁移列当时的真实旧定义。",
+        "前序执行情况不会改变本列的输入状态。"
+      ],
+      "evidenceIds": [
+        "E-context",
+        "E-old-amount",
+        "E-scale",
+        "E-plan-statements",
+        "E-rule002",
+        "E-rule-scope"
+      ],
+      "nextActions": [
+        "先核对实际 precision/scale 和数据范围，再按目标补丁版本评估受支持的迁移方案；仅建议另行授权的无害验证，本次不生成替代迁移。"
+      ]
+    },
+    {
+      "id": "F-003",
+      "target": "SALES.CUSTOMER 的目录检查",
+      "claim": "该计划对 SALES.CUSTOMER 进行变更，但 PL/SQL 块使用 USER_TAB_COLUMNS 检查 CUSTOMER。按给定 OPS 登录、current schema SALES 的上下文，命中目录检查对象范围可能与目标 schema 不一致的风险。",
+      "basis": "confirmed",
+      "impact": "若这段检查意图判断 SALES.CUSTOMER，可能得到登录用户自身对象范围的计数，造成目标列是否存在的误判；查询本身未必报错，也不能据静态材料断定返回 0。",
+      "conditions": [
+        "目录检查意图与同一计划的 SALES.CUSTOMER 目标一致；若意在检查 OPS 自身对象，应重新归类。",
+        "按给定会话上下文运行；计划中未发现 ALTER SESSION 切换。"
+      ],
+      "evidenceIds": [
+        "E-context",
+        "E-user-catalog",
+        "E-plan-statements",
+        "E-rule003",
+        "E-rule-scope"
+      ],
+      "nextActions": [
+        "确认目录检查确实面向 SALES.CUSTOMER，并核对实际登录身份、current schema 与可见权限；按目标版本核验对应 ALL_* 视图及显式 OWNER = SALES 条件。"
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "id": "D-001",
+      "code": "FDA-OB-001",
+      "severity": "warning",
+      "basis": "confirmed",
+      "ruleSource": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/skill-snapshots/0.2.0-tested/flydb-analysis/references/compatibility.md; 转引 https://github.com/zzxCoding/Flydb/blob/56bc3baef4a4e5c9eefe440644a4343aa960d0a4/docs/getting-started/oceanbase-oracle.md#已知限制",
+      "applicability": "applicable",
+      "targetDatabase": {
+        "product": "OceanBase",
+        "mode": "Oracle",
+        "version": "4.2.1.2",
+        "loginUser": "OPS",
+        "currentSchema": "SALES",
+        "targetSchema": "SALES",
+        "catalog": null,
+        "identitySource": "用户提供的 context.md:2，未现场核验"
+      },
+      "statementLocation": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 2,
+        "lineEnd": 2
+      },
+      "evidenceIds": [
+        "E-context",
+        "E-old-cust",
+        "E-mixed",
+        "E-plan-statements",
+        "E-rule001",
+        "E-rule-scope"
+      ],
+      "message": "同一 MODIFY 将 CUST_TYPE 从 VARCHAR2(16) NULL 改为 VARCHAR2(32) NOT NULL，同时改变长度与可空性，命中已知组合变更风险。 在目标版本可能不接受该组合变更；静态命中不证明数据库必然报错。",
+      "nextCheck": "核对目标列的实时定义及现有 NULL 数据；在另行授权的验证环境评估分开修改长度和可空性。拆分后的业务数据条件仍需验证。"
+    },
+    {
+      "id": "D-002",
+      "code": "FDA-OB-002",
+      "severity": "warning",
+      "basis": "confirmed",
+      "ruleSource": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/skill-snapshots/0.2.0-tested/flydb-analysis/references/compatibility.md; 转引 https://github.com/zzxCoding/Flydb/blob/56bc3baef4a4e5c9eefe440644a4343aa960d0a4/docs/getting-started/oceanbase-oracle.md#已知限制",
+      "applicability": "applicable",
+      "targetDatabase": {
+        "product": "OceanBase",
+        "mode": "Oracle",
+        "version": "4.2.1.2",
+        "loginUser": "OPS",
+        "currentSchema": "SALES",
+        "targetSchema": "SALES",
+        "catalog": null,
+        "identitySource": "用户提供的 context.md:2，未现场核验"
+      },
+      "statementLocation": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 3,
+        "lineEnd": 3
+      },
+      "evidenceIds": [
+        "E-context",
+        "E-old-amount",
+        "E-scale",
+        "E-plan-statements",
+        "E-rule002",
+        "E-rule-scope"
+      ],
+      "message": "旧定义 NUMBER(10,2) 与计划中的 NUMBER(10,4) 可比：precision 均为 10，scale 从 2 变为 4，命中仅改变 scale 的已知风险。 目标版本可能不支持该直接变更；还需评估现有数据是否满足新精度和 scale 的表示范围。",
+      "nextCheck": "先核对实际 precision/scale 和数据范围，再按目标补丁版本评估受支持的迁移方案；仅建议另行授权的无害验证，本次不生成替代迁移。"
+    },
+    {
+      "id": "D-003",
+      "code": "FDA-OB-003",
+      "severity": "warning",
+      "basis": "confirmed",
+      "ruleSource": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/skill-snapshots/0.2.0-tested/flydb-analysis/references/compatibility.md; 转引 https://github.com/zzxCoding/Flydb/blob/56bc3baef4a4e5c9eefe440644a4343aa960d0a4/docs/getting-started/oceanbase-oracle.md#已知限制",
+      "applicability": "applicable",
+      "targetDatabase": {
+        "product": "OceanBase",
+        "mode": "Oracle",
+        "version": "4.2.1.2",
+        "loginUser": "OPS",
+        "currentSchema": "SALES",
+        "targetSchema": "SALES",
+        "catalog": null,
+        "identitySource": "用户提供的 context.md:2，未现场核验"
+      },
+      "statementLocation": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 4,
+        "lineEnd": 8
+      },
+      "evidenceIds": [
+        "E-context",
+        "E-user-catalog",
+        "E-plan-statements",
+        "E-rule003",
+        "E-rule-scope"
+      ],
+      "message": "该计划对 SALES.CUSTOMER 进行变更，但 PL/SQL 块使用 USER_TAB_COLUMNS 检查 CUSTOMER。按给定 OPS 登录、current schema SALES 的上下文，命中目录检查对象范围可能与目标 schema 不一致的风险。 若这段检查意图判断 SALES.CUSTOMER，可能得到登录用户自身对象范围的计数，造成目标列是否存在的误判；查询本身未必报错，也不能据静态材料断定返回 0。",
+      "nextCheck": "确认目录检查确实面向 SALES.CUSTOMER，并核对实际登录身份、current schema 与可见权限；按目标版本核验对应 ALL_* 视图及显式 OWNER = SALES 条件。"
+    }
+  ],
+  "ruleCoverage": [
+    {
+      "code": "FDA-OB-001",
+      "status": "match",
+      "reason": "逐条检查 5 个计划语句及源文件上下文；仅第 1 句（migration.sql:2）同时改长度与可空性。第 4 句仅改长度；第 5 句的相似 DDL 是字符串；第 1 行是注释。"
+    },
+    {
+      "code": "FDA-OB-002",
+      "status": "match",
+      "reason": "第 2 句与 before.sql:4 比较，NUMBER(10,2) -> NUMBER(10,4)，精度不变，scale 改变。其他语句没有匹配的数值类型变更。"
+    },
+    {
+      "code": "FDA-OB-003",
+      "status": "match",
+      "reason": "完整检查第 3 个 PL/SQL 块，目录查询位于 migration.sql:7；给定登录 OPS/current schema SALES，计划目标 SALES.CUSTOMER，5 个语句内无 ALTER SESSION。按该目标检查目录时命中。注释中的名称不计入。"
+    }
+  ],
+  "statements": [
+    {
+      "id": "statement-1",
+      "script": "migration.sql",
+      "migrationVersion": "2",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 2,
+        "lineEnd": 2
+      },
+      "sql": "ALTER TABLE SALES.CUSTOMER MODIFY CUST_TYPE VARCHAR2(32) NOT NULL;",
+      "planJsonPointer": "/migrations/0/statements/0",
+      "matchesSourceFile": true,
+      "diagnosticIds": [
+        "D-001"
+      ]
+    },
+    {
+      "id": "statement-2",
+      "script": "migration.sql",
+      "migrationVersion": "2",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 3,
+        "lineEnd": 3
+      },
+      "sql": "ALTER TABLE SALES.CUSTOMER MODIFY AMOUNT NUMBER(10,4);",
+      "planJsonPointer": "/migrations/0/statements/1",
+      "matchesSourceFile": true,
+      "diagnosticIds": [
+        "D-002"
+      ]
+    },
+    {
+      "id": "statement-3",
+      "script": "migration.sql",
+      "migrationVersion": "2",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 4,
+        "lineEnd": 8
+      },
+      "sql": "DECLARE\n  n NUMBER;\nBEGIN\n  SELECT COUNT(*) INTO n FROM USER_TAB_COLUMNS WHERE TABLE_NAME = 'CUSTOMER';\nEND;",
+      "planJsonPointer": "/migrations/0/statements/2",
+      "matchesSourceFile": true,
+      "diagnosticIds": [
+        "D-003"
+      ]
+    },
+    {
+      "id": "statement-4",
+      "script": "migration.sql",
+      "migrationVersion": "2",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 9,
+        "lineEnd": 9
+      },
+      "sql": "ALTER TABLE SALES.CUSTOMER MODIFY CUST_TYPE VARCHAR2(64);",
+      "planJsonPointer": "/migrations/0/statements/3",
+      "matchesSourceFile": true,
+      "diagnosticIds": []
+    },
+    {
+      "id": "statement-5",
+      "script": "migration.sql",
+      "migrationVersion": "2",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 10,
+        "lineEnd": 10
+      },
+      "sql": "SELECT 'ALTER TABLE X MODIFY Y VARCHAR2(20) NOT NULL' AS EXAMPLE FROM DUAL;",
+      "planJsonPointer": "/migrations/0/statements/4",
+      "matchesSourceFile": true,
+      "diagnosticIds": []
+    }
+  ],
+  "coverage": [
+    {
+      "scope": "用户限定的四份离线材料与成功信封消费",
+      "status": "inspected",
+      "checked": [
+        "完整读取 context.md、plan.json、before.sql、migration.sql。",
+        "计划标记为 success、exitCode=0、dryRun=true；合成来源已说明。",
+        "1 个迁移、5 个语句，计数与实际数组一致；SQL 和 lineNumber 与文件逐一一致。",
+        "原样引用 plan.algorithm/id；targetVersion=2 仅表示迁移版本。"
+      ],
+      "limitations": [
+        "未认证真实 Flydb Core 生成、计划签名或数据库运行状态。",
+        "来源 revision、dirtyState 和采集时间未提供，保持未知。"
+      ]
+    },
+    {
+      "scope": "FDA-OB-001/002/003 静态规则检查",
+      "status": "inspected",
+      "checked": [
+        "逐句检查并将 DECLARE...END 视为完整块。",
+        "区分注释、字符串、可执行 DDL 与目录查询。",
+        "比较旧列类型/长度/可空性和 precision/scale。",
+        "按 OPS/SALES 初始上下文顺序检查，未发现 ALTER SESSION 或动态 SQL。"
+      ],
+      "limitations": [
+        "三项均为 warning；confirmed 仅表示当前材料中的匹配证据，非现场成功或失败证明。",
+        "3 条规则无法穷尽方言、权限、业务数据和所有依赖风险。"
+      ]
+    },
+    {
+      "scope": "目标库运行时状态及外部资料实时核验",
+      "status": "unavailable",
+      "checked": [],
+      "limitations": [
+        "用户限定离线；无连接、无 SQL 执行、无网络访问。",
+        "没有实时列定义、业务数据、权限、目录结果或实际补丁版本证据。"
+      ]
+    }
+  ],
+  "unknowns": [
+    {
+      "gap": "用户提供的旧定义是否仍等于实际待迁移列定义、目标实例是否确为声明版本/模式，均未实时核验。",
+      "affectedClaims": [
+        "F-001",
+        "F-002",
+        "F-003"
+      ],
+      "nextCheck": "由用户提供有采集时间与目标身份的列定义、版本和会话信息；或另行授权只读元数据核验。"
+    },
+    {
+      "gap": "CUST_TYPE 是否含 NULL、AMOUNT 的现有值是否适合新定义、操作执行及依赖条件未知。",
+      "affectedClaims": [
+        "F-001",
+        "F-002"
+      ],
+      "nextCheck": "另行确认数据条件与变更依赖，并在获授权的验证环境完成目标版本测试。"
+    },
+    {
+      "gap": "目录检查的开发者意图、OPS/SALES 实际对象与目录可见权限未知；无法给出 COUNT(*) 实际值。",
+      "affectedClaims": [
+        "F-003"
+      ],
+      "nextCheck": "确认检查意图是 SALES.CUSTOMER；提供实际用户/current schema 和对应目录可见性证据。"
+    },
+    {
+      "gap": "同一计划中的前序语句是否成功、执行器会否继续以及外部会话初始化行为无法从 dry-run 推出。",
+      "affectedClaims": [
+        "F-001",
+        "F-002",
+        "F-003"
+      ],
+      "nextCheck": "需要另行提供实际执行环境和日志；本次逐项审查计划中的拟执行语句，不假设已执行。"
+    },
+    {
+      "gap": "本次仅采用本地 Skill 的三条项目实测规则；未覆盖其他方言限制，也未实时确认引用文档或厂商全版本行为。",
+      "affectedClaims": [
+        "F-001",
+        "F-002",
+        "F-003"
+      ],
+      "nextCheck": "如需扩大范围，补充与目标版本匹配的一手资料或获授权的无害验证结果。"
+    }
+  ],
+  "excluded": [
+    {
+      "candidate": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 1,
+        "lineEnd": 1
+      },
+      "reason": "整行注释，USER_TAB_COLUMNS / MODIFY ... NOT NULL 不构成可执行 SQL。",
+      "evidenceIds": [
+        "E-comment"
+      ]
+    },
+    {
+      "candidate": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 9,
+        "lineEnd": 9
+      },
+      "reason": "仅将 CUST_TYPE 长度改为 64，没有同句修改可空性，不命中 FDA-OB-001；不据此断言该语句一定可执行。",
+      "evidenceIds": [
+        "E-widen"
+      ]
+    },
+    {
+      "candidate": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+        "lineStart": 10,
+        "lineEnd": 10
+      },
+      "reason": "相似 DDL 位于普通 SELECT 的字符串常量中，没有 EXECUTE IMMEDIATE；不命中 DDL 规则。",
+      "evidenceIds": [
+        "E-string"
+      ]
+    }
+  ],
+  "provenance": {
+    "skillVersion": "0.2.0",
+    "host": "Codex desktop",
+    "model": "unknown",
+    "ruleVerification": "仅读取 Skill 内置本地规则；固定修订链接未联网访问。",
+    "tools": [
+      "functions.exec / exec_command：只读文件、Python 产物生成及格式校验",
+      "Python 3.14.6"
+    ]
+  },
+  "sourcePlan": {
+    "provider": "用户提供的合成 Flydb dry-run 信封",
+    "algorithm": "flydb-plan-v1",
+    "id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "location": {
+      "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/plan.json",
+      "lineStart": 7,
+      "lineEnd": 13
+    },
+    "targetVersion": "2",
+    "identityHandling": "从原文件复制，未重算、修改或认证；分析为独立附件。"
+  },
+  "ruleSourceScope": {
+    "localSourceId": "S-rules",
+    "referencedUrl": "https://github.com/zzxCoding/Flydb/blob/56bc3baef4a4e5c9eefe440644a4343aa960d0a4/docs/getting-started/oceanbase-oracle.md#已知限制",
+    "referencedRevision": "56bc3baef4a4e5c9eefe440644a4343aa960d0a4",
+    "sourceType": "项目实测记录的 Skill 内置转述，非厂商全版本承诺",
+    "productScope": "OceanBase 4.2.x Oracle 模式；记录含 4.2.1.2，规则优先覆盖 4.2.1.x",
+    "liveVerified": false,
+    "remoteSourceRead": false
+  },
+  "inputContents": [
+    {
+      "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/before.sql",
+      "lineStart": 1,
+      "text": "CREATE TABLE SALES.CUSTOMER (\n  ID NUMBER(10) NOT NULL,\n  CUST_TYPE VARCHAR2(16) NULL,\n  AMOUNT NUMBER(10,2)\n);\n"
+    },
+    {
+      "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/compatibility/migration.sql",
+      "lineStart": 1,
+      "text": "-- 注释里出现 USER_TAB_COLUMNS 和 MODIFY c VARCHAR2(20) NOT NULL，不是执行语句。\nALTER TABLE SALES.CUSTOMER MODIFY CUST_TYPE VARCHAR2(32) NOT NULL;\nALTER TABLE SALES.CUSTOMER MODIFY AMOUNT NUMBER(10,4);\nDECLARE\n  n NUMBER;\nBEGIN\n  SELECT COUNT(*) INTO n FROM USER_TAB_COLUMNS WHERE TABLE_NAME = 'CUSTOMER';\nEND;\nALTER TABLE SALES.CUSTOMER MODIFY CUST_TYPE VARCHAR2(64);\nSELECT 'ALTER TABLE X MODIFY Y VARCHAR2(20) NOT NULL' AS EXAMPLE FROM DUAL;\n"
+    }
+  ]
+}

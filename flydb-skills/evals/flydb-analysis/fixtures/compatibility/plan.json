@@ -1,0 +1,47 @@
+{
+  "protocolVersion": 1,
+  "command": "migrate",
+  "status": "success",
+  "exitCode": 0,
+  "dryRun": true,
+  "plan": {
+    "algorithm": "flydb-plan-v1",
+    "direction": "migrate",
+    "id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "targetVersion": "2",
+    "migrationCount": 1,
+    "statementCount": 5
+  },
+  "migrations": [
+    {
+      "script": "migration.sql",
+      "type": "SQL",
+      "version": "2",
+      "description": "customer changes",
+      "checksum": 42,
+      "statementCount": 5,
+      "statements": [
+        {
+          "lineNumber": 2,
+          "sql": "ALTER TABLE SALES.CUSTOMER MODIFY CUST_TYPE VARCHAR2(32) NOT NULL;"
+        },
+        {
+          "lineNumber": 3,
+          "sql": "ALTER TABLE SALES.CUSTOMER MODIFY AMOUNT NUMBER(10,4);"
+        },
+        {
+          "lineNumber": 4,
+          "sql": "DECLARE\n  n NUMBER;\nBEGIN\n  SELECT COUNT(*) INTO n FROM USER_TAB_COLUMNS WHERE TABLE_NAME = 'CUSTOMER';\nEND;"
+        },
+        {
+          "lineNumber": 9,
+          "sql": "ALTER TABLE SALES.CUSTOMER MODIFY CUST_TYPE VARCHAR2(64);"
+        },
+        {
+          "lineNumber": 10,
+          "sql": "SELECT 'ALTER TABLE X MODIFY Y VARCHAR2(20) NOT NULL' AS EXAMPLE FROM DUAL;"
+        }
+      ]
+    }
+  ]
+}

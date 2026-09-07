@@ -1,0 +1,51 @@
+{
+  "status": "passed",
+  "checks": [
+    "input JSON parse",
+    "success/dry-run envelope fields",
+    "migration and statement count consistency",
+    "statement source-line exact matching",
+    "output JSON parse",
+    "required report fields",
+    "legal enums",
+    "unique IDs",
+    "resolvable references",
+    "evidence excerpt line matching",
+    "unchanged sourcePlan identity and metadata",
+    "Markdown contains original plan ID",
+    "input hashes unchanged during generation"
+  ],
+  "statementChecks": [
+    {
+      "index": 1,
+      "lineNumber": 2,
+      "matchesSource": true
+    },
+    {
+      "index": 2,
+      "lineNumber": 3,
+      "matchesSource": true
+    },
+    {
+      "index": 3,
+      "lineNumber": 4,
+      "matchesSource": true
+    },
+    {
+      "index": 4,
+      "lineNumber": 9,
+      "matchesSource": true
+    },
+    {
+      "index": 5,
+      "lineNumber": 10,
+      "matchesSource": true
+    }
+  ],
+  "findings": 5,
+  "evidence": 10,
+  "limitations": [
+    "未调用数据库、SQL 解析器或厂商方言校验器；检查不认证分析语义。",
+    "旧 Skill 未提供诊断专用 schema 或校验脚本，采用其报告约定和 Python 标准库断言。"
+  ]
+}

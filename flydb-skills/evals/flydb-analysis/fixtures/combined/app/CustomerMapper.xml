@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mapper namespace="sample.CustomerMapper">
+  <resultMap id="customer" type="sample.CustomerRow">
+    <id column="ID" property="id"/>
+    <result column="TIER" property="customerType"/>
+  </resultMap>
+  <sql id="columns">c.ID, c.CUST_TYPE AS TIER</sql>
+  <select id="find" resultMap="customer">
+    SELECT <include refid="columns"/> FROM SALES.CUSTOMER c WHERE c.ID = #{id}
+  </select>
+  <select id="byColumn" resultMap="customer">
+    SELECT <include refid="columns"/> FROM SALES.CUSTOMER c
+    WHERE c.${column} = #{value}
+  </select>
+</mapper>

@@ -1,0 +1,12 @@
+{
+  "eval_id": 2,
+  "eval_name": "snapshot-drift",
+  "prompt": "没有具体变更方案。请把 baseline.sql 和 observed.sql 分别整理成可复用的 Schema 快照 JSON，再比较两份结构，输出漂移 JSON 和中文报告，区分能确定的差异及材料缺失。范围信息在 context.md。仅离线分析，不修改输入。",
+  "assertions": [
+    "在没有拟议变更或数据库连接时生成两份独立可复用快照及漂移报告。",
+    "识别 CUST_TYPE 从 VARCHAR2(16) 到 VARCHAR2(32)，且可空性从允许 NULL 到 NOT NULL。",
+    "在明确完整的 CUSTOMER 列定义范围内识别 EMAIL 新增和 LEGACY_TAG 移除。",
+    "没有将 observed 未导出的 V_CUSTOMER 报为确定删除，也没有将 baseline 未导出索引等同索引不存在。",
+    "报告区分文件事实与当前数据库状态，并具体说明未覆盖的对象范围。"
+  ]
+}

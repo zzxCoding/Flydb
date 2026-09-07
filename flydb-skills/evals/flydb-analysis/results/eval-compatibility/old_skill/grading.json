@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "识别组合 MODIFY 的兼容风险，定位 migration.sql 第2行，保留版本与静态材料限定。",
+      "passed": true,
+      "evidence": "compatibility-report.md 的 F1 指出第2行同一 MODIFY 改长度和非空，版本行为保留待核验。"
+    },
+    {
+      "text": "将 AMOUNT 的 NUMBER(10,2) 到 NUMBER(10,4) 识别为仅 scale 变化，并引用旧定义。",
+      "passed": true,
+      "evidence": "F2 对照 NUMBER(10,2) 和 NUMBER(10,4)，说明小数位增加及整数容量变化；没有编造实时数据。"
+    },
+    {
+      "text": "关联 OPS 与 SALES 的区别，说明目标 schema 使用 USER_TAB_COLUMNS 的目录可见性风险。",
+      "passed": true,
+      "evidence": "F3 对照登录 OPS/current schema SALES，说明 USER_TAB_COLUMNS 的 owner 可见范围需核对。"
+    },
+    {
+      "text": "没有把注释或字符串字面量中的示例当成实际 MODIFY，也没有把单独类型修改当成组合 MODIFY。",
+      "passed": true,
+      "evidence": "关键排除说明注释和字符串不作为 DDL；F5 明确仅扩长不命中组合修改风险。"
+    },
+    {
+      "text": "JSON 原样保留给定 plan.algorithm/id，且没有宣称目标 SQL 已执行或生产必然失败。",
+      "passed": true,
+      "evidence": "diagnostics.json 原样透传计划 algorithm/id；报告没有将输入 success 当成真实执行证据。"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "grading_method": "主 Agent 回读原始材料、实际报告和 JSON；没有把自述日志当作完整执行审计。",
+  "eval_feedback": {
+    "suggestions": [],
+    "overall": "有限的功能核对；不能据单次样例判断跨模型稳定性或量化准确率增益。"
+  }
+}

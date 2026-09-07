@@ -85,6 +85,8 @@ bin/flydb validate
 
 ## Agent 使用
 
+存量结构与代码分析可直接使用独立的 [`flydb-analysis` Skill](flydb-skills/docs/flydb-analysis.md)：提供方言预检、Schema 快照与漂移、对象依赖、应用引用和变更影响分析的基础工作流。当前为 preview，支持离线材料与未使用 Flydb 的项目，Skill 可独立于 JAR 更新。
+
 Agent 请先阅读仓库根目录的 [`AGENTS.md`](./AGENTS.md)，按其指引安装或启用 [`flydb-cli` Skill](./flydb-skills/skills/flydb-cli/SKILL.md) 后再执行命令；涉及迁移时先执行 `validate` 和 `--dry-run migrate`。Skill 是薄编排层，不复制 CLI 手册；命令、配置和错误码细节以 [`docs/reference`](./docs/reference/README.md) 为准，Skill 面向 Claude Code、Codex、Gemini CLI、ZCode 等主流 Agent 复用，格式与安装方式见 [`flydb-skills`](./flydb-skills/README.md)。宿主支持 MCP 时，可通过 [`mcp.json`](./flydb-skills/mcp.json) 以 MCP tools 调用 Flydb（写入工具默认不注册），见 [MCP 工具参考](./docs/reference/mcp-tools.md)与[接入指南](./docs/getting-started/mcp-adapter.md)。
 
 CLI 发行 ZIP 同时包含 `AGENTS.md`、`docs/` 和 `flydb-skills/`，因此只有发行包、没有源码 checkout 时，也能使用与当前 CLI 版本匹配的文档和 Skill；复制 Skill 到 Agent 目录后，应保留发行包路径供其查找这些文档。

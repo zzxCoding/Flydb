@@ -1,0 +1,441 @@
+{
+  "schemaVersion": "flydb-impact-report-v1",
+  "formatNote": "复用指定 Skill 的分析报告契约；changeKind、before、after、comparison 是本次比较的扩展字段。该 Skill 未定义专门的漂移契约。",
+  "analysisStatus": "completed",
+  "request": {
+    "kind": "offline-schema-snapshot-comparison",
+    "proposedChange": null,
+    "target": {
+      "catalog": null,
+      "schema": "SALES",
+      "table": "CUSTOMER",
+      "column": null,
+      "quoted": false
+    },
+    "description": "生成两份可复用快照，比较结构，区分确定差异与材料缺失。"
+  },
+  "comparison": {
+    "baseline": "baseline.snapshot.json",
+    "observed": "observed.snapshot.json",
+    "direction": "baseline-to-observed",
+    "confirmedDifferenceCount": 4,
+    "comparableScope": "两份完整的 SALES.CUSTOMER 表定义",
+    "wholeSchemaComparable": false,
+    "liveDatabaseVerified": false
+  },
+  "sources": [
+    {
+      "id": "context.md",
+      "kind": "scope-context",
+      "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/context.md",
+      "sha256": "04dbd8b73f02a905c1d2d68783f3b2af0584db518d97c6c906bf442cf91b760d",
+      "capturedAt": null,
+      "live": false,
+      "repositoryRevision": "56bc3baef4a4e5c9eefe440644a4343aa960d0a4",
+      "trackedAtRevision": false,
+      "limitations": [
+        "输入目录未跟踪；内容身份以 SHA-256 为准。",
+        "数据库采集时间与当前性未知。"
+      ]
+    },
+    {
+      "id": "baseline.sql",
+      "kind": "provided-ddl",
+      "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/baseline.sql",
+      "sha256": "aaa6560adc654693ff892378fc890b21b2c33cd5119b94df7217f4d1a369422f",
+      "capturedAt": null,
+      "live": false,
+      "repositoryRevision": "56bc3baef4a4e5c9eefe440644a4343aa960d0a4",
+      "trackedAtRevision": false,
+      "limitations": [
+        "输入目录未跟踪；内容身份以 SHA-256 为准。",
+        "数据库采集时间与当前性未知。"
+      ]
+    },
+    {
+      "id": "observed.sql",
+      "kind": "provided-ddl",
+      "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+      "sha256": "5d2a0a165733560514cdb6a909919d6f7d3a1e7c73edacbd8f6e871cebadc6ed",
+      "capturedAt": null,
+      "live": false,
+      "repositoryRevision": "56bc3baef4a4e5c9eefe440644a4343aa960d0a4",
+      "trackedAtRevision": false,
+      "limitations": [
+        "输入目录未跟踪；内容身份以 SHA-256 为准。",
+        "数据库采集时间与当前性未知。"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "D001",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "table": "CUSTOMER",
+        "column": "EMAIL",
+        "quoted": false
+      },
+      "changeKind": "column-added",
+      "before": null,
+      "after": {
+        "identity": {
+          "catalog": null,
+          "schema": "SALES",
+          "table": "CUSTOMER",
+          "column": "EMAIL",
+          "quoted": false
+        },
+        "ordinal": 3,
+        "dataType": {
+          "name": "VARCHAR2",
+          "arguments": [
+            128
+          ],
+          "declaration": "VARCHAR2(128)"
+        },
+        "nullable": true,
+        "nullabilityDeclaration": "UNSPECIFIED",
+        "defaultExpression": null,
+        "source": {
+          "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+          "startLine": 4,
+          "endLine": 4
+        }
+      },
+      "claim": "观测文件的 SALES.CUSTOMER 定义包含 EMAIL，基线完整定义中没有该列。",
+      "basis": "confirmed",
+      "impact": "两份材料的列集合不同；不判断业务用途或部署行为。",
+      "conditions": [
+        "仅比较两份给定完整建表定义；不代表实时数据库或已执行的迁移。"
+      ],
+      "evidenceIds": [
+        "E-CONTEXT",
+        "E-BASE-TABLE",
+        "E-OBS-TABLE"
+      ],
+      "nextActions": [
+        "如需确认环境漂移，获取同一目标数据库、明确时间和范围的结构导出后复查。"
+      ]
+    },
+    {
+      "id": "D002",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "table": "CUSTOMER",
+        "column": "LEGACY_TAG",
+        "quoted": false
+      },
+      "changeKind": "column-removed",
+      "before": {
+        "identity": {
+          "catalog": null,
+          "schema": "SALES",
+          "table": "CUSTOMER",
+          "column": "LEGACY_TAG",
+          "quoted": false
+        },
+        "ordinal": 3,
+        "dataType": {
+          "name": "VARCHAR2",
+          "arguments": [
+            8
+          ],
+          "declaration": "VARCHAR2(8)"
+        },
+        "nullable": true,
+        "nullabilityDeclaration": "UNSPECIFIED",
+        "defaultExpression": null,
+        "source": {
+          "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/baseline.sql",
+          "startLine": 4,
+          "endLine": 4
+        }
+      },
+      "after": null,
+      "claim": "基线 SALES.CUSTOMER 定义包含 LEGACY_TAG，观测完整定义中没有该列。",
+      "basis": "confirmed",
+      "impact": "两份材料的列集合不同；不能据此证明线上数据被删除。",
+      "conditions": [
+        "仅比较两份给定完整建表定义；不代表实时数据库或已执行的迁移。"
+      ],
+      "evidenceIds": [
+        "E-CONTEXT",
+        "E-BASE-TABLE",
+        "E-OBS-TABLE"
+      ],
+      "nextActions": [
+        "如需确认环境漂移，获取同一目标数据库、明确时间和范围的结构导出后复查。"
+      ]
+    },
+    {
+      "id": "D003",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "table": "CUSTOMER",
+        "column": "CUST_TYPE",
+        "quoted": false
+      },
+      "changeKind": "column-type-changed",
+      "before": {
+        "name": "VARCHAR2",
+        "arguments": [
+          16
+        ],
+        "declaration": "VARCHAR2(16)"
+      },
+      "after": {
+        "name": "VARCHAR2",
+        "arguments": [
+          32
+        ],
+        "declaration": "VARCHAR2(32)"
+      },
+      "claim": "CUST_TYPE 的声明由 VARCHAR2(16) 变为 VARCHAR2(32)。",
+      "basis": "confirmed",
+      "impact": "声明长度参数变化已确认；具体长度单位和运行影响取决于数据库配置及使用方式。",
+      "conditions": [
+        "仅比较两份给定完整建表定义；不代表实时数据库或已执行的迁移。"
+      ],
+      "evidenceIds": [
+        "E-CONTEXT",
+        "E-BASE-TABLE",
+        "E-OBS-TABLE"
+      ],
+      "nextActions": [
+        "如需确认环境漂移，获取同一目标数据库、明确时间和范围的结构导出后复查。"
+      ]
+    },
+    {
+      "id": "D004",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "table": "CUSTOMER",
+        "column": "CUST_TYPE",
+        "quoted": false
+      },
+      "changeKind": "column-nullability-changed",
+      "before": true,
+      "after": false,
+      "claim": "CUST_TYPE 的声明由 NULL 变为 NOT NULL。",
+      "basis": "confirmed",
+      "impact": "观测定义要求非空；缺少真实数据，未判断现有数据是否满足条件。",
+      "conditions": [
+        "仅比较两份给定完整建表定义；不代表实时数据库或已执行的迁移。"
+      ],
+      "evidenceIds": [
+        "E-CONTEXT",
+        "E-BASE-TABLE",
+        "E-OBS-TABLE"
+      ],
+      "nextActions": [
+        "如需确认环境漂移，获取同一目标数据库、明确时间和范围的结构导出后复查。"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E-CONTEXT",
+      "sourceId": "context.md",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/context.md",
+        "startLine": 2,
+        "endLine": 7
+      },
+      "excerpt": "未加引号标识符折叠大写；SALES.CUSTOMER 在两份文件中均给出完整建表定义（不是 ALTER 增量）。"
+    },
+    {
+      "id": "E-BASE-TABLE",
+      "sourceId": "baseline.sql",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/baseline.sql",
+        "startLine": 1,
+        "endLine": 5
+      },
+      "excerpt": "CREATE TABLE SALES.CUSTOMER (\n  ID NUMBER(10) NOT NULL,\n  CUST_TYPE VARCHAR2(16) NULL,\n  LEGACY_TAG VARCHAR2(8)\n);"
+    },
+    {
+      "id": "E-OBS-TABLE",
+      "sourceId": "observed.sql",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+        "startLine": 1,
+        "endLine": 5
+      },
+      "excerpt": "CREATE TABLE SALES.CUSTOMER (\n  ID NUMBER(10) NOT NULL,\n  CUST_TYPE VARCHAR2(32) NOT NULL,\n  EMAIL VARCHAR2(128)\n);"
+    },
+    {
+      "id": "E-BASE-VIEW",
+      "sourceId": "baseline.sql",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/baseline.sql",
+        "startLine": 6,
+        "endLine": 6
+      },
+      "excerpt": "CREATE VIEW SALES.V_CUSTOMER AS SELECT ID, CUST_TYPE FROM SALES.CUSTOMER;"
+    },
+    {
+      "id": "E-OBS-INDEX",
+      "sourceId": "observed.sql",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+        "startLine": 6,
+        "endLine": 6
+      },
+      "excerpt": "CREATE INDEX SALES.IDX_CUSTOMER_TYPE ON SALES.CUSTOMER(CUST_TYPE);"
+    }
+  ],
+  "coverage": [
+    {
+      "scope": "提供的 3 个输入文件",
+      "status": "inspected",
+      "checked": [
+        "context.md 7 行",
+        "baseline.sql 6 行",
+        "observed.sql 6 行"
+      ],
+      "limitations": [
+        "只枚举和处理用户指定输入目录。"
+      ]
+    },
+    {
+      "scope": "SALES.CUSTOMER 表定义",
+      "status": "inspected",
+      "checked": [
+        "schema/表身份",
+        "全部列及顺序",
+        "声明类型及参数",
+        "可空性",
+        "显式默认表达式和表级约束"
+      ],
+      "limitations": [
+        "只比较静态声明，不验证真实数据、运行效果或未导出的其他对象。"
+      ]
+    },
+    {
+      "scope": "视图",
+      "status": "partial",
+      "checked": [
+        "基线 SALES.V_CUSTOMER 的完整文本及对 CUSTOMER.ID/CUST_TYPE 的引用"
+      ],
+      "limitations": [
+        "观测视图范围 unavailable，不能推导视图删除。"
+      ]
+    },
+    {
+      "scope": "索引",
+      "status": "partial",
+      "checked": [
+        "观测 SALES.IDX_CUSTOMER_TYPE 的完整文本及对 CUSTOMER.CUST_TYPE 的引用"
+      ],
+      "limitations": [
+        "基线索引范围 unavailable，不能推导索引新增。"
+      ]
+    },
+    {
+      "scope": "实时数据库及整个 schema",
+      "status": "unavailable",
+      "checked": [],
+      "limitations": [
+        "没有连接；没有 schema 完整导出。"
+      ]
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U001",
+      "gap": "observed.sql 没有导出任何视图。",
+      "affectedClaims": [
+        "不能确认 SALES.V_CUSTOMER 是否仍存在、是否变化或已删除。"
+      ],
+      "nextCheck": "补充同一目标范围的观测视图清单与定义，并声明导出完整性。",
+      "evidenceIds": [
+        "E-CONTEXT",
+        "E-BASE-VIEW"
+      ]
+    },
+    {
+      "id": "U002",
+      "gap": "baseline.sql 没有索引导出。",
+      "affectedClaims": [
+        "不能把 SALES.IDX_CUSTOMER_TYPE 判为新增索引，也不能比较其基线定义。"
+      ],
+      "nextCheck": "补充基线索引清单与定义，并声明导出完整性。",
+      "evidenceIds": [
+        "E-CONTEXT",
+        "E-OBS-INDEX"
+      ]
+    },
+    {
+      "id": "U003",
+      "gap": "两份文件采集时间、环境及是否对应当前数据库均未知；没有数据库连接。",
+      "affectedClaims": [
+        "已确认的是材料间结构差异，不能宣称当前数据库或生产环境已经漂移。"
+      ],
+      "nextCheck": "补充两份材料的环境身份和采集时间；需要实时结论时再取得获授权的结构读取结果。",
+      "evidenceIds": [
+        "E-CONTEXT"
+      ]
+    },
+    {
+      "id": "U004",
+      "gap": "两份文件都不是整个 schema 的完整导出，其他对象类型的材料未提供。",
+      "affectedClaims": [
+        "不能扩展为整个 SALES schema 的完整漂移结论。"
+      ],
+      "nextCheck": "若要扩大范围，补充 schema 对象清单、对象类型导出范围与完整性说明。",
+      "evidenceIds": [
+        "E-CONTEXT"
+      ]
+    },
+    {
+      "id": "U005",
+      "gap": "Oracle 版本、字符长度配置、运行数据和应用引用材料未提供。",
+      "affectedClaims": [
+        "不能判断变更执行可行性、真实数据兼容性或完整应用影响。"
+      ],
+      "nextCheck": "仅在后续需要执行或影响分析时，补充相关版本、配置、数据核验及应用材料。",
+      "evidenceIds": [
+        "E-CONTEXT"
+      ]
+    }
+  ],
+  "excluded": [
+    {
+      "candidate": "LEGACY_TAG 重命名为 EMAIL",
+      "reason": "没有重命名证据；按身份分别记录删除和新增。",
+      "evidenceIds": [
+        "E-BASE-TABLE",
+        "E-OBS-TABLE"
+      ]
+    },
+    {
+      "candidate": "ID 列发生变化",
+      "reason": "两份定义都是 NUMBER(10) NOT NULL，位置均为第 1 列。",
+      "evidenceIds": [
+        "E-BASE-TABLE",
+        "E-OBS-TABLE"
+      ]
+    }
+  ],
+  "provenance": {
+    "skillVersion": "0.1.0-draft.2",
+    "host": "Codex",
+    "model": "unknown",
+    "tools": [
+      {
+        "name": "Python",
+        "version": "3.14.6"
+      },
+      {
+        "name": "exec_command",
+        "version": "unknown"
+      }
+    ],
+    "method": "完整读取三个输入文件，提取结构并按明确相同身份比较。"
+  }
+}

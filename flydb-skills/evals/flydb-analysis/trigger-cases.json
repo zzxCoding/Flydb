@@ -1,0 +1,42 @@
+[
+  {
+    "query": "这份 SQL 要在 OceanBase Oracle 模式跑，先查已知兼容性问题，不执行。",
+    "should_trigger": true
+  },
+  {
+    "query": "把 schema.sql 整理成后面可比较的数据库结构快照。",
+    "should_trigger": true
+  },
+  {
+    "query": "对比这两个库导出的结构，有哪些漂移和无法比较的地方？",
+    "should_trigger": true
+  },
+  {
+    "query": "SALES.CUSTOMER 还有哪些视图、过程、触发器和索引在依赖它？",
+    "should_trigger": true
+  },
+  {
+    "query": "只查代码里 CUST_TYPE 的引用位置，暂时没有改字段计划。",
+    "should_trigger": true
+  },
+  {
+    "query": "CUST_TYPE 改名为 CUSTOMER_TYPE，对代码和数据库对象有什么影响？",
+    "should_trigger": true
+  },
+  {
+    "query": "给我执行已经确认过的 Flydb migrate。",
+    "should_trigger": false
+  },
+  {
+    "query": "Flydb 连接失败，帮我查驱动和账号配置。",
+    "should_trigger": false
+  },
+  {
+    "query": "给项目写一个新增 nickname 列的迁移文件，不需要分析影响。",
+    "should_trigger": false
+  },
+  {
+    "query": "解释这个 JOIN 怎么把两张表关联起来。",
+    "should_trigger": false
+  }
+]

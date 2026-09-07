@@ -1,0 +1,204 @@
+{
+  "schemaVersion": "offline-schema-snapshot-v1",
+  "formatOrigin": "本次试用自定义格式；指定 Skill 未规定 Schema 快照契约。",
+  "snapshotId": "observed",
+  "database": {
+    "product": "Oracle",
+    "version": null,
+    "mode": "default",
+    "catalog": null,
+    "targetSchema": "SALES",
+    "environment": null
+  },
+  "identifierRules": {
+    "unquotedCaseFold": "UPPER",
+    "source": {
+      "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/context.md",
+      "startLine": 3,
+      "endLine": 3
+    }
+  },
+  "sources": [
+    {
+      "id": "observed.sql",
+      "kind": "provided-ddl",
+      "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+      "sha256": "5d2a0a165733560514cdb6a909919d6f7d3a1e7c73edacbd8f6e871cebadc6ed",
+      "capturedAt": null,
+      "live": false,
+      "repositoryRevision": "56bc3baef4a4e5c9eefe440644a4343aa960d0a4",
+      "trackedAtRevision": false,
+      "limitations": [
+        "输入目录未跟踪；内容身份以 SHA-256 为准。",
+        "数据库采集时间与当前性未知。"
+      ]
+    },
+    {
+      "id": "context.md",
+      "kind": "scope-context",
+      "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/context.md",
+      "sha256": "04dbd8b73f02a905c1d2d68783f3b2af0584db518d97c6c906bf442cf91b760d",
+      "capturedAt": null,
+      "live": false,
+      "repositoryRevision": "56bc3baef4a4e5c9eefe440644a4343aa960d0a4",
+      "trackedAtRevision": false,
+      "limitations": [
+        "输入目录未跟踪；内容身份以 SHA-256 为准。",
+        "数据库采集时间与当前性未知。"
+      ]
+    }
+  ],
+  "scope": {
+    "wholeSchemaComplete": false,
+    "tables": {
+      "collectionComplete": false,
+      "completeDefinitions": [
+        "SALES.CUSTOMER"
+      ]
+    },
+    "views": {
+      "exportStatus": "unavailable",
+      "collectionComplete": false
+    },
+    "indexes": {
+      "exportStatus": "partial",
+      "collectionComplete": false
+    },
+    "otherObjectTypes": {
+      "exportStatus": "unavailable",
+      "collectionComplete": false
+    }
+  },
+  "tables": [
+    {
+      "identity": {
+        "catalog": null,
+        "schema": "SALES",
+        "table": "CUSTOMER",
+        "column": null,
+        "quoted": false
+      },
+      "definitionComplete": true,
+      "columns": [
+        {
+          "identity": {
+            "catalog": null,
+            "schema": "SALES",
+            "table": "CUSTOMER",
+            "column": "ID",
+            "quoted": false
+          },
+          "ordinal": 1,
+          "dataType": {
+            "name": "NUMBER",
+            "arguments": [
+              10
+            ],
+            "declaration": "NUMBER(10)"
+          },
+          "nullable": false,
+          "nullabilityDeclaration": "NOT NULL",
+          "defaultExpression": null,
+          "source": {
+            "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+            "startLine": 2,
+            "endLine": 2
+          }
+        },
+        {
+          "identity": {
+            "catalog": null,
+            "schema": "SALES",
+            "table": "CUSTOMER",
+            "column": "CUST_TYPE",
+            "quoted": false
+          },
+          "ordinal": 2,
+          "dataType": {
+            "name": "VARCHAR2",
+            "arguments": [
+              32
+            ],
+            "declaration": "VARCHAR2(32)"
+          },
+          "nullable": false,
+          "nullabilityDeclaration": "NOT NULL",
+          "defaultExpression": null,
+          "source": {
+            "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+            "startLine": 3,
+            "endLine": 3
+          }
+        },
+        {
+          "identity": {
+            "catalog": null,
+            "schema": "SALES",
+            "table": "CUSTOMER",
+            "column": "EMAIL",
+            "quoted": false
+          },
+          "ordinal": 3,
+          "dataType": {
+            "name": "VARCHAR2",
+            "arguments": [
+              128
+            ],
+            "declaration": "VARCHAR2(128)"
+          },
+          "nullable": true,
+          "nullabilityDeclaration": "UNSPECIFIED",
+          "defaultExpression": null,
+          "source": {
+            "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+            "startLine": 4,
+            "endLine": 4
+          }
+        }
+      ],
+      "tableConstraints": [],
+      "source": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+        "startLine": 1,
+        "endLine": 5
+      }
+    }
+  ],
+  "views": [],
+  "indexes": [
+    {
+      "catalog": null,
+      "schema": "SALES",
+      "name": "IDX_CUSTOMER_TYPE",
+      "quoted": false,
+      "table": {
+        "catalog": null,
+        "schema": "SALES",
+        "table": "CUSTOMER",
+        "column": null,
+        "quoted": false
+      },
+      "columns": [
+        "CUST_TYPE"
+      ],
+      "definition": "CREATE INDEX SALES.IDX_CUSTOMER_TYPE ON SALES.CUSTOMER(CUST_TYPE);",
+      "source": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+        "startLine": 6,
+        "endLine": 6
+      }
+    }
+  ],
+  "interpretation": [
+    "只对完整给出的 SALES.CUSTOMER 列集合，将缺失解释为该文件定义中没有该列。",
+    "其他对象集合中的空数组表示没有导出材料，不能解释为数据库中不存在。",
+    "未写 NULL/NOT NULL 的列按所提供 Oracle DDL 的通常声明语义记为 nullable=true，并保留 UNSPECIFIED。",
+    "未显式指定的 VARCHAR2 长度单位、数据库默认配置及运行行为不由本快照推断。"
+  ],
+  "provenance": {
+    "skillVersion": "0.1.0-draft.2",
+    "host": "Codex",
+    "model": "unknown",
+    "method": "读取本次 DDL 并用限制语法的本地脚本提取；未执行 SQL。"
+  }
+}

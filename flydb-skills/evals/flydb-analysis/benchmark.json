@@ -1,0 +1,113 @@
+{
+  "metadata": {
+    "skill_name": "flydb-analysis 0.2.0 preview vs 0.1.0-draft.2",
+    "timestamp": "2026-09-07",
+    "evals_run": [
+      "compatibility",
+      "snapshot-drift",
+      "combined"
+    ],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 3,
+      "eval_name": "combined",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "pass_rate": 1.0
+      }
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "compatibility",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "pass_rate": 1.0
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "snapshot-drift",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "pass_rate": 1.0
+      }
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "combined",
+      "configuration": "old_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "pass_rate": 1.0
+      }
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "compatibility",
+      "configuration": "old_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "pass_rate": 1.0
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "snapshot-drift",
+      "configuration": "old_skill",
+      "run_number": 1,
+      "result": {
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "pass_rate": 1.0
+      }
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      }
+    },
+    "old_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      }
+    },
+    "delta": {
+      "pass_rate": "0.0"
+    }
+  },
+  "notes": [
+    "每个场景每版仅一次独立初始试用；新版两份报告随后修正证据 excerpt 为逐字摘录，结论与评分保持不变，初始产物另存。",
+    "两版共享15项语义检查均通过；这不证明新版普遍提高正确率或跨模型稳定性。",
+    "没有取得可独立核验的精确模型、耗时和Token用量，相关字段省略；未将字符数替代Token。",
+    "校验器运行和模型语义核对分别记录；没有真实数据库或生产执行验证。"
+  ]
+}

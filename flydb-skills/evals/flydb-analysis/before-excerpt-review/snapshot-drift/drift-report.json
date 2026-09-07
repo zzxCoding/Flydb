@@ -1,0 +1,780 @@
+{
+  "schemaVersion": "flydb-analysis-report-v1",
+  "task": "drift",
+  "analysisStatus": "partial",
+  "request": {
+    "baseline": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/results/eval-snapshot-drift/with_skill/outputs/baseline-schema-snapshot.json",
+    "observed": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/results/eval-snapshot-drift/with_skill/outputs/observed-schema-snapshot.json",
+    "objective": "分别生成可复用 Schema 快照，再比较两份结构，区分确定差异和材料缺失。",
+    "scope": "Oracle/default，SALES.CUSTOMER 完整建表文件定义及各文件可见的单个视图或索引。",
+    "changeProposal": null,
+    "execution": "仅离线读取，未执行 SQL，未连接数据库。"
+  },
+  "sources": [
+    {
+      "id": "baseline",
+      "kind": "snapshot",
+      "location": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/results/eval-snapshot-drift/with_skill/outputs/baseline-schema-snapshot.json",
+      "originalSource": {
+        "label": "基线 Oracle DDL 文件",
+        "kind": "ddl",
+        "location": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/baseline.sql",
+        "environment": null,
+        "capturedAt": null,
+        "revision": null,
+        "sha256": "aaa6560adc654693ff892378fc890b21b2c33cd5119b94df7217f4d1a369422f",
+        "context": {
+          "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/context.md",
+          "lineStart": 2,
+          "lineEnd": 7
+        },
+        "limitations": [
+          "用户提供的定义，采集时间、目标环境及是否对应当前数据库未知。",
+          "未取得版本控制修订或脏状态；文件 SHA-256 用于识别本次输入。",
+          "范围与标识符规则来自 context.md；Oracle 产品版本未知，mode=default。",
+          "catalog=null 表示采用 Oracle 的 schema.object 名称层级；具体连接、服务、当前用户未知。",
+          "DDL 没有指定 VARCHAR2 的 BYTE/CHAR 单位，未取得相关环境设置，lengthSemantics 保持未知。",
+          "properties 仅记录本次已提取的结构属性；表注释、物理存储、权限等未提供。"
+        ]
+      },
+      "database": {
+        "product": "Oracle",
+        "mode": "default",
+        "version": null,
+        "identifierPolicy": "upper-unquoted"
+      },
+      "snapshotSha256": "2a55cc6b358ab216af231b21017fc968a2ab7895d0c94035a4f0fdf498d0a2bd"
+    },
+    {
+      "id": "observed",
+      "kind": "snapshot",
+      "location": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/results/eval-snapshot-drift/with_skill/outputs/observed-schema-snapshot.json",
+      "originalSource": {
+        "label": "待比较 Oracle DDL 文件",
+        "kind": "ddl",
+        "location": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+        "environment": null,
+        "capturedAt": null,
+        "revision": null,
+        "sha256": "5d2a0a165733560514cdb6a909919d6f7d3a1e7c73edacbd8f6e871cebadc6ed",
+        "context": {
+          "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/context.md",
+          "lineStart": 2,
+          "lineEnd": 7
+        },
+        "limitations": [
+          "用户提供的定义，采集时间、目标环境及是否对应当前数据库未知。",
+          "未取得版本控制修订或脏状态；文件 SHA-256 用于识别本次输入。",
+          "范围与标识符规则来自 context.md；Oracle 产品版本未知，mode=default。",
+          "catalog=null 表示采用 Oracle 的 schema.object 名称层级；具体连接、服务、当前用户未知。",
+          "DDL 没有指定 VARCHAR2 的 BYTE/CHAR 单位，未取得相关环境设置，lengthSemantics 保持未知。",
+          "properties 仅记录本次已提取的结构属性；表注释、物理存储、权限等未提供。"
+        ]
+      },
+      "database": {
+        "product": "Oracle",
+        "mode": "default",
+        "version": null,
+        "identifierPolicy": "upper-unquoted"
+      },
+      "snapshotSha256": "fc95d8d2b64e657bf986636404b6761e2768011e09b9585a8742374cd9d5f39b"
+    },
+    {
+      "id": "context",
+      "kind": "user-scope",
+      "location": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/context.md",
+      "revision": null,
+      "capturedAt": null,
+      "environment": null,
+      "sha256": "04dbd8b73f02a905c1d2d68783f3b2af0584db518d97c6c906bf442cf91b760d"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "baseline-1-1",
+      "sourceId": "baseline",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/baseline.sql",
+        "lineStart": 1,
+        "lineEnd": 5
+      }
+    },
+    {
+      "id": "baseline-2-1",
+      "sourceId": "baseline",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/baseline.sql",
+        "lineStart": 2,
+        "lineEnd": 2
+      }
+    },
+    {
+      "id": "baseline-3-1",
+      "sourceId": "baseline",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/baseline.sql",
+        "lineStart": 3,
+        "lineEnd": 3
+      }
+    },
+    {
+      "id": "baseline-4-1",
+      "sourceId": "baseline",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/baseline.sql",
+        "lineStart": 4,
+        "lineEnd": 4
+      }
+    },
+    {
+      "id": "baseline-5-1",
+      "sourceId": "baseline",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/baseline.sql",
+        "lineStart": 6,
+        "lineEnd": 6
+      }
+    },
+    {
+      "id": "observed-1-1",
+      "sourceId": "observed",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+        "lineStart": 1,
+        "lineEnd": 5
+      }
+    },
+    {
+      "id": "observed-2-1",
+      "sourceId": "observed",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+        "lineStart": 2,
+        "lineEnd": 2
+      }
+    },
+    {
+      "id": "observed-3-1",
+      "sourceId": "observed",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+        "lineStart": 3,
+        "lineEnd": 3
+      }
+    },
+    {
+      "id": "observed-4-1",
+      "sourceId": "observed",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+        "lineStart": 4,
+        "lineEnd": 4
+      }
+    },
+    {
+      "id": "observed-5-1",
+      "sourceId": "observed",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/observed.sql",
+        "lineStart": 6,
+        "lineEnd": 6
+      }
+    },
+    {
+      "id": "context-identity",
+      "sourceId": "context",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/context.md",
+        "lineStart": 2,
+        "lineEnd": 4
+      },
+      "excerpt": "两份均为 Oracle DDL，mode=default；未加引号名称折叠大写；CUSTOMER 为完整建表定义。"
+    },
+    {
+      "id": "context-coverage",
+      "sourceId": "context",
+      "location": {
+        "path": "/Users/xuan/worksapce/Flydb/flydb-skills/evals/flydb-analysis/fixtures/snapshot-drift/context.md",
+        "lineStart": 5,
+        "lineEnd": 7
+      },
+      "excerpt": "两份材料不能代表整个 schema；observed 未导出视图，baseline 未导出索引；没有数据库连接或变更方案。"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "column",
+        "parent": "CUSTOMER",
+        "name": "CUST_TYPE"
+      },
+      "claim": "CUST_TYPE 的声明类型由 VARCHAR2(16) 变为 VARCHAR2(32)。",
+      "basis": "confirmed",
+      "impact": "声明长度参数不同；BYTE/CHAR 语义未知，不能据此推定真实容量或运行时迁移结果。",
+      "conditions": [
+        "仅在用户提供的完整 CUSTOMER 建表文件范围内确认。"
+      ],
+      "evidenceIds": [
+        "baseline-3-1",
+        "observed-3-1"
+      ],
+      "nextActions": []
+    },
+    {
+      "id": "F2",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "column",
+        "parent": "CUSTOMER",
+        "name": "CUST_TYPE"
+      },
+      "claim": "CUST_TYPE 的 nullable 从 true 变为 false（NULL → NOT NULL）。",
+      "basis": "confirmed",
+      "impact": "两份定义的空值约束不同；当前数据及实际数据库约束状态未核验。",
+      "conditions": [
+        "仅在用户提供的完整 CUSTOMER 建表文件范围内确认。"
+      ],
+      "evidenceIds": [
+        "baseline-3-1",
+        "observed-3-1"
+      ],
+      "nextActions": []
+    },
+    {
+      "id": "F3",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "column",
+        "parent": "CUSTOMER",
+        "name": "EMAIL"
+      },
+      "claim": "observed 完整表定义新增 EMAIL 列：VARCHAR2(128)，可空，无 DEFAULT，列序号 3。",
+      "basis": "confirmed",
+      "impact": "确认的是两份材料的列清单差异；没有证据表明真实数据库执行过 ADD COLUMN。",
+      "conditions": [
+        "仅在用户提供的完整 CUSTOMER 建表文件范围内确认。"
+      ],
+      "evidenceIds": [
+        "observed-4-1",
+        "baseline-1-1",
+        "context-identity"
+      ],
+      "nextActions": []
+    },
+    {
+      "id": "F4",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "column",
+        "parent": "CUSTOMER",
+        "name": "LEGACY_TAG"
+      },
+      "claim": "observed 完整表定义中不再包含基线的 LEGACY_TAG 列：VARCHAR2(8)，可空，无 DEFAULT，列序号 3。",
+      "basis": "confirmed",
+      "impact": "可确认文件结构中的列移除；没有数据删除、列改名或实际迁移执行证据。",
+      "conditions": [
+        "仅在用户提供的完整 CUSTOMER 建表文件范围内确认。"
+      ],
+      "evidenceIds": [
+        "baseline-4-1",
+        "observed-1-1",
+        "context-identity"
+      ],
+      "nextActions": []
+    },
+    {
+      "id": "F5",
+      "target": "SALES.CUSTOMER.ID",
+      "claim": "两份定义中的 ID 已知属性相同：NUMBER(10)、NOT NULL、无 DEFAULT、列序号 1。",
+      "basis": "confirmed",
+      "impact": "在本次提取的属性中未发现差异，不涵盖未导出的元数据。",
+      "conditions": [
+        "文件范围内比较。"
+      ],
+      "evidenceIds": [
+        "baseline-2-1",
+        "observed-2-1"
+      ],
+      "nextActions": []
+    }
+  ],
+  "coverage": [
+    {
+      "scope": {
+        "source": "baseline",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "table",
+        "parent": null,
+        "names": [
+          "CUSTOMER"
+        ],
+        "status": "complete",
+        "limitations": [
+          "仅 SALES.CUSTOMER 的文件定义；不能代表 SALES 全部表。"
+        ]
+      },
+      "status": "inspected",
+      "checked": [
+        "按声明范围比较快照事实",
+        "人工回查原始 DDL 和 context.md 的范围限制。"
+      ],
+      "limitations": [
+        "仅 SALES.CUSTOMER 的文件定义；不能代表 SALES 全部表。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "baseline",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "column",
+        "parent": "CUSTOMER",
+        "names": null,
+        "status": "complete",
+        "limitations": [
+          "context.md 明确该表为完整 CREATE TABLE 定义；仅证明文件列清单完整，不能证明当前数据库状态。"
+        ]
+      },
+      "status": "inspected",
+      "checked": [
+        "按声明范围比较快照事实",
+        "人工回查原始 DDL 和 context.md 的范围限制。"
+      ],
+      "limitations": [
+        "context.md 明确该表为完整 CREATE TABLE 定义；仅证明文件列清单完整，不能证明当前数据库状态。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "baseline",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "view",
+        "parent": null,
+        "names": [
+          "V_CUSTOMER"
+        ],
+        "status": "complete",
+        "limitations": [
+          "仅导出了 V_CUSTOMER，未枚举整个 schema 的视图。"
+        ]
+      },
+      "status": "inspected",
+      "checked": [
+        "按声明范围比较快照事实",
+        "人工回查原始 DDL 和 context.md 的范围限制。"
+      ],
+      "limitations": [
+        "仅导出了 V_CUSTOMER，未枚举整个 schema 的视图。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "baseline",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "index",
+        "parent": null,
+        "names": null,
+        "status": "unavailable",
+        "limitations": [
+          "baseline.sql 没有索引导出；不能推论 IDX_CUSTOMER_TYPE 不存在。"
+        ]
+      },
+      "status": "unavailable",
+      "checked": [
+        "核对来源声明及文件内容；本类对象没有可比较的完整清单。"
+      ],
+      "limitations": [
+        "baseline.sql 没有索引导出；不能推论 IDX_CUSTOMER_TYPE 不存在。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "baseline",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "procedure",
+        "parent": null,
+        "names": null,
+        "status": "unavailable",
+        "limitations": [
+          "未提供过程定义或目录枚举。"
+        ]
+      },
+      "status": "unavailable",
+      "checked": [
+        "核对来源声明及文件内容；本类对象没有可比较的完整清单。"
+      ],
+      "limitations": [
+        "未提供过程定义或目录枚举。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "baseline",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "trigger",
+        "parent": null,
+        "names": null,
+        "status": "unavailable",
+        "limitations": [
+          "未提供触发器定义或目录枚举。"
+        ]
+      },
+      "status": "unavailable",
+      "checked": [
+        "核对来源声明及文件内容；本类对象没有可比较的完整清单。"
+      ],
+      "limitations": [
+        "未提供触发器定义或目录枚举。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "baseline",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "constraint",
+        "parent": null,
+        "names": null,
+        "status": "unavailable",
+        "limitations": [
+          "未提供独立约束清单或数据库生成的约束名称；列 NULL/NOT NULL 已记录为 nullable 属性。"
+        ]
+      },
+      "status": "unavailable",
+      "checked": [
+        "核对来源声明及文件内容；本类对象没有可比较的完整清单。"
+      ],
+      "limitations": [
+        "未提供独立约束清单或数据库生成的约束名称；列 NULL/NOT NULL 已记录为 nullable 属性。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "observed",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "table",
+        "parent": null,
+        "names": [
+          "CUSTOMER"
+        ],
+        "status": "complete",
+        "limitations": [
+          "仅 SALES.CUSTOMER 的文件定义；不能代表 SALES 全部表。"
+        ]
+      },
+      "status": "inspected",
+      "checked": [
+        "按声明范围比较快照事实",
+        "人工回查原始 DDL 和 context.md 的范围限制。"
+      ],
+      "limitations": [
+        "仅 SALES.CUSTOMER 的文件定义；不能代表 SALES 全部表。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "observed",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "column",
+        "parent": "CUSTOMER",
+        "names": null,
+        "status": "complete",
+        "limitations": [
+          "context.md 明确该表为完整 CREATE TABLE 定义；仅证明文件列清单完整，不能证明当前数据库状态。"
+        ]
+      },
+      "status": "inspected",
+      "checked": [
+        "按声明范围比较快照事实",
+        "人工回查原始 DDL 和 context.md 的范围限制。"
+      ],
+      "limitations": [
+        "context.md 明确该表为完整 CREATE TABLE 定义；仅证明文件列清单完整，不能证明当前数据库状态。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "observed",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "view",
+        "parent": null,
+        "names": null,
+        "status": "unavailable",
+        "limitations": [
+          "observed.sql 未导出任何视图；无法判断 V_CUSTOMER 当前是否存在。"
+        ]
+      },
+      "status": "unavailable",
+      "checked": [
+        "核对来源声明及文件内容；本类对象没有可比较的完整清单。"
+      ],
+      "limitations": [
+        "observed.sql 未导出任何视图；无法判断 V_CUSTOMER 当前是否存在。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "observed",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "index",
+        "parent": null,
+        "names": [
+          "IDX_CUSTOMER_TYPE"
+        ],
+        "status": "complete",
+        "limitations": [
+          "仅导出了 IDX_CUSTOMER_TYPE，未枚举整个 schema 的索引。"
+        ]
+      },
+      "status": "inspected",
+      "checked": [
+        "按声明范围比较快照事实",
+        "人工回查原始 DDL 和 context.md 的范围限制。"
+      ],
+      "limitations": [
+        "仅导出了 IDX_CUSTOMER_TYPE，未枚举整个 schema 的索引。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "observed",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "procedure",
+        "parent": null,
+        "names": null,
+        "status": "unavailable",
+        "limitations": [
+          "未提供过程定义或目录枚举。"
+        ]
+      },
+      "status": "unavailable",
+      "checked": [
+        "核对来源声明及文件内容；本类对象没有可比较的完整清单。"
+      ],
+      "limitations": [
+        "未提供过程定义或目录枚举。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "observed",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "trigger",
+        "parent": null,
+        "names": null,
+        "status": "unavailable",
+        "limitations": [
+          "未提供触发器定义或目录枚举。"
+        ]
+      },
+      "status": "unavailable",
+      "checked": [
+        "核对来源声明及文件内容；本类对象没有可比较的完整清单。"
+      ],
+      "limitations": [
+        "未提供触发器定义或目录枚举。"
+      ]
+    },
+    {
+      "scope": {
+        "source": "observed",
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "constraint",
+        "parent": null,
+        "names": null,
+        "status": "unavailable",
+        "limitations": [
+          "未提供独立约束清单或数据库生成的约束名称；列 NULL/NOT NULL 已记录为 nullable 属性。"
+        ]
+      },
+      "status": "unavailable",
+      "checked": [
+        "核对来源声明及文件内容；本类对象没有可比较的完整清单。"
+      ],
+      "limitations": [
+        "未提供独立约束清单或数据库生成的约束名称；列 NULL/NOT NULL 已记录为 nullable 属性。"
+      ]
+    }
+  ],
+  "unknowns": [
+    {
+      "gap": "observed 未导出视图，无法确认 SALES.V_CUSTOMER 被移除、保留或修改；基线只给出该视图的定义。",
+      "affectedClaims": [
+        "SALES.V_CUSTOMER 的存在性和定义漂移",
+        "SALES 视图清单完整性"
+      ],
+      "nextCheck": "补充 observed 的 V_CUSTOMER 定义或完整且注明范围的视图清单。"
+    },
+    {
+      "gap": "baseline 未导出索引，无法确认 SALES.IDX_CUSTOMER_TYPE 是新增、原有还是定义发生变化；observed 给出 CUSTOMER(CUST_TYPE) 的非唯一索引定义。",
+      "affectedClaims": [
+        "SALES.IDX_CUSTOMER_TYPE 的新增与属性漂移",
+        "SALES 索引清单完整性"
+      ],
+      "nextCheck": "补充 baseline 的 IDX_CUSTOMER_TYPE 定义或完整且注明范围的索引清单。"
+    },
+    {
+      "gap": "双方均未提供 procedure、trigger 或独立 constraint 清单，相关 scope 及双侧对应关系不可确认；nullable 已单独提取。",
+      "affectedClaims": [
+        "SALES 过程、触发器、独立约束的增减与属性漂移"
+      ],
+      "nextCheck": "若要覆盖这些类型，补充双方相应对象定义与列举范围；生成的约束名称须有元数据证据。"
+    },
+    {
+      "gap": "CUSTOMER 之外的表、其他视图及索引未被完整列举，两份材料不能代表整个 SALES schema。",
+      "affectedClaims": [
+        "整个 SALES schema 相同或不存在其他漂移"
+      ],
+      "nextCheck": "扩展分析时补充双方完整、同范围的对象清单；保持当前 CUSTOMER 子集范围。"
+    },
+    {
+      "gap": "DDL 未指定 VARCHAR2 的 BYTE/CHAR 长度语义，相关环境设置未知。",
+      "affectedClaims": [
+        "F1",
+        "EMAIL 和 LEGACY_TAG 的实际长度语义"
+      ],
+      "nextCheck": "补充双方列的 CHAR_USED、CHAR_LENGTH、DATA_LENGTH 等相关元数据，或带显式 BYTE/CHAR 的可靠定义。"
+    },
+    {
+      "gap": "采集时间、目标环境、是否对应当前数据库、连接身份及文件仓库修订/脏状态均未知；仅保留本次文件哈希。",
+      "affectedClaims": [
+        "两份文件差异就是当前数据库或生产漂移",
+        "差异发生时间及执行顺序"
+      ],
+      "nextCheck": "提供每份材料的来源环境、采集时间与修订记录；如需判定现状，再使用获授权且同范围的元数据导出。"
+    },
+    {
+      "gap": "Oracle 具体版本未知。",
+      "affectedClaims": [
+        "特定 Oracle 版本的运行时兼容性或迁移结果"
+      ],
+      "nextCheck": "需要运行时兼容性结论时补充产品版本；本次仅比较明确的定义属性。"
+    },
+    {
+      "gap": "表注释、物理存储、权限等属性未提供，也未被快照声明为已知。",
+      "affectedClaims": [
+        "除当前 properties 外的全部属性均相同"
+      ],
+      "nextCheck": "如需比较这些属性，补充双方对应定义或元数据，并扩充快照后重新运行 diff。"
+    }
+  ],
+  "excluded": [
+    {
+      "candidate": "将 LEGACY_TAG 与 EMAIL 认定为同一列改名",
+      "reason": "只有两份结构定义，没有变更方案、历史记录或显式映射；按身份记录 removed 和 added。"
+    }
+  ],
+  "changes": [
+    {
+      "kind": "changed",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "column",
+        "parent": "CUSTOMER",
+        "name": "CUST_TYPE"
+      },
+      "property": "dataType",
+      "before": "VARCHAR2(16)",
+      "after": "VARCHAR2(32)",
+      "evidenceIds": [
+        "baseline-3-1",
+        "observed-3-1"
+      ]
+    },
+    {
+      "kind": "changed",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "column",
+        "parent": "CUSTOMER",
+        "name": "CUST_TYPE"
+      },
+      "property": "nullable",
+      "before": true,
+      "after": false,
+      "evidenceIds": [
+        "baseline-3-1",
+        "observed-3-1"
+      ]
+    },
+    {
+      "kind": "added",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "column",
+        "parent": "CUSTOMER",
+        "name": "EMAIL"
+      },
+      "property": null,
+      "before": null,
+      "after": {
+        "dataType": "VARCHAR2(128)",
+        "nullable": true,
+        "default": null,
+        "ordinal": 3
+      },
+      "evidenceIds": [
+        "observed-4-1",
+        "baseline-1-1",
+        "context-identity"
+      ]
+    },
+    {
+      "kind": "removed",
+      "target": {
+        "catalog": null,
+        "schema": "SALES",
+        "kind": "column",
+        "parent": "CUSTOMER",
+        "name": "LEGACY_TAG"
+      },
+      "property": null,
+      "before": {
+        "dataType": "VARCHAR2(8)",
+        "nullable": true,
+        "default": null,
+        "ordinal": 3
+      },
+      "after": null,
+      "evidenceIds": [
+        "baseline-4-1",
+        "observed-1-1",
+        "context-identity"
+      ]
+    }
+  ],
+  "provenance": {
+    "skillVersion": "0.2.0",
+    "host": "Codex desktop",
+    "model": "unknown",
+    "comparisonTool": "analysis_artifacts.py diff",
+    "validationTool": "analysis_artifacts.py validate",
+    "notes": "模型提取快照；脚本产生 4 条差异和 21 条原始缺口；人工复核并合并缺口、补充双侧及范围证据。原始脚本结果另存 drift-report.script.json。"
+  },
+  "workflowStatuses": {
+    "baselineSnapshot": "completed",
+    "observedSnapshot": "completed",
+    "driftComparison": "partial"
+  }
+}

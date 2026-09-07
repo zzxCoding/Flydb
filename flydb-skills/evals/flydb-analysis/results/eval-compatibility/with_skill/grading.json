@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "识别组合 MODIFY 的兼容风险，定位 migration.sql 第2行，保留版本与静态材料限定。",
+      "passed": true,
+      "evidence": "compatibility-report.md 的 FDA-OB-001 定位 migration.sql:2，并限定目标为用户说明的 4.2.1.2 Oracle 模式。"
+    },
+    {
+      "text": "将 AMOUNT 的 NUMBER(10,2) 到 NUMBER(10,4) 识别为仅 scale 变化，并引用旧定义。",
+      "passed": true,
+      "evidence": "FDA-OB-002 明确 precision=10 不变，scale 由 2 变 4，引用 before.sql:4。"
+    },
+    {
+      "text": "关联 OPS 与 SALES 的区别，说明目标 schema 使用 USER_TAB_COLUMNS 的目录可见性风险。",
+      "passed": true,
+      "evidence": "FDA-OB-003 将 OPS 与 SALES 对照，指向第7行 USER_TAB_COLUMNS，并保留查询意图和权限条件。"
+    },
+    {
+      "text": "没有把注释或字符串字面量中的示例当成实际 MODIFY，也没有把单独类型修改当成组合 MODIFY。",
+      "passed": true,
+      "evidence": "已排除段落分别排除第1行注释、第9行仅改长度、第10行字符串示例。"
+    },
+    {
+      "text": "JSON 原样保留给定 plan.algorithm/id，且没有宣称目标 SQL 已执行或生产必然失败。",
+      "passed": true,
+      "evidence": "JSON sourcePlan 与输入 algorithm/id 一致；报告明确合成信封、未执行 SQL、静态风险不是必然失败。"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "grading_method": "主 Agent 回读原始材料、实际报告和 JSON；没有把自述日志当作完整执行审计。",
+  "eval_feedback": {
+    "suggestions": [],
+    "overall": "有限的功能核对；不能据单次样例判断跨模型稳定性或量化准确率增益。"
+  }
+}

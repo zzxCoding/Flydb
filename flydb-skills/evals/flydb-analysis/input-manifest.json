@@ -1,0 +1,19 @@
+{
+  "compatibility/plan.json": "4be52c43ed8a14e2fb7694ab907b2dc8305846e44acfc262f24e75969ae378a3",
+  "compatibility/context.md": "d9cb644842381c8705b75d9d1ffc0d98c0ea48df269b6bf63598b053a53cc215",
+  "compatibility/migration.sql": "1d8d39b78220e58ac9d4d589e4a82b98edd05d3337e07ec3f0912d45eca73bb9",
+  "compatibility/before.sql": "b5351c309bd1e47acbed506801946f1407e1545156778a4337708bbe4f999047",
+  "snapshot-drift/observed.sql": "5d2a0a165733560514cdb6a909919d6f7d3a1e7c73edacbd8f6e871cebadc6ed",
+  "snapshot-drift/context.md": "04dbd8b73f02a905c1d2d68783f3b2af0584db518d97c6c906bf442cf91b760d",
+  "snapshot-drift/baseline.sql": "aaa6560adc654693ff892378fc890b21b2c33cd5119b94df7217f4d1a369422f",
+  "combined/context.md": "0534a94b9630380908a5683ceca9c0646738bc2d0cb23a22bff3516499a61f8e",
+  "combined/app/CustomerRow.java": "f23b5e1c63c768d9ec4c258c5b455029c822cfe80069aa782cf7ad769a957217",
+  "combined/app/CustomerEntity.java": "5dcc2a0b37a50a0eecd2f9f868823f7a546cfb69335a5f9d9bfb73db7cb1459c",
+  "combined/app/CustomerMapper.xml": "5380080ce8f97d689dbc8601f8e34530a58670e6caf1c1a1c12ff7264df631a0",
+  "combined/app/CustomerMapper.java": "c4051546fdeeff15cf1783516b8f5bffddc6bc476fd23be407e2d1aad463ebdb",
+  "combined/app/CustomerService.java": "e63a182263de16c4118fdefff5502b04dc56d790f4dc7be52f2ce711d73c2d75",
+  "combined/history/old-note.sql": "c833082d414233ce05b339c9479bd9903df9a34a6a7eeded24d01cf917eae544",
+  "combined/db/schema.sql": "e51d4d110a9651171512796c93201c540366811847f6f2a3f4ed253e5c80be33",
+  "combined/export/NightlyExport.java": "598a9c8966baa338db677f52208b4cf3916a3c653ea3e1130165055dd8ad57d0",
+  "combined/reports/archive.sql": "8e504e63cafc28d82ec10e2c171f7ae050ab3683b19aef60cc44977a73c3c556"
+}

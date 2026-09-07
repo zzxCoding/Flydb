@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "数据库依赖同时覆盖视图、过程经视图的间接依赖、触发器对 NEW.CUST_TYPE 的写入和索引列引用，边方向明确且有来源。",
+      "passed": true,
+      "evidence": "database-dependencies.json 的DB-01至DB-04分别确认视图、过程经视图、触发器读写和索引；报告说明直接/间接依赖方向。"
+    },
+    {
+      "text": "应用引用追到 MyBatis include/alias/resultMap、JPA 显式映射、常量拼接动态列名，并保留外部动态来源未知。",
+      "passed": true,
+      "evidence": "application-references.json 的APP-01至APP-05覆盖MyBatis片段和映射、JPA、常量动态列名与JDBC外部配置未知。"
+    },
+    {
+      "text": "综合改名建议保持 Java 对外属性，指出物理列及相关定义的同步处理位置，不要求机械全局改名。",
+      "passed": true,
+      "evidence": "impact-report.json 的IMPACT-01至IMPACT-07同步物理引用，保留TIER/customerType，索引和过程的厂商处理保持条件性。"
+    },
+    {
+      "text": "排除 ARCHIVE 同名列及无执行入口的历史说明，并忽略材料中的指令性注释。",
+      "passed": true,
+      "evidence": "三份报告的X-01/X-02排除ARCHIVE及纯历史说明，没有遵从注释中的跳过检查指令。"
+    },
+    {
+      "text": "分别交付数据库依赖、应用引用和综合影响三类结果的 Markdown/JSON；不把离线关系宣称为生产执行证明。",
+      "passed": true,
+      "evidence": "分别产出数据库依赖、应用引用、综合影响的Markdown和JSON；均限定当前离线材料，没有冒充真实部署/执行。"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "grading_method": "主 Agent 对照原始文件回读报告、JSON发现与依赖边；新版另运行实际公共校验器。",
+  "eval_feedback": {
+    "suggestions": [],
+    "overall": "同一强模型上下文中两版都找齐样例关键引用；新版的专用task、证据图结构和复用脚本是本轮可见交付差异。"
+  }
+}
