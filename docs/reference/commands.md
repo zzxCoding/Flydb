@@ -158,6 +158,9 @@ MySQL/Oracle 家族虽然不支持 DDL 事务，但一份脚本若解析后的�
 
 `clean` 默认禁用。非交互环境必须同时设置 `--clean-disabled=false` 和 `--force`：
 
+本机 Web 工作台在“高级操作 → 清空数据库”提供独立警示和确认流程，单次授权不会改写此默认配置，
+见 [GUI 指南](../getting-started/web.md)。
+
 ```bash
 bin/flydb clean --clean-disabled=false --force
 ```

@@ -11,9 +11,10 @@ vi.mock('./api', () => ({
   connect: vi.fn().mockResolvedValue(undefined),
   ApiError: class extends Error {},
   api: vi.fn(async (path: string) => {
-    if (path === '/bootstrap') return fixture.bootstrap
+    if (path === '/bootstrap?compact=true') return fixture.bootstrap
     if (path.endsWith('/config')) return fixture.config
     if (path.endsWith('/actions')) return fixture.bootstrap.runs[1]
+    if (path.endsWith('/clean-confirmation')) return { token: 'single-use', target: 'jdbc:mysql://localhost/app', user: 'tester' }
     throw new Error('Unexpected API request: ' + path)
   }),
 }))
@@ -81,5 +82,13 @@ it('releases the lock after cancelling an advanced operation without executing i
   document.querySelector<HTMLElement>('.advanced-actions summary')!.click()
   button('Set baseline').click(); await locked()
   button('Cancel', document.querySelector('.n-modal')!).click()
+  await unlocked()
+})
+it('opens clean from advanced actions with execution disabled and releases the modal lock on cancel', async () => {
+  document.querySelector<HTMLElement>('.advanced-actions summary')!.click()
+  button('Clean database').click(); await locked()
+  await vi.waitFor(() => expect(document.querySelector('.clean-dialog')?.textContent).toContain('jdbc:mysql://localhost/app'))
+  expect(button('Confirm clean').disabled).toBe(true)
+  button('Cancel', document.querySelector('.clean-dialog')!).click()
   await unlocked()
 })

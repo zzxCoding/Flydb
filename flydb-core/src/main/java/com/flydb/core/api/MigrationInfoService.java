@@ -8,6 +8,7 @@ import java.util.List;
 import com.flydb.core.migration.AppliedMigration;
 import com.flydb.core.migration.MigrationInfo;
 import com.flydb.core.migration.MigrationState;
+import com.flydb.core.migration.MigrationType;
 import com.flydb.core.migration.MigrationVersion;
 import com.flydb.core.migration.ResolvedMigration;
 
@@ -53,11 +54,11 @@ public final class MigrationInfoService {
     public MigrationVersion current() {
         MigrationVersion current = null;
         for (MigrationInfo info : all) {
-            if (info.state() != MigrationState.SUCCESS && info.state() != MigrationState.BASELINE) {
+            AppliedMigration applied = info.applied();
+            if (applied == null || !applied.success() || applied.type() == MigrationType.UNDO_SQL) {
                 continue;
             }
-            AppliedMigration applied = info.applied();
-            MigrationVersion version = applied == null ? null : applied.version();
+            MigrationVersion version = applied.version();
             if (version != null && (current == null || version.compareTo(current) > 0)) {
                 current = version;
             }

@@ -1,56 +1,84 @@
 English | [中文](./README.md)
 
 <p align="center">
-  <img src="./docs/assets/flydb-mascot-banner.png" alt="Flydb Data Courier mascot" width="100%">
+  <img src="./docs/assets/flydb-mascot-banner.png" alt="Flydb Data Courier mascot" width="520">
 </p>
 
 # Flydb
+
+**Database migrations you can see. Context your Agent can use.**
 
 [![CI](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml/badge.svg)](https://github.com/zzxCoding/Flydb/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/zzxCoding/Flydb)](https://github.com/zzxCoding/Flydb/releases/latest)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](./LICENSE)
 ![Java 8+](https://img.shields.io/badge/Java-8%2B-blue)
-[![LINUX DO](https://img.shields.io/badge/LINUX-DO-FFB003.svg?logo=data:image/svg%2bxml;base64,DQo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiPjxwYXRoIGQ9Ik00Ni44Mi0uMDU1aDYuMjVxMjMuOTY5IDIuMDYyIDM4IDIxLjQyNmM1LjI1OCA3LjY3NiA4LjIxNSAxNi4xNTYgOC44NzUgMjUuNDV2Ni4yNXEtMi4wNjQgMjMuOTY4LTIxLjQzIDM4LTExLjUxMiA3Ljg4NS0yNS40NDUgOC44NzRoLTYuMjVxLTIzLjk3LTIuMDY0LTM4LjAwNC0yMS40M1EuOTcxIDY3LjA1Ni0uMDU0IDUzLjE4di02LjQ3M0MxLjM2MiAzMC43ODEgOC41MDMgMTguMTQ4IDIxLjM3IDguODE3IDI5LjA0NyAzLjU2MiAzNy41MjcuNjA0IDQ2LjgyMS0uMDU2IiBzdHlsZT0ic3Ryb2tlOm5vbmU7ZmlsbC1ydWxlOmV2ZW5vZGQ7ZmlsbDojZWNlY2VjO2ZpbGwtb3BhY2l0eToxIi8+PHBhdGggZD0iTTQ3LjI2NiAyLjk1N3EyMi41My0uNjUgMzcuNzc3IDE1LjczOWE0OS43IDQ5LjcgMCAwIDEgNi44NjcgMTAuMTU3cS00MS45NjQuMjIyLTgzLjkzIDAgOS43NS0xOC42MTYgMzAuMDI0LTI0LjM4N2E2MSA2MSAwIDAgMSA5LjI2Mi0xLjUwOCIgc3R5bGU9InN0cm9rZTpub25lO2ZpbGwtcnVsZTpldmVub2RkO2ZpbGw6IzE5MTkxOTtmaWxsLW9wYWNpdHk6MSIvPjxwYXRoIGQ9Ik03Ljk4IDcwLjkyNmMyNy45NzctLjAzNSA1NS45NTQgMCA4My45My4xMTNRODMuNDI2IDg3LjQ3MyA2Ni4xMyA5NC4wODZxLTE4LjgxIDYuNTQ0LTM2LjgzMi0xLjg5OC0xNC4yMDMtNy4wOS0yMS4zMTctMjEuMjYyIiBzdHlsZT0ic3Ryb2tlOm5vbmU7ZmlsbC1ydWxlOmV2ZW5vZGQ7ZmlsbDojZjlhZjAwO2ZpbGwtb3BhY2l0eToxIi8+PC9zdmc+)](https://linux.do)
 
-Flydb is a versioned schema migration tool for databases with JDBC drivers: built-in dialects for mainstream databases, first-class support for Chinese Xinchuang databases, and extension to niche JDBC databases through the `DatabaseType` SPI.
+[Website & demo](https://flydb.zzxcoding.dev) · [Download](https://github.com/zzxCoding/Flydb/releases/latest) · [GUI guide](./docs/getting-started/web.en.md) · [Agent setup](./flydb-skills/README.md) · [Documentation](./docs/getting-started/README.md)
 
-**Today**, Flydb 0.2 is a reliable migration runtime: commands such as `migrate`, `info`, `validate`, `baseline`, `repair`, `undo`, and `clean`, backed by concurrency locks, transaction semantics, checksum validation, and failure blocking with recovery; eight built-in dialects; and Spring Boot 2/3 starters. **The long-term direction** is a database change capability shared safely by humans and AI agents: agents decide *what* changes; Flydb guarantees *how* it changes safely. See the [roadmap](./ROADMAP.md) (in Chinese) for stage goals and current progress.
+Flydb helps developers and operators manage versioned database changes. Use the local GUI to organize configurations, review SQL and watch execution; use the CLI in scripts and CI; copy context to an Agent when you want help. All three entry points share the same configuration and migration engine, while the GUI and local CLI share execution records.
 
-> **Scope boundary:** Flydb manages migration versions, execution safety, and database dialect behavior. It does not translate arbitrary vendor SQL into every database syntax. Keep separate migration directories for database families when their dialects differ; see the [multi-environment guide](./docs/getting-started/multi-environment.md#4-脚本仓库按数据库家族分目录).
+MySQL, PostgreSQL, Oracle and Chinese databases including OceanBase, TiDB, DM8, KingbaseES and openGauss. **Run with Java 8+; the GUI needs no Node.js, network access or language model.**
 
-## Why Flydb
+![Flydb local workbench with environment groups, migration state and Agent handoff](./docs/assets/flydb-workbench.en.png)
+*Actual workbench UI using fictional demonstration configurations and migration records.*
 
-- **Xinchuang databases as first-class citizens**: DM8 (Dameng), KingbaseES, openGauss, OceanBase, and TiDB ship as built-in dialects alongside MySQL, PostgreSQL, and Oracle. The CLI never bundles vendor drivers; it resolves them from `drivers/`, the runtime classpath, or a Maven repository, which fits drivers that cannot be distributed publicly.
-- **Zero-dependency Java 8 core**: `flydb-core` has no third-party runtime dependencies (enforced by Maven Enforcer) and drops into any legacy Java 8 system; Boot 3 / Java 17 environments use a separate starter.
-- **Friendly to humans and agents alike**: stable exit and error codes, `--dry-run` previews, non-interactive operation; the distribution ships an Agent Skill and docs matched to the CLI version.
-- **Safe defaults**: `clean` is disabled by default and needs a double opt-in; failed migrations block subsequent runs; passwords come from environment variables or password files, never commands, logs, or SQL.
+## Choose how you work
 
-## Quick start
+| Your workflow | What Flydb provides |
+|---|---|
+| Manage development, staging and production configurations | Collapsible groups, drag-and-drop organization, forms and an advanced editor for the original files |
+| Review an upgrade before applying it | SQL previews, version search, pagination, full-text search and complete SQL downloads |
+| Follow execution and diagnose failures | Script progress, transaction outcomes and post-run verification; unknown outcomes stay explicit |
+| Bring in an Agent | “Copy for Agent” packages redacted settings, migration state and recent errors; Skills, JSON and MCP offer further integration |
+| Automate migrations in an application or pipeline | CLI for CI, a Java API and Spring Boot 2/3 starters sharing the same engine |
 
-Prerequisites: Java 8 or newer, an existing target database, and a Java 8-compatible JDBC driver.
+## Open the GUI with one command
+
+Download the ZIP from [Releases](https://github.com/zzxCoding/Flydb/releases/latest), extract it and run:
 
 ```bash
-curl -LO https://github.com/zzxCoding/Flydb/releases/download/v0.3.6/flydb-cli-0.3.6.zip
-unzip flydb-cli-0.3.6.zip
-cd flydb-cli-0.3.6
-
-# Example: place mysql-connector-j.jar into drivers/
-cp /path/to/mysql-connector-j.jar drivers/
-
-bin/flydb init \
-  --url 'jdbc:mysql://127.0.0.1:3306/demo' \
-  --user flydb_user \
-  --database-type mysql \
-  --yes
-
-export FLYDB_PASSWORD='replace-me'
-bin/flydb --dry-run migrate
-bin/flydb migrate
-bin/flydb info
-bin/flydb validate
+cd flydb-cli-0.3.7
+bin/flydb web
 ```
 
-`init` generates `flydb.conf`, `db/migration/V1__init.sql`, and `drivers/README.md`, and never overwrites existing files. Passwords can also be supplied through `flydb.password=${env:DB_PASSWORD}` or `flydb.password.file=/run/secrets/db_password`; a plaintext `flydb.password` is only recommended for local throwaway testing.
+On Windows, use `bin\flydb.bat web`. Import an existing `flydb.conf` or create a configuration in the browser, then provide the JDBC driver for your database. No account setup; Chinese / English and light / dark themes are included. Starting the workbench does not run migrations.
+
+Open an existing configuration directly:
+
+```bash
+bin/flydb --config /path/to/project/flydb.conf web
+```
+
+See the [GUI guide](./docs/getting-started/web.en.md). Vendor JDBC drivers are supplied by the user under their respective licenses, not bundled in the ZIP.
+
+<details>
+<summary><strong>Prefer a terminal? Start with the CLI</strong></summary>
+
+For an existing MySQL database:
+
+```bash
+cp /path/to/mysql-connector-j.jar drivers/
+bin/flydb init --url 'jdbc:mysql://127.0.0.1:3306/demo' --user flydb_user --database-type mysql --yes
+export FLYDB_PASSWORD='replace-me'
+bin/flydb validate
+bin/flydb --dry-run migrate
+# Review the SQL and target before applying
+bin/flydb migrate
+bin/flydb info
+```
+
+`init` generates `flydb.conf`, `db/migration/V1__init.sql` and `drivers/README.md`, refusing to overwrite existing files. The V1 sample contains `SELECT 1;`; replace it with your actual changes. Environment variables and password files are also supported.
+
+</details>
+
+## One migration engine across every entry point
+
+- **Review before execution**: checksum validation, concurrency locks, transaction handling and failure blocking. Changes to configuration or scripts after a preview are rechecked.
+- **Fit existing environments**: a Java 8 core with zero third-party runtime dependencies, a standalone CLI ZIP, and Spring Boot 2/3 starters.
+- **Work across database families**: built-in dialects and driver loading, extensible through `DatabaseType` SPI. Verification levels are documented below.
+- **Share facts with your Agent**: structured JSON, Plan Artifacts and execution records. Unknown or interrupted migrations are never automatically replayed. GUI clean requires risk acknowledgment and typing `CLEAN`.
+
+Flydb manages migration workflow and database dialect behavior. It does not translate arbitrary vendor SQL into other database syntaxes; keep separate migration directories where dialects differ.
 
 ## Database support
 
@@ -72,7 +100,8 @@ See the [database getting-started guides](./docs/getting-started/README.md) for 
 
 - [x] **Reliable migration runtime**: engine, 8 built-in dialects, CLI, Spring Boot starters, Agent Skill, the `v0.2.0` GitHub Release, and the `v0.2.1` Maven Central publishing
 - [x] **DX and machine contract**: `--json` machine-readable output, protocolVersion contract versioning, CI integration docs, an Agent Plugins 1.0 package (`v0.3.0`; package managers and a Docker image on demand)
-- [x] **Agent distribution**: an MCP adapter (TypeScript, nine domain tools, writes unregistered by default) plus the Plan Artifact v1 plan digest; the npm package ships with the next release
+- [x] **Agent distribution**: an MCP adapter (TypeScript, nine domain tools, writes unregistered by default) plus the Plan Artifact v1 plan digest; a built adapter ships in the CLI ZIP
+- [x] **Local workbench**: multiple configurations, groups, migration previews, execution records and Agent handoff
 - [ ] **Brownfield change intelligence**: impact analysis, application reference scanning, coverage with explicit unknowns
 - [ ] **Agent-safe change runtime**: a Plan → Validate → Risk → Approval → Apply → Verify protocol
 
@@ -114,7 +143,7 @@ Plain Java applications depend on `flydb-core`:
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-core</artifactId>
-  <version>0.3.6</version>
+  <version>0.3.7</version>
 </dependency>
 ```
 
@@ -125,13 +154,13 @@ Spring Boot applications pick the matching starter; it runs `migrate` during con
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-3-starter</artifactId>
-  <version>0.3.6</version>
+  <version>0.3.7</version>
 </dependency>
 <!-- Spring Boot 2.7 / Java 8 -->
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-2-starter</artifactId>
-  <version>0.3.6</version>
+  <version>0.3.7</version>
 </dependency>
 ```
 
@@ -175,7 +204,7 @@ The full reactor, including the Boot 3 modules, is built with Java 17; the Boot 
 ./mvnw verify
 ```
 
-The CLI distribution is generated at `flydb-cli/target/flydb-cli-0.3.6.zip`. The core module enforces an 80% JaCoCo line-coverage gate and zero non-test runtime dependencies via Maven Enforcer.
+The CLI distribution is generated at `flydb-cli/target/flydb-cli-0.3.7.zip`. The core module enforces an 80% JaCoCo line-coverage gate and zero non-test runtime dependencies via Maven Enforcer.
 
 Database integration contracts are skipped by default. Set `-Pmysql`/`-Ppostgresql` and `-Dflydb.integration.database=<dialect>` explicitly to start temporary databases and run the selected tests. The full matrix runs in `.github/workflows/ci.yml`.
 

@@ -110,7 +110,64 @@ final class ProfileStore {
         }
     }
     private void save(ArrayNode all) throws IOException {
-        StateJson.write(state.resolve("profiles.json"), StateJson.object().set("profiles", all));
+        ObjectNode registry = registry();
+        registry.set("profiles", all);
+        registry.set("groups", groupNames(registry, all));
+        StateJson.write(state.resolve("profiles.json"), registry);
+    }
+    private ObjectNode registry() throws IOException {
+        Path file = state.resolve("profiles.json");
+        return Files.exists(file) ? (ObjectNode) StateJson.read(file) : StateJson.object();
+    }
+    private ArrayNode groupNames(ObjectNode registry, ArrayNode all) {
+        Set<String> names = new LinkedHashSet<String>();
+        for (JsonNode name : registry.path("groups")) if (name.isTextual() && !name.asText().isEmpty()) names.add(name.asText());
+        for (JsonNode profile : all) if (!profile.path("group").asText().isEmpty()) names.add(profile.path("group").asText());
+        ArrayNode result = StateJson.array();
+        for (String name : names) result.add(name);
+        return result;
+    }
+    synchronized ArrayNode groups() throws IOException { return groupNames(registry(), list()); }
+
+    /** Mutate display organization under the same lock as profile registration, never config files. */
+    synchronized ArrayNode organize(ObjectNode input) throws IOException {
+        try (FileChannel channel = FileChannel.open(state.resolve("profiles.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+             FileLock lock = channel.lock()) {
+            ObjectNode registry = registry();
+            ArrayNode all = list();
+            List<String> names = new ArrayList<String>();
+            for (JsonNode name : groupNames(registry, all)) names.add(name.asText());
+            String action = required(input, "action"), name = input.path("name").asText();
+            if ("create".equals(action) || "rename".equals(action)) {
+                String next = bounded(required(input, "newName"), 80);
+                if (names.contains(next)) throw new WebException(409, "GROUP_EXISTS", "Group name already exists");
+                if ("create".equals(action)) names.add(next);
+                else {
+                    if (!names.contains(name)) throw new WebException(404, "GROUP_NOT_FOUND", "Group no longer exists");
+                    names.set(names.indexOf(name), next);
+                    for (JsonNode p : all) if (name.equals(p.path("group").asText())) ((ObjectNode) p).put("group", next);
+                }
+            } else if ("delete".equals(action) || "move".equals(action)) {
+                if (!names.contains(name)) throw new WebException(404, "GROUP_NOT_FOUND", "Group no longer exists");
+                if ("delete".equals(action)) {
+                    names.remove(name);
+                    for (JsonNode p : all) if (name.equals(p.path("group").asText())) ((ObjectNode) p).put("group", "");
+                } else {
+                    String before = input.path("before").asText();
+                    if (!before.isEmpty() && !names.contains(before)) throw new WebException(404, "GROUP_NOT_FOUND", "Destination group no longer exists");
+                    if (!name.equals(before)) { names.remove(name); names.add(before.isEmpty() ? names.size() : names.indexOf(before), name); }
+                }
+            } else if ("moveProfile".equals(action)) {
+                if (!name.isEmpty() && !names.contains(name)) throw new WebException(404, "GROUP_NOT_FOUND", "Destination group no longer exists");
+                String id = required(input, "profileId"); boolean found = false;
+                for (JsonNode p : all) if (id.equals(p.path("id").asText())) { ((ObjectNode) p).put("group", name); found = true; break; }
+                if (!found) throw new WebException(404, "PROFILE_NOT_FOUND", "Configuration is no longer registered");
+            } else throw new WebException(400, "INVALID_REQUEST", "Unknown group operation");
+            ArrayNode groups = StateJson.array(); for (String value : names) groups.add(value);
+            registry.set("profiles", all); registry.set("groups", groups);
+            StateJson.write(state.resolve("profiles.json"), registry);
+            return groups;
+        }
     }
     static Path directory(String path) throws IOException {
         if (path.trim().isEmpty()) throw new WebException(400, "INVALID_PATH", "Choose a working directory");
