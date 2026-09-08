@@ -5,6 +5,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.filter.FilteringParserDelegate;
+import com.fasterxml.jackson.core.filter.TokenFilter;
 import java.time.Instant;
 import java.util.*;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,6 +19,9 @@ import com.flydb.core.api.ExecutionObserver;
 /** Cross-process local execution journal. A held OS lock, not a heartbeat, proves liveness. */
 public final class RunStore {
     private final Path directory;
+    private final Map<String, SummaryCache> summaries = new LinkedHashMap<String, SummaryCache>(16, .75f, true) {
+        @Override protected boolean removeEldestEntry(Map.Entry<String, SummaryCache> entry) { return size() > 200; }
+    };
     public RunStore(Path stateDirectory) throws IOException {
         this.directory = stateDirectory.resolve("runs");
         Files.createDirectories(directory);
@@ -31,7 +38,15 @@ public final class RunStore {
     }
     public ObjectNode read(String id) throws IOException {
         Path run = path(id);
-        ObjectNode summary = StateJson.read(run.resolve("summary.json"));
+        // Run results contain full migration previews, so they cannot share the
+        // small configuration-file size limit. Stream the file to avoid a second
+        // full byte-array copy; keep the mapper's JSON structure constraints.
+        ObjectNode summary;
+        try (InputStream input = Files.newInputStream(run.resolve("summary.json"))) {
+            JsonNode node = StateJson.MAPPER.readTree(input);
+            if (node == null || !node.isObject()) throw new IOException("Expected JSON object");
+            summary = (ObjectNode) node;
+        }
         if ("RUNNING".equals(summary.path("status").asText()) && !isLive(run)) {
             summary.put("status", "UNKNOWN");
             summary.put("recovery", "NO_TERMINAL_RESULT");
@@ -39,6 +54,13 @@ public final class RunStore {
         return summary;
     }
     public List<ObjectNode> list(int limit) throws IOException {
+        return list(limit, false);
+    }
+    /** SQL-free polling view. Full records remain available through read(id). */
+    public List<ObjectNode> listSummaries(int limit) throws IOException {
+        return list(limit, true);
+    }
+    private List<ObjectNode> list(int limit, boolean compact) throws IOException {
         List<Path> paths = new ArrayList<Path>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory)) {
             for (Path path : stream) if (Files.isDirectory(path) && Files.exists(path.resolve("summary.json"))) paths.add(path);
@@ -47,7 +69,7 @@ public final class RunStore {
         List<ObjectNode> result = new ArrayList<ObjectNode>();
         for (Path path : paths) {
             if (result.size() >= limit) break;
-            try { result.add(read(path.getFileName().toString())); }
+            try { result.add(compact ? readSummary(path.getFileName().toString()) : read(path.getFileName().toString())); }
             catch (IOException e) {
                 ObjectNode damaged = StateJson.object().put("id", path.getFileName().toString())
                         .put("status", "UNKNOWN").put("recovery", "UNREADABLE_RECORD");
@@ -55,6 +77,43 @@ public final class RunStore {
             }
         }
         return result;
+    }
+    private synchronized ObjectNode readSummary(String id) throws IOException {
+        Path run = path(id), file = run.resolve("summary.json");
+        BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
+        SummaryCache cached = summaries.get(id);
+        if (cached != null && cached.matches(attributes)) return cached.value.deepCopy();
+        final boolean[] omitted = { false };
+        TokenFilter filter = new TokenFilter() {
+            @Override public TokenFilter includeProperty(String name) {
+                if ("statements".equals(name)) { omitted[0] = true; return null; }
+                return this;
+            }
+        };
+        ObjectNode summary;
+        try (InputStream input = Files.newInputStream(file);
+             JsonParser parser = new FilteringParserDelegate(StateJson.MAPPER.getFactory().createParser(input), filter,
+                     TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)) {
+            JsonNode node = StateJson.MAPPER.readTree(parser);
+            if (node == null || !node.isObject()) throw new IOException("Expected JSON object");
+            summary = (ObjectNode) node;
+        }
+        if (omitted[0]) summary.put("detailsOmitted", true);
+        if ("RUNNING".equals(summary.path("status").asText())) {
+            if (!isLive(run)) summary.put("status", "UNKNOWN").put("recovery", "NO_TERMINAL_RESULT");
+        } else if (SummaryCache.same(attributes, Files.readAttributes(file, BasicFileAttributes.class))) {
+            summaries.put(id, new SummaryCache(attributes, summary.deepCopy()));
+        }
+        return summary;
+    }
+    private static final class SummaryCache {
+        final BasicFileAttributes attributes;
+        final ObjectNode value;
+        SummaryCache(BasicFileAttributes attributes, ObjectNode value) { this.attributes = attributes; this.value = value; }
+        boolean matches(BasicFileAttributes other) { return same(attributes, other); }
+        static boolean same(BasicFileAttributes a, BasicFileAttributes b) {
+            return a.size() == b.size() && a.lastModifiedTime().equals(b.lastModifiedTime()) && Objects.equals(a.fileKey(), b.fileKey());
+        }
     }
     public List<JsonNode> events(String id, long after, int limit) throws IOException {
         List<JsonNode> result = new ArrayList<JsonNode>();

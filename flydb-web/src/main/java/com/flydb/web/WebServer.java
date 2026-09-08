@@ -81,10 +81,11 @@ public final class WebServer implements AutoCloseable {
     }
     private JsonNode route(HttpExchange exchange, String path) throws IOException {
         String method = exchange.getRequestMethod();
-        if ("GET".equals(method) && "/bootstrap".equals(path)) return bootstrap();
+        if ("GET".equals(method) && "/bootstrap".equals(path)) return bootstrap("true".equals(query(exchange).get("compact")));
         if ("GET".equals(method) && "/files".equals(path)) return LocalFiles.browse(query(exchange).getOrDefault("path", working.toString()));
         if ("GET".equals(method) && "/discover".equals(path)) return LocalFiles.discover(query(exchange).getOrDefault("path", working.toString()));
         if ("POST".equals(method) && "/profiles".equals(path)) return profiles.create(body(exchange));
+        if ("POST".equals(method) && "/groups".equals(path)) return profiles.organize(body(exchange));
         if ("POST".equals(method) && "/config/init".equals(path)) return ConfigDocuments.init(body(exchange));
         if ("POST".equals(method) && "/config/document".equals(path)) return ConfigDocuments.response(ConfigDocuments.parse(body(exchange)));
         String[] parts = path.split("/");
@@ -99,14 +100,15 @@ public final class WebServer implements AutoCloseable {
             if (parts.length == 4 && "document".equals(parts[3]) && "GET".equals(method))
                 return ConfigDocuments.response(configurations.document(profiles.get(id)));
             if (parts.length == 4 && "actions".equals(parts[3]) && "POST".equals(method)) return operations.submit(id, body(exchange));
+            if (parts.length == 4 && "clean-confirmation".equals(parts[3]) && "POST".equals(method)) return operations.prepareClean(id, body(exchange));
         }
         if (parts.length == 3 && "runs".equals(parts[1]) && "GET".equals(method)) return runs.read(parts[2]);
         throw new WebException(404, "NOT_FOUND", "Unknown workbench endpoint");
     }
-    private ObjectNode bootstrap() throws IOException {
+    private ObjectNode bootstrap(boolean compact) throws IOException {
         ObjectNode result = StateJson.object().put("version", version).put("initialDirectory", working.toString())
                 .put("stateDirectory", state.toString()).put("driversDirectory", installation.resolve("drivers").toString());
-        result.set("profiles", profiles.list()); result.set("runs", StateJson.MAPPER.valueToTree(runs.list(200)));
+        result.set("profiles", profiles.list()); result.set("groups", profiles.groups()); result.set("runs", StateJson.MAPPER.valueToTree(compact ? runs.listSummaries(200) : runs.list(200)));
         result.set("knownKeys", StateJson.MAPPER.valueToTree(ConfigLoader.knownKeys()));
         return result;
     }

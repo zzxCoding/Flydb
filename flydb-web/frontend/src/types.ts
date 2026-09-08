@@ -19,15 +19,17 @@ export interface CommandResult {
   [key: string]: unknown
 }
 export interface Run {
+  detailsOmitted?: boolean
   id: string; profileId?: string; profileName?: string; configPath?: string
-  source: 'CLI' | 'WEB'; command: string; status: string; startedAt: string
+  source?: 'CLI' | 'WEB'; command?: string; status: string; startedAt?: string
   endedAt?: string; lastActivityAt?: string; target?: string; script?: string
-  verification: string; sequence: number; result?: CommandResult; recovery?: string
+  verification?: string; sequence?: number; result?: CommandResult; recovery?: string
   configRevision?: string; driver?: { className: string; source: string }
   progress?: { confirmed: number; total: number; script: string }
   transactionResult?: { transaction: string; phase: string; script: string }
 }
 export interface Bootstrap {
+  groups?: string[]
   profiles: Profile[]; runs: Run[]; version: string; initialDirectory: string
   stateDirectory: string; driversDirectory: string; knownKeys: string[]
 }

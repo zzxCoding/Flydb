@@ -23,6 +23,70 @@ class WebServerTest {
     }
     @AfterEach void stop() { server.close(); }
 
+    @Test void cleanConfirmationIsSingleUseAndRequestRetriesDoNotReplay() throws Exception {
+        // Deliberately unavailable driver: admission is exercised without ever connecting to a database.
+        bootstrap(); String profileId = importConfig().path("id").asText();
+        String revision = request("GET", "/api/profiles/" + profileId + "/config", null, null).body.path("revision").asText();
+        ObjectNode prepare = StateJson.object().put("revision", revision);
+        JsonNode confirmation = request("POST", "/api/profiles/" + profileId + "/clean-confirmation", prepare.toString(), null).body;
+        ObjectNode action = prepare.deepCopy().put("command", "clean").put("requestId", UUID.randomUUID().toString())
+                .put("cleanToken", confirmation.path("token").asText()).put("confirmed", true).put("confirmationText", "clean");
+        assertThat(request("POST", "/api/profiles/" + profileId + "/actions", action.toString(), null).status).isEqualTo(400);
+        action.put("confirmationText", "CLEAN");
+        Reply accepted = request("POST", "/api/profiles/" + profileId + "/actions", action.toString(), null);
+        assertThat(accepted.status).isEqualTo(200);
+        String id = accepted.body.path("id").asText();
+        JsonNode result = accepted.body;
+        for (int attempt = 0; attempt < 100 && "RUNNING".equals(result.path("status").asText()); attempt++) {
+            Thread.sleep(20); result = request("GET", "/api/runs/" + id, null, null).body;
+        }
+        assertThat(result.path("result").path("error").path("code").asText()).isEqualTo("FLYDB-1003");
+        assertThat(request("POST", "/api/profiles/" + profileId + "/actions", action.toString(), null).body.path("id").asText()).isEqualTo(id);
+        action.put("requestId", UUID.randomUUID().toString());
+        assertThat(request("POST", "/api/profiles/" + profileId + "/actions", action.toString(), null).status).isEqualTo(409);
+        assertThat(request("GET", "/api/bootstrap", null, null).body.path("runs").size()).isEqualTo(1);
+        assertThat(new String(Files.readAllBytes(temporary.resolve("flydb.conf")), StandardCharsets.UTF_8)).doesNotContain("clean-disabled=false");
+    }
+
+    @Test void cleanRequiresExplicitConfirmationBoundToTheConfiguration() throws Exception {
+        bootstrap(); String profileId = importConfig().path("id").asText();
+        String revision = request("GET", "/api/profiles/" + profileId + "/config", null, null).body.path("revision").asText();
+        ObjectNode prepare = StateJson.object().put("revision", revision);
+        Reply preview = request("POST", "/api/profiles/" + profileId + "/clean-confirmation", prepare.toString(), null);
+        assertThat(preview.status).isEqualTo(200);
+        assertThat(preview.body.path("target").asText()).contains("jdbc:");
+        ObjectNode action = prepare.deepCopy().put("command", "clean").put("requestId", UUID.randomUUID().toString());
+        assertThat(request("POST", "/api/profiles/" + profileId + "/actions", action.toString(), null).status).isEqualTo(400);
+        action.put("confirmed", true).put("confirmationText", "CLEAN");
+        assertThat(request("POST", "/api/profiles/" + profileId + "/actions", action.toString(), null).status).isEqualTo(400);
+        action.put("cleanToken", preview.body.path("token").asText());
+        Files.write(temporary.resolve("flydb.conf"), "\n# changed after confirmation\n".getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
+        action.put("revision", request("GET", "/api/profiles/" + profileId + "/config", null, null).body.path("revision").asText());
+        assertThat(request("POST", "/api/profiles/" + profileId + "/actions", action.toString(), null).status).isEqualTo(409);
+        assertThat(request("GET", "/api/bootstrap", null, null).body.path("runs").size()).isZero();
+        assertThat(new String(Files.readAllBytes(temporary.resolve("flydb.conf")), StandardCharsets.UTF_8)).doesNotContain("clean-disabled=false");
+    }
+
+    @Test void compactPollingOmitsSqlButFullRunPreservesTheEntirePreview() throws Exception {
+        com.flydb.runtime.state.RunStore store = new com.flydb.runtime.state.RunStore(temporary.resolve("state"));
+        ObjectNode result = StateJson.object().put("planId", "confirmed-plan");
+        ObjectNode migration = result.putArray("migrations").addObject().put("script", "V1__large.sql");
+        char[] chars = new char[9 * 1024 * 1024]; Arrays.fill(chars, 'x');
+        migration.putArray("statements").addObject().put("lineNumber", 1).put("sql", new String(chars));
+        String id;
+        try (com.flydb.runtime.state.RunStore.Writer writer = store.start(StateJson.object().put("command", "plan"))) {
+            id = writer.id(); writer.finish("SUCCEEDED", result, "NOT_RUN");
+        }
+        bootstrap();
+        JsonNode compact = request("GET", "/api/bootstrap?compact=true", null, null).body.path("runs").get(0);
+        assertThat(compact.toString().length()).isLessThan(4096);
+        assertThat(compact.path("detailsOmitted").asBoolean()).isTrue();
+        assertThat(compact.path("result").path("planId").asText()).isEqualTo("confirmed-plan");
+        JsonNode full = request("GET", "/api/runs/" + id, null, null).body;
+        assertThat(full.path("result").path("migrations").get(0).path("statements").get(0).path("sql").asText().length()).isEqualTo(chars.length);
+        assertThat(request("GET", "/api/bootstrap?compact=true", null, null).body.path("runs").get(0)).isEqualTo(compact);
+    }
+
     @Test void automaticBrowserBootstrapNeedsNoAccountAndBlocksCrossOriginWrites() throws Exception {
         assertThat(request("GET", "/api/bootstrap", null, null).status).isEqualTo(401);
         bootstrap();

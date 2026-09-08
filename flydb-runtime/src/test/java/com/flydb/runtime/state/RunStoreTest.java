@@ -9,6 +9,53 @@ import static org.assertj.core.api.Assertions.*;
 
 class RunStoreTest {
     @TempDir Path state;
+    @Test void summaryCacheTracksReplacementAndDoesNotCacheLiveness() throws Exception {
+        RunStore store = new RunStore(state);
+        String id;
+        try (RunStore.Writer writer = store.start(StateJson.object().put("command", "plan"))) {
+            id = writer.id();
+            assertThat(store.listSummaries(1).get(0).path("status").asText()).isEqualTo("RUNNING");
+            writer.finish("SUCCEEDED", StateJson.object().put("planId", "first"), "NOT_RUN");
+        }
+        assertThat(store.listSummaries(1).get(0).path("status").asText()).isEqualTo("SUCCEEDED");
+        ObjectNode changed = store.read(id).put("status", "FAILED");
+        StateJson.write(state.resolve("runs").resolve(id).resolve("summary.json"), changed);
+        assertThat(store.listSummaries(1).get(0).path("status").asText()).isEqualTo("FAILED");
+        changed.put("status", "RUNNING");
+        StateJson.write(state.resolve("runs").resolve(id).resolve("summary.json"), changed);
+        assertThat(store.listSummaries(1).get(0).path("recovery").asText()).isEqualTo("NO_TERMINAL_RESULT");
+    }
+    @Test void malformedRecordsStillHaveUnknownOutcomes() throws Exception {
+        RunStore store = new RunStore(state);
+        String id;
+        try (RunStore.Writer writer = store.start(StateJson.object())) { id = writer.id(); }
+        Path file = state.resolve("runs").resolve(id).resolve("summary.json");
+        for (String invalid : new String[] { "{", "[]", "{\"status\":\"FAILED\",\"status\":\"SUCCEEDED\"}" }) {
+            Files.write(file, invalid.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            ObjectNode record = store.list(1).get(0);
+            assertThat(record.path("status").asText()).isEqualTo("UNKNOWN");
+            assertThat(record.path("recovery").asText()).isEqualTo("UNREADABLE_RECORD");
+        }
+    }
+    @Test void readsLargePreviewWrittenByTheSameStoreWithoutLosingOutcome() throws Exception {
+        RunStore store = new RunStore(state);
+        char[] chars = new char[9 * 1024 * 1024];
+        java.util.Arrays.fill(chars, 'x');
+        String sql = new String(chars);
+        String id;
+        try (RunStore.Writer writer = store.start(StateJson.object().put("command", "plan"))) {
+            id = writer.id();
+            writer.finish("SUCCEEDED", StateJson.object().put("sql", sql), "NOT_RUN");
+        }
+        assertThat(Files.size(state.resolve("runs").resolve(id).resolve("summary.json"))).isGreaterThan(8 * 1024 * 1024);
+        ObjectNode record = new RunStore(state).list(1).get(0);
+        assertThat(record.path("status").asText()).isEqualTo("SUCCEEDED");
+        assertThat(record.path("result").path("sql").asText()).isEqualTo(sql);
+        assertThat(store.read(id)).isEqualTo(record);
+        assertThatThrownBy(() -> StateJson.read(state.resolve("runs").resolve(id).resolve("summary.json")))
+                .isInstanceOf(java.io.IOException.class).hasMessageContaining("8 MiB");
+    }
+
     @Test void persistsOrderedRedactedEventsAndDetectsCrossInstanceLiveness() throws Exception {
         RunStore store = new RunStore(state);
         String id;

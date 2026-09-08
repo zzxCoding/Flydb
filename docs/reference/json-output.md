@@ -55,6 +55,10 @@ $ bin/flydb --json migrate
 
 取值约定：状态 token 为 `PENDING`、`OUT_OF_ORDER`、`SUCCESS`、`FAILED`、`MISSING`、`OUTDATED`、`FUTURE`、`BASELINE`、`UNDONE`；类型 token 为 `SQL`、`JDBC`、`BASELINE`、`UNDO_SQL`；`installedOn` 为 ISO-8601 本地时间；可重复迁移的 `version` 为 `null`；未知或不适用的数值为 `null`。
 
+`info.current` 为仍有效的成功历史记录中的最高版本，包含本地脚本缺失时的 `MISSING` / `FUTURE`，
+不计失败或已撤销的记录。`OUT_OF_ORDER` 表示本地存在、数据库尚未应用的低版本脚本，属于待执行，
+不能将它显示为“乱序已执行”。校验是否允许执行仍由 Core 决定，不由统计数量决定。
+
 ## 稳定性承诺
 
 同一 `protocolVersion` 内只新增字段、不改名、不删除、不改类型或语义；**消费者必须忽略未知字段**。破坏性变更会递增 `protocolVersion` 并在 CHANGELOG 说明。字段顺序固定但消费者不得依赖。

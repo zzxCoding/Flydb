@@ -97,7 +97,13 @@ inspect the database and history before deciding what to do. No write is automat
 
 Advanced actions separately explain and confirm baseline, undo and repair. Undo previews the matched
 `U__` script. Baseline records an existing version; repair changes history and does not reverse SQL.
-There is no Web `clean` action.
+“Clean database” removes tables, views, sequences, and Flydb history/lock tables in the connection’s current
+schema according to its dialect, including objects not managed by Flydb. Check the displayed target, account
+and backups, acknowledge the warning, type `CLEAN`, then select “Confirm clean”. Confirmation is bound to
+effective settings, expires after five minutes, and is single-use. The confirmation page does not connect or
+enumerate objects; the connection determines the actual schema. Local configuration and SQL files are retained.
+Clean is enabled for this invocation only; `flydb.conf` is not changed. Failure may leave partial deletions;
+inspect the database before deciding what to do next.
 
 ## CLI and Agent interoperability
 
@@ -120,15 +126,35 @@ diagnostics. Passwords, secret URL parameters and configuration values named wit
 credential are redacted. Unmarked sensitive business literals cannot be exhaustively inferred;
 review reports according to your project's data policy before sharing. The list shows the most recent
 200 records; older files remain on disk without automatic deletion.
+Project and all-run histories show 10 entries per page, with navigation and direct page entry above and below the list. Background refresh preserves the page; switching projects resets project history to page one.
 
 ## Preferences and troubleshooting
 
+“Copy for Agent” appears beside the configuration name across all three tabs, or below it on narrow screens.
+It copies file and working-directory paths, redacted connection settings, the latest inspection statistics and up to
+50 scripts, plus 10 recent execution summaries and errors. Stale state, excluded unsaved drafts and truncation are explicit.
+It does not read raw configuration files or include temporary passwords or SQL bodies. Nothing is automatically sent to an Agent.
+Add your specific request when pasting; the Agent needs access to the local paths and must verify current state first.
+Copying context does not authorize database writes. A manual-copy dialog is available when clipboard access fails.
+
+Create empty groups in the sidebar; click a group name to collapse it. Its menu supports rename,
+move up/down and delete. Drag a group before another group to reorder, or onto Ungrouped to move it last.
+Drag configurations into groups, or use the folder button beside a configuration to choose its group.
+Deleting a group moves its configurations to Ungrouped and preserves files and database data.
+Groups and order persist in the local workbench across restarts. Collapse preferences stay in the browser;
+search temporarily expands matching groups.
+
 Use the bottom-left controls for Chinese/English and dark/light themes. Preferences persist in the
 browser. Narrow screens use the top-left configuration menu; SQL scrolls within its preview.
+Large previews use a read-only editor that renders the visible region. Use `Ctrl/⌘ F` to search the full
+SQL and scroll horizontally for long lines. “Download full SQL” exports every preview statement in the
+selected script. Migration lists show 10 entries per page with controls above and below the list; preview directories show 50, with full-set version/script
+search and direct page-number entry. Filtering and pagination never change totals or the execution set.
 
 - Driver failure: check the JAR, Java version, class, coordinate and offline setting.
 - Connection failure: check the effective URL, credentials and network, then inspect again.
 - Validation or SQL failure: read the original details and [error reference](../reference/errors.md).
+- Unreadable execution record (`UNREADABLE_RECORD`): the local record could not be read; this does not mean the database is empty or the migration failed. Preserve `runs/<report id>/summary.json` and `events.jsonl` in the state directory, check file size, integrity and access permissions, and verify database state before deciding what to do next.
 - Unavailable page: keep the local process running, check the port, then refresh or select Retry.
 - Configuration conflict: merge external changes before saving; the original file was not overwritten.
 
