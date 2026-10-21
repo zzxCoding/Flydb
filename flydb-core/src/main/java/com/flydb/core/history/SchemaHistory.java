@@ -37,7 +37,7 @@ public final class SchemaHistory {
      * 幂等创建历史表 + 锁表。
      *
      * <p>建表动作发生在获取锁<b>之前</b>（锁表本身需要先存在），因此建表必须自身幂等且容忍竞态。
-     * 调用者应确保在获取锁之后调用此方法。
+     * 调用者应在获取锁之前调用此方法。
      */
     public void ensureExists() {
         executeCreateTable(ddl.createTableSql(table));
@@ -85,9 +85,8 @@ public final class SchemaHistory {
             stmt = connection.createStatement();
             stmt.execute(sql);
         } catch (SQLException e) {
-            // Oracle 系无 IF NOT EXISTS：表已存在错误码（ORA-00955）→ 幂等忽略
-            // 其他系直接用 IF NOT EXISTS 无此问题
-            if (e.getErrorCode() != 955) { // ORA-00955: name is already used by an existing object
+            // 由方言识别产品的已存在错误，其他建表失败必须继续上报。
+            if (!ddl.isTableAlreadyExists(e)) {
                 throw new FlydbException(ErrorCode.MIGRATION_EXECUTION_FAILED,
                         "建表失败: " + e.getMessage(), e);
             }

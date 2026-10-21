@@ -1,6 +1,7 @@
 package com.flydb.core.dialect;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 
 import com.flydb.core.api.FlydbConfiguration;
 import com.flydb.core.history.SchemaHistory;
@@ -23,13 +24,17 @@ public final class DmDatabase extends OracleFamilyDatabase {
     @Override
     public SchemaHistoryDdl schemaHistoryDdl() {
         final SchemaHistoryDdl delegate = super.schemaHistoryDdl();
-        if (!caseSensitive) {
-            return delegate;
-        }
         return new SchemaHistoryDdl() {
             @Override
             public String tableName(String rawTableName) {
-                return quote(rawTableName);
+                return caseSensitive ? quote(rawTableName) : delegate.tableName(rawTableName);
+            }
+
+            @Override
+            public boolean isTableAlreadyExists(SQLException exception) {
+                // DM8 8.1.3.62：对象已存在为 -2124，SQLState 22000 还包含其他错误。
+                return exception.getErrorCode() == -2124
+                        || delegate.isTableAlreadyExists(exception);
             }
 
             @Override
@@ -40,6 +45,11 @@ public final class DmDatabase extends OracleFamilyDatabase {
             @Override
             public String createLockTableSql(String lockTableName) {
                 return delegate.createLockTableSql(tableName(lockTableName));
+            }
+
+            @Override
+            public String dropTableSql(String tableName) {
+                return delegate.dropTableSql(tableName);
             }
         };
     }

@@ -92,7 +92,7 @@ public interface Database extends AutoCloseable {
 | 标识符引用 | 双引号（引用即大小写敏感） |
 | 语句切分 | 识别 PL/SQL 块（`CREATE [OR REPLACE] [EDITIONABLE\|NONEDITIONABLE] PROCEDURE/FUNCTION/TRIGGER/PACKAGE/TYPE`、裸 `DECLARE`/`BEGIN`），块终止符为独占一行的 `/`；`EDITIONABLE VIEW/SYNONYM` 仍是普通单语句 |
 | 锁 | 通用锁表方案（家族默认）；专用锁连接使用包含当前 schema 的全限定锁表名 |
-| 历史表 DDL | 无 `IF NOT EXISTS` → "先查系统目录后建 + 建表异常兜底"的幂等策略；`success` 用 `NUMBER(1)`；`installed_on TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL`——Oracle 列定义要求 `DEFAULT` 在 `NOT NULL` 之前，反序报 `ORA-00907` |
+| 历史表 DDL | 无 `IF NOT EXISTS` → 尝试建表，仅忽略方言确认的“对象已存在”错误，以兼容重复调用与并发初始化；`success` 用 `NUMBER(1)`；`installed_on TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL`——Oracle 列定义要求 `DEFAULT` 在 `NOT NULL` 之前，反序报 `ORA-00907` |
 | clean | 专用 `OracleCleanStrategy`：序列按待清理 schema 查 `all_sequences`（跳过 `ISEQ$$_`/`BIN$`）——JDBC `getTables` 不返回序列且无 `information_schema`；`DROP TABLE ... PURGE` 并收尾 `PURGE RECYCLEBIN`（失败降级警告），避免回收站残留的表/LOB 段/索引占名导致 `CREATE` 撞名；OceanBase 直接返回 `-4007`，或以 vendor code `600` 的 `ORA-00600 arguments` 包装 `-4007` 时，等待 `all_tab_columns` 列数稳定后有限重试，并跳过 `_...hidden...` DDL 中间表；记账表排除忽略大小写（非引用名大写存储） |
 | currentSchema | 查询会话当前 schema（达梦：`SELECT SYS_CONTEXT('USERENV','CURRENT_SCHEMA') FROM dual`，实施时确认） |
 
@@ -119,8 +119,10 @@ public interface Database extends AutoCloseable {
 `SchemaHistoryDdl` 返回两组 DDL（历史表 + 锁表，见 [04 §2.2](04-parser-lock-tx.md)），由 `SchemaHistory.ensureExists()` 调用：
 
 1. PG 系/MySQL 系：直接 `CREATE TABLE IF NOT EXISTS`（幂等）。
-2. Oracle 系：先查系统目录判断存在性；不存在则建表，并捕获"表已存在"错误码兜底（两个进程同时初始化的竞态窗口）。
+2. Oracle 系：尝试建表，由 `SchemaHistoryDdl.isTableAlreadyExists(SQLException)` 判定异常是否可以忽略。默认保留 Oracle `955`；达梦方言额外识别 DM8 8.1.3.62 实测的 `-2124`。不能按通用 SQLState（例如 DM 的 `22000`）忽略语法或权限错误。厂商差异留在方言，历史仓储不维护产品错误码列表。
 3. 建表动作发生在获取锁**之前**（锁表本身需要先存在），因此建表必须自身幂等且容忍竞态——这是流程顺序上的硬约束（见 [05 §1](05-commands.md) 时序第 4~5 步）。
+
+2026-10-21 实例验证确认：原实现直接尝试建表，仅识别 Oracle `955`，与旧文档的“先查系统目录”描述不符，达梦重复迁移因此失败。这里明确采用现有的建表加方言异常判定策略；目录预查不能替代并发场景中的异常兜底。
 
 ## 6. 扩展新方言的成本模型（二期验收标准）
 
