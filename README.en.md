@@ -37,7 +37,7 @@ MySQL, PostgreSQL, Oracle and Chinese databases including OceanBase, TiDB, DM8, 
 Download the ZIP from [Releases](https://github.com/zzxCoding/Flydb/releases/latest), extract it and run:
 
 ```bash
-cd flydb-cli-0.3.7
+cd flydb-cli-0.3.8
 bin/flydb web
 ```
 
@@ -87,7 +87,7 @@ Flydb manages migration workflow and database dialect behavior. It does not tran
 | MySQL  | Yes | Automated contract tests; CLI distribution end-to-end verification |
 | PostgreSQL | Yes | Automated contract tests |
 | Oracle | Yes | Automated contract tests; end-to-end validation (validate / clean / migrate) completed on a licensed real instance |
-| DM8 (Dameng) | Yes | Dialect and driver-metadata contract tests; real-environment certification pending |
+| DM8 (Dameng) | Yes | End-to-end verified on an authorized DM8 8.1.3.62 instance in case-insensitive mode; 0.3.8 fixes repeated migrations ([test record](./docs/verification/dm8-20261021.md)) |
 | KingbaseES | Yes | Dialect and driver-metadata contract tests; real-environment certification pending |
 | openGauss | Yes | Dialect and driver-metadata contract tests; real-environment certification pending |
 | OceanBase | Oracle/MySQL family reuse | Oracle tenant end-to-end validated on a licensed real instance; MySQL tenant under lightweight compatibility tests |
@@ -143,7 +143,7 @@ Plain Java applications depend on `flydb-core`:
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-core</artifactId>
-  <version>0.3.7</version>
+  <version>0.3.8</version>
 </dependency>
 ```
 
@@ -154,13 +154,13 @@ Spring Boot applications pick the matching starter; it runs `migrate` during con
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-3-starter</artifactId>
-  <version>0.3.7</version>
+  <version>0.3.8</version>
 </dependency>
 <!-- Spring Boot 2.7 / Java 8 -->
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-2-starter</artifactId>
-  <version>0.3.7</version>
+  <version>0.3.8</version>
 </dependency>
 ```
 
@@ -204,7 +204,7 @@ The full reactor, including the Boot 3 modules, is built with Java 17; the Boot 
 ./mvnw verify
 ```
 
-The CLI distribution is generated at `flydb-cli/target/flydb-cli-0.3.7.zip`. The core module enforces an 80% JaCoCo line-coverage gate and zero non-test runtime dependencies via Maven Enforcer.
+The CLI distribution is generated at `flydb-cli/target/flydb-cli-0.3.8.zip`. The core module enforces an 80% JaCoCo line-coverage gate and zero non-test runtime dependencies via Maven Enforcer.
 
 Database integration contracts are skipped by default. Set `-Pmysql`/`-Ppostgresql` and `-Dflydb.integration.database=<dialect>` explicitly to start temporary databases and run the selected tests. The full matrix runs in `.github/workflows/ci.yml`.
 

@@ -1,7 +1,9 @@
 package com.flydb.core.history;
 
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import com.flydb.core.dialect.DmDatabase;
 import com.flydb.core.migration.AppliedMigration;
 import com.flydb.core.migration.MigrationType;
 import com.flydb.core.migration.MigrationVersion;
@@ -55,6 +58,88 @@ class SchemaHistoryTest {
                     && sql.contains("IF NOT EXISTS")
                     && sql.contains("TINYINT(1)"));
         }
+
+        @Test
+        @DisplayName("达梦大小写不敏感实例重复初始化历史表和锁表保持幂等")
+        void dmCaseInsensitiveExistingTablesAreIdempotent() {
+            assertDmExistingTablesAreIdempotent(false);
+        }
+
+        @Test
+        @DisplayName("达梦大小写敏感实例重复初始化带引号的历史表和锁表保持幂等")
+        void dmCaseSensitiveExistingTablesAreIdempotent() {
+            assertDmExistingTablesAreIdempotent(true);
+        }
+
+        @Test
+        @DisplayName("达梦不会忽略同为 SQLState 22000 的其他建表错误")
+        void dmOtherCreateErrorsAreNotSwallowed() {
+            SQLException failure = new SQLException("syntax error", "22000", -2007);
+            Connection connection = failingCreateConnection(new ArrayList<String>(), failure);
+            SchemaHistory history = new SchemaHistory(TABLE,
+                    new DmDatabase(connection, false).schemaHistoryDdl(), connection);
+
+            assertThatThrownBy(history::ensureExists).hasCause(failure);
+        }
+
+        @Test
+        @DisplayName("Oracle 已存在错误 955 仍保持幂等")
+        void oracleExistingTablesRemainIdempotent() {
+            List<String> attempted = new ArrayList<String>();
+            Connection connection = failingCreateConnection(attempted,
+                    new SQLException("name is already used", "42000", 955));
+            SchemaHistory history = new SchemaHistory(TABLE, SchemaHistoryDdl.oracle(), connection);
+
+            history.ensureExists();
+            history.ensureExists();
+
+            assertThat(attempted).hasSize(4);
+        }
+
+        @Test
+        @DisplayName("达梦已存在错误码不影响 Oracle 方言的错误处理")
+        void oracleDoesNotSwallowDmErrorCode() {
+            SQLException failure = new SQLException("unrelated error", "22000", -2124);
+            Connection connection = failingCreateConnection(new ArrayList<String>(), failure);
+            SchemaHistory history = new SchemaHistory(TABLE, SchemaHistoryDdl.oracle(), connection);
+
+            assertThatThrownBy(history::ensureExists).hasCause(failure);
+        }
+
+        private void assertDmExistingTablesAreIdempotent(boolean caseSensitive) {
+            List<String> attempted = new ArrayList<String>();
+            Connection connection = failingCreateConnection(attempted,
+                    new SQLException("object already exists", "22000", -2124));
+            SchemaHistory history = new SchemaHistory(TABLE,
+                    new DmDatabase(connection, caseSensitive).schemaHistoryDdl(), connection);
+
+            history.ensureExists();
+            history.ensureExists();
+
+            String historyName = caseSensitive ? "\"" + TABLE + "\"" : TABLE;
+            String lockName = caseSensitive ? "\"flydb_schema_lock\"" : "flydb_schema_lock";
+            assertThat(attempted).hasSize(4);
+            assertThat(attempted.get(0)).startsWith("CREATE TABLE " + historyName + " (");
+            assertThat(attempted.get(1)).startsWith("CREATE TABLE " + lockName + " (");
+        }
+    }
+
+    private static Connection failingCreateConnection(List<String> attempted,
+                                                        SQLException failure) {
+        return (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(),
+                new Class<?>[]{Connection.class}, (proxy, method, args) -> {
+                    if ("createStatement".equals(method.getName())) {
+                        return Proxy.newProxyInstance(Statement.class.getClassLoader(),
+                                new Class<?>[]{Statement.class}, (statement, call, values) -> {
+                                    if ("execute".equals(call.getName())) {
+                                        attempted.add((String) values[0]);
+                                        throw failure;
+                                    }
+                                    return JdbcFakes.defaultValue(call.getReturnType());
+                                });
+                    }
+                    return JdbcFakes.defaultValue(method.getReturnType());
+                });
     }
 
     @Nested

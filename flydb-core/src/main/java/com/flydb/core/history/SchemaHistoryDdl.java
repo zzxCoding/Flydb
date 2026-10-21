@@ -1,18 +1,28 @@
 package com.flydb.core.history;
 
+import java.sql.SQLException;
+
 /**
  * 历史表 DDL 模板（设计 03 §5）。
  *
  * <p>封装各方言家族的历史表与锁表建表 DDL 差异。由 {@link SchemaHistory#ensureExists()} 调用。
  *
  * <p>PG 系/MySQL 系：直接 {@code CREATE TABLE IF NOT EXISTS}（幂等）。
- * Oracle 系：先查系统目录判断存在性，不存在则建表，并捕获"表已存在"错误码兜底。
+ * Oracle 系：尝试建表，仅忽略方言确认的"表已存在"错误，兼容并发初始化。
  */
 public interface SchemaHistoryDdl {
 
     /** 将配置中的原始表名转换为该方言执行 SQL 时使用的标识符。 */
     default String tableName(String rawTableName) {
         return rawTableName;
+    }
+
+    /**
+     * 判定建表失败是否仅因对象已存在。默认保留 Oracle 955 的既有行为；
+     * 厂商方言可补充自身错误码，不能按宽泛的 SQLState 忽略其他建表错误。
+     */
+    default boolean isTableAlreadyExists(SQLException exception) {
+        return exception.getErrorCode() == 955;
     }
 
     /**
@@ -113,7 +123,7 @@ public interface SchemaHistoryDdl {
     final class OracleSchemaHistoryDdl implements SchemaHistoryDdl {
         @Override
         public String createTableSql(String tableName) {
-            // Oracle 系无 IF NOT EXISTS，使用 "查系统目录后建表" 的幂等策略
+            // Oracle 系无 IF NOT EXISTS，使用方言错误码判定保证幂等与竞态安全
             // Oracle 列定义要求 DEFAULT 子句在 NOT NULL 之前（NOT NULL DEFAULT 顺序报 ORA-00907）
             return "CREATE TABLE " + tableName + " (\n"
                     + "    installed_rank INT NOT NULL,\n"

@@ -37,7 +37,7 @@ Flydb 是给开发、运维和实施人员使用的数据库版本迁移工具�
 从 [Releases](https://github.com/zzxCoding/Flydb/releases/latest) 下载 ZIP，解压后运行：
 
 ```bash
-cd flydb-cli-0.3.7
+cd flydb-cli-0.3.8
 bin/flydb web
 ```
 
@@ -87,7 +87,7 @@ Flydb 管理迁移流程与数据库方言行为，不会把任意厂商 SQL 自
 | MySQL  | 是 | 自动化兼容测试；CLI 发行包端到端验证 |
 | PostgreSQL | 是 | 自动化兼容测试 |
 | Oracle | 是 | 自动化契约测试；已在授权真实实例完成 validate、clean、migrate 端到端验证 |
-| 达梦 DM8 | 是 | 方言与驱动元数据契约测试；真实环境认证待补 |
+| 达梦 DM8 | 是 | DM8 8.1.3.62 授权实例端到端验证（大小写不敏感）；0.3.8 修复重复迁移，见[实测记录](./docs/verification/dm8-20261021.md) |
 | 人大金仓 KingbaseES | 是 | 方言与驱动元数据契约测试；真实环境认证待补 |
 | openGauss | 是 | 方言与驱动元数据契约测试；真实环境认证待补 |
 | OceanBase | 复用 Oracle/MySQL 家族 | Oracle 租户已在授权真实实例完成端到端验证；MySQL 租户为轻量兼容测试 |
@@ -143,7 +143,7 @@ flydb.migrate();
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-core</artifactId>
-  <version>0.3.7</version>
+  <version>0.3.8</version>
 </dependency>
 ```
 
@@ -154,13 +154,13 @@ Spring Boot 应用选择对应 starter，容器初始化期间执行 `migrate`�
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-3-starter</artifactId>
-  <version>0.3.7</version>
+  <version>0.3.8</version>
 </dependency>
 <!-- Spring Boot 2.7 / Java 8 -->
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-2-starter</artifactId>
-  <version>0.3.7</version>
+  <version>0.3.8</version>
 </dependency>
 ```
 
@@ -204,7 +204,7 @@ bin/flydb clean --clean-disabled=false --force   # clean 默认禁用；非交�
 ./mvnw verify
 ```
 
-CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.3.7.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
+CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.3.8.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
 
 数据库集成契约默认跳过；显式设置 `-Pmysql`/`-Ppostgresql` 与 `-Dflydb.integration.database=<dialect>` 后，才会启动临时数据库执行对应测试。完整矩阵由 `.github/workflows/ci.yml` 执行。
 
