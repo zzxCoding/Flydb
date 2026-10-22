@@ -15,7 +15,7 @@
 | [Oracle](oracle.md) | `oracle` | 原生 Oracle 家族方言；授权真实实例已通过 validate、clean、migrate 端到端验证 |
 | [TiDB](tidb.md) | `tidb` | MySQL 家族兼容契约；真实 TiDB 待显式环境 |
 | [OceanBase-MySQL](oceanbase-mysql.md) | `oceanbase` | MySQL 家族兼容契约与探测代理；真实租户待显式环境 |
-| [openGauss](opengauss.md) | `opengauss` | PostgreSQL 家族兼容契约；真实实例待显式环境 |
+| [openGauss](opengauss.md) | `opengauss` | openGauss 5.0.0 真实实例验证（A 兼容模式）：迁移、重复执行、锁互斥与 DDL 回滚 |
 | [KingbaseES](kingbasees.md) | `kingbasees` | PostgreSQL 家族兼容契约；真实实例需授权环境 |
 | [达梦 DM8](dm8.md) | `dm` | 方言/元数据契约；真实实例需授权环境 |
 | [OceanBase-Oracle](oceanbase-oracle.md) | `oceanbase` | Oracle 家族方言；授权真实 Oracle 租户已通过端到端验证 |

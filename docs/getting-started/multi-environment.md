@@ -112,6 +112,6 @@ bin/flydb -c "$CONF" baseline --baseline-version 20260801
 - **MCP 适配尚未交付**（规划于路线图阶段三）：Agent 与 IDE 目前通过 CLI + `--json` 稳定消费结果（见[JSON 输出参考](../reference/json-output.md)），尚无 MCP 服务器形态，见[路线图](../../ROADMAP.md)。
 - **没有配置继承或模板**：多份 conf 之间的重复内容，可在流水线中用模板生成后作为制品管理，而不是等待工具内置 profile。
 - **`undo` 只回退最近一次版本化迁移，`clean` 是破坏性操作**（默认禁用，非交互需双开关）：两者都不应出现在自动化脚本中，仅在本地排障时人工执行。
-- **信创数据库的验证层级以[数据库上手指南](README.md)为准**：达梦、KingbaseES、openGauss 目前为方言与驱动元数据契约测试，接入生产前应先在授权实例完成[JDBC 数据库快速接入](jdbc-integration.md#5-接入后的最小验证清单)中的最小验证清单，不要把单测通过当作厂商兼容证明。
+- **信创数据库的验证层级以[数据库上手指南](README.md)为准**：openGauss 5.0.0 已完成 A 兼容模式真实实例验证，其他版本与模式仍需各自验证。接入生产前应先在授权实例完成[JDBC 数据库快速接入](jdbc-integration.md#5-接入后的最小验证清单)中的最小验证清单，不要把单测通过当作厂商兼容证明。
 
 相关页面：[CI 集成指南](ci-integration.md)、[数据库上手指南索引](README.md)、[JDBC 数据库快速接入](jdbc-integration.md)、[配置项参考](../reference/configuration.md)、[CLI 命令参考](../reference/commands.md)、[错误码参考](../reference/errors.md)。

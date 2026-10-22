@@ -35,7 +35,7 @@ Maven 坐标 groupId 统一为 `io.github.zzxcoding`（Central Portal 经 GitHub
 | Oracle | `oracle` | Oracle 制品库 `ojdbc` | `oracle.jdbc.OracleDriver` | 见厂商文档 | 自动化契约测试；已在授权真实实例完成 validate、clean、migrate 端到端验证 |
 | 达梦 DM8 | `dm` | 达梦安装介质或企业制品库 | `dm.jdbc.driver.DmDriver` | 见厂商文档 | DM8 8.1.3.62 授权实例端到端验证（大小写不敏感）；0.3.8 修复重复迁移，见[实测记录](../verification/dm8-20261021.md) |
 | 人大金仓 KingbaseES | `kingbasees` | 人大金仓交付介质（`cn.com.kingbase:kingbase8`，选不带 `.jre` 后缀的 JDK8+ 版本） | `com.kingbase8.Driver` | 见厂商文档 | 方言与驱动元数据契约测试；真实环境认证待补 |
-| openGauss | `opengauss` | `org.opengauss:opengauss-jdbc` | `org.opengauss.Driver` | 见厂商文档 | 方言与驱动元数据契约测试；真实环境认证待补 |
+| openGauss | `opengauss` | 官方 5.0.0 JDBC 发布包；Maven 制品需核对实际包名，见[指南](../getting-started/opengauss.md) | `org.opengauss.Driver` | 本次 Java 8 实测通过 | openGauss 5.0.0 真实实例验证（A 兼容模式）：迁移、重复执行、锁互斥与 DDL 回滚，见[实测记录](../verification/opengauss-20261022.md) |
 | OceanBase | `oceanbase` | `com.oceanbase:oceanbase-client` | `com.oceanbase.jdbc.Driver` | 官方声明基于 Java 8 开发 | Oracle 租户已在授权真实实例完成端到端验证；MySQL 租户为轻量兼容测试 |
 | TiDB | `tidb` | `com.mysql:mysql-connector-j` | `com.mysql.cj.jdbc.Driver` | 同 MySQL 驱动 | 轻量兼容测试；真实环境覆盖持续补充 |
 | 其他 JDBC 数据库 | 需自定义 | 由接入方提供 | 由接入方提供 | 由接入方确认 | 需实现 `DatabaseType` SPI 方言并自行验证 |

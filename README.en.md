@@ -89,7 +89,7 @@ Flydb manages migration workflow and database dialect behavior. It does not tran
 | Oracle | Yes | Automated contract tests; end-to-end validation (validate / clean / migrate) completed on a licensed real instance |
 | DM8 (Dameng) | Yes | End-to-end verified on an authorized DM8 8.1.3.62 instance in case-insensitive mode; 0.3.8 fixes repeated migrations ([test record](./docs/verification/dm8-20261021.md)) |
 | KingbaseES | Yes | Dialect and driver-metadata contract tests; real-environment certification pending |
-| openGauss | Yes | Dialect and driver-metadata contract tests; real-environment certification pending |
+| openGauss | Yes | Real openGauss 5.0.0 instance, A compatibility mode: migration, repeat execution, lock exclusion and DDL rollback; see the [verification record](./docs/verification/opengauss-20261022.md) |
 | OceanBase | Oracle/MySQL family reuse | Oracle tenant end-to-end validated on a licensed real instance; MySQL tenant under lightweight compatibility tests |
 | TiDB | MySQL family reuse | Lightweight compatibility tests; real-environment coverage growing |
 | Other JDBC databases | Extensible | Requires a JDBC driver and a `DatabaseType` SPI dialect |
