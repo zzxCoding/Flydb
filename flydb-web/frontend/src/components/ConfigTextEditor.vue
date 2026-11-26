@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { basicSetup } from 'codemirror'
 import { EditorState, Compartment } from '@codemirror/state'
@@ -8,10 +8,17 @@ import { StreamLanguage, syntaxHighlighting, HighlightStyle } from '@codemirror/
 import { tags } from '@lezer/highlight'
 import { properties } from '@codemirror/legacy-modes/mode/properties'
 import { autocompletion } from '@codemirror/autocomplete'
-const props = defineProps<{ modelValue: string; knownKeys: string[]; disabled?: boolean; readonly?: boolean; label?: string }>()
+import { configLabel, configOptions } from '../config-labels'
+import ConfigFieldHelp from './ConfigFieldHelp.vue'
+const props = defineProps<{ modelValue: string; knownKeys: string[]; defaults?: Record<string, string>; disabled?: boolean; readonly?: boolean; label?: string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string]; save: [] }>()
 const { t, locale } = useI18n()
 const root = ref<HTMLDivElement>(), lines = ref(1), line = ref(1), column = ref(1), wrapped = ref(false)
+// 仅识别当前行开头的配置键，说明面板不读取或显示用户填写的值。
+function fieldAt(text: string) { return /^\s*(flydb\.[\w.-]+)(?:\s|[=:]|$)/.exec(text)?.[1] ?? '' }
+const currentKey = ref('')
+const currentField = computed(() => configLabel(currentKey.value))
+const choices = computed(() => configOptions(currentKey.value, props.defaults))
 const wrapping = new Compartment(), access = new Compartment(), language = new Compartment()
 let editor: EditorView | undefined
 function editable() { return [EditorState.readOnly.of(!!props.readonly || !!props.disabled), EditorView.editable.of(!props.readonly && !props.disabled)] }
@@ -28,15 +35,20 @@ onMounted(() => {
       const word = context.matchBefore(/[\w.-]*/)
       const prefix = context.state.doc.lineAt(context.pos).text.slice(0, context.pos - context.state.doc.lineAt(context.pos).from)
       if (!word || (!context.explicit && !word.text) || !/^\s*[\w.-]*$/.test(prefix)) return null
-      return { from: word.from, options: props.knownKeys.map(label => ({ label, type: 'property' })) }
+      return { from: word.from, options: props.knownKeys.map(label => {
+        const field = configLabel(label)
+        return { label, type: 'property', detail: locale.value === 'en' ? field.en : field.zh }
+      }) }
     }] }),
     EditorView.updateListener.of(update => {
       const pos = update.state.selection.main.head, current = update.state.doc.lineAt(pos)
       lines.value = update.state.doc.lines; line.value = current.number; column.value = pos - current.from + 1
+      currentKey.value = fieldAt(current.text)
       if (update.docChanged) emit('update:modelValue', update.state.sliceDoc())
     }),
   ] }) })
   lines.value = editor.state.doc.lines
+  currentKey.value = fieldAt(editor.state.doc.line(1).text)
 })
 watch(() => props.modelValue, value => {
   if (editor && value !== editor.state.sliceDoc()) editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: value } })
@@ -50,6 +62,11 @@ onBeforeUnmount(() => editor?.destroy())
   <section class="source-editor" :aria-label="label || t('fileContent')">
     <header class="source-toolbar"><span><span class="file-dot"></span>flydb.conf <small>UTF-8 · Properties</small></span><button type="button" class="text-button" :aria-pressed="wrapped" @click="wrapped = !wrapped">{{ t('wrapLines') }}</button></header>
     <div ref="root" class="code-editor"></div>
+    <aside v-if="currentField.hintZh" class="source-field-help">
+      <strong>{{ locale === 'en' ? currentField.en : currentField.zh }}</strong>
+      <ConfigFieldHelp :config-key="currentKey" :show-example="!choices.length" />
+      <small v-if="choices.length" class="field-example">{{ choices.map(([v, zh, en]) => v + ' · ' + (locale === 'en' ? en : zh)).join(' / ') }}</small>
+    </aside>
     <footer class="source-status"><span>{{ t('editorPosition', { line, column }) }} <span class="muted">· {{ t('editorLines', { count: lines }) }}</span></span><span>{{ t('editorShortcut') }}</span></footer>
   </section>
 </template>

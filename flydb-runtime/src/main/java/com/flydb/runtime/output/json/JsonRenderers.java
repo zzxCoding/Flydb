@@ -54,6 +54,29 @@ public final class JsonRenderers {
         return envelope("clean").endObject().toString();
     }
 
+    private static JsonWriter planHeader(String command, DryRunResult result) {
+        PlanArtifact plan = PlanArtifact.of(result);
+        return envelope(command)
+                .name("dryRun").value(true)
+                .name("plan").beginObject()
+                .name("algorithm").value(PlanArtifact.ALGORITHM)
+                .name("direction").value(plan.direction())
+                .name("id").value(plan.id())
+                .name("targetVersion").value(plan.targetVersion())
+                .name("migrationCount").value(plan.migrationCount())
+                .name("statementCount").value(plan.statementCount())
+                .endObject();
+    }
+
+    public static String newScript(String file, String version) {
+        return envelope("new").name("createdFile").value(file).name("version").value(version).endObject().toString();
+    }
+
+    public static String preflight(DryRunResult result, String target, String details) {
+        return planHeader("preflight", result).name("validation").value("PASSED")
+                .name("target").value(target).name("detailsFile").value(details).endObject().toString();
+    }
+
     public static String init(List<String> createdFiles) {
         JsonWriter json = envelope("init").name("createdFiles").beginArray();
         for (String file : createdFiles) json.value(file);
@@ -76,18 +99,7 @@ public final class JsonRenderers {
      * 或 {@code undo}，SQL 与文本模式同样脱敏。
      */
     public static String dryRun(String command, DryRunResult result, String password) {
-        PlanArtifact plan = PlanArtifact.of(result);
-        JsonWriter json = envelope(command)
-                .name("dryRun").value(true)
-                .name("plan").beginObject()
-                .name("algorithm").value(PlanArtifact.ALGORITHM)
-                .name("direction").value(plan.direction())
-                .name("id").value(plan.id())
-                .name("targetVersion").value(plan.targetVersion())
-                .name("migrationCount").value(plan.migrationCount())
-                .name("statementCount").value(plan.statementCount())
-                .endObject()
-                .name("migrations").beginArray();
+        JsonWriter json = planHeader(command, result).name("migrations").beginArray();
         for (DryRunMigration migration : result.migrations()) {
             json.beginObject()
                     .name("script").value(migration.script())

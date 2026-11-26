@@ -19,6 +19,8 @@ afterEach(() => { app?.unmount(); document.body.replaceChildren(); vi.useRealTim
 const button = (label: string) => Array.from(document.querySelectorAll('button')).find(el => el.textContent?.trim().startsWith(label))!
 async function jump(scope: ParentNode, value: string) {
   const input = scope.querySelector<HTMLInputElement>('.pagination input')!
+  input.focus()
+  expect(document.activeElement === input, '页码输入框应能保留键盘焦点').toBe(true)
   input.value = value; input.dispatchEvent(new Event('change')); await nextTick()
 }
 it('paginates both histories independently, retains pages across polls, and clamps shortened lists', async () => {

@@ -23,6 +23,75 @@ class WebServerTest {
     }
     @AfterEach void stop() { server.close(); }
 
+    @Test void catalogShowsRuntimeDefaultsAndTheFileThatSuppliedInheritedValues() throws Exception {
+        bootstrap();
+        String profile = "/api/profiles/" + importConfig().path("id").asText();
+        Path shared = temporary.resolve("shared.conf");
+        Files.write(shared, Collections.singletonList("flydb.batch-size=24"), StandardCharsets.UTF_8);
+        Files.write(temporary.resolve("flydb.conf"), Arrays.asList("flydb.config-import=shared.conf",
+                "flydb.password=synthetic-catalog-secret"), StandardCharsets.UTF_8);
+        JsonNode snapshot = request("GET", profile + "/config", null, null).body;
+        assertThat(snapshot.path("effective").path("flydb.batch-size").asText()).isEqualTo("24");
+        assertThat(snapshot.path("declaredAt").path("flydb.batch-size").asText()).isEqualTo(shared.toRealPath().toString());
+        assertThat(snapshot.toString()).doesNotContain("synthetic-catalog-secret");
+        JsonNode defaults = request("GET", "/api/bootstrap?compact=true", null, null).body.path("configDefaults");
+        assertThat(defaults.path("flydb.batch-size").asText()).isEqualTo("1");
+        assertThat(defaults.has("flydb.password")).isFalse();
+    }
+
+    @Test void createsLocalScriptsFromTheSelectedDirectoryWithoutDatabaseCredentials() throws Exception {
+        bootstrap();
+        String profile = "/api/profiles/" + importConfig().path("id").asText();
+        Path project = Files.createDirectory(temporary.resolve("project")).toRealPath();
+        Path release = Files.createDirectory(temporary.resolve("release")).toRealPath();
+        Files.write(temporary.resolve("flydb.conf"), Arrays.asList("flydb.locations=filesystem:project",
+                "flydb.password=${env:UNSET_DB_PASSWORD}"), StandardCharsets.UTF_8);
+        Files.createFile(project.resolve("V01__init.sql"));
+        Files.createFile(release.resolve("V7__orders.sql"));
+        JsonNode config = request("GET", profile + "/config", null, null).body;
+        assertThat(config.has("error")).isTrue();
+        assertThat(Paths.get(config.path("scriptLocations").asText().substring("filesystem:".length())).toRealPath()).isEqualTo(project);
+        String revision = config.path("revision").asText();
+        ObjectNode input = StateJson.object().put("revision", revision).put("description", "add order note");
+        String endpoint = profile + "/scripts";
+        Reply created = request("POST", endpoint, input.toString(), null);
+        Path file = project.resolve("V02__add_order_note.sql");
+        assertThat(created.status).isEqualTo(200);
+        assertThat(created.body.path("path").asText()).isEqualTo(file.toString());
+        assertThat(Files.size(file)).isZero();
+        Files.write(file, Collections.singletonList("-- edited"), StandardCharsets.UTF_8);
+        input.put("scriptVersion", "2.0");
+        assertThat(request("POST", endpoint, input.toString(), null).status).isEqualTo(409);
+        assertThat(Files.readAllLines(file)).containsExactly("-- edited");
+        input.remove("scriptVersion");
+        input.put("releaseDirectory", release.toString());
+        assertThat(request("POST", endpoint, input.toString(), null).body.path("version").asText()).isEqualTo("8");
+        assertThat(release.resolve("V8__add_order_note.sql")).exists();
+        input.put("directory", project.toString());
+        assertThat(request("POST", endpoint, input.toString(), null).status).isEqualTo(400);
+        input.remove("directory");
+        input.put("revision", "stale");
+        assertThat(request("POST", endpoint, input.toString(), null).status).isEqualTo(409);
+        assertThat(release.resolve("V9__add_order_note.sql")).doesNotExist();
+        assertThat(request("GET", "/api/bootstrap", null, null).body.path("runs").size()).isZero();
+    }
+
+    @Test void releaseDirectoryIsCapturedAtPreviewAndCannotBeReplacedOnApply() throws Exception {
+        bootstrap();
+        String profile = "/api/profiles/" + importConfig().path("id").asText();
+        String revision = request("GET", profile + "/config", null, null).body.path("revision").asText();
+        ObjectNode action = StateJson.object().put("command", "plan").put("revision", revision)
+                .put("requestId", UUID.randomUUID().toString()).put("releaseDirectory", "relative");
+        assertThat(request("POST", profile + "/actions", action.toString(), null).status).isEqualTo(400);
+        action.put("releaseDirectory", temporary.toRealPath().toString()).put("command", "migrate");
+        assertThat(request("POST", profile + "/actions", action.toString(), null).status).isEqualTo(400);
+        action.put("command", "plan");
+        Reply accepted = request("POST", profile + "/actions", action.toString(), null);
+        assertThat(accepted.status).isEqualTo(200);
+        assertThat(accepted.body.path("releaseDirectory").asText()).isEqualTo(temporary.toRealPath().toString());
+        assertThat(request("GET", profile + "/config", null, null).body.path("revision").asText()).isEqualTo(revision);
+    }
+
     @Test void cleanConfirmationIsSingleUseAndRequestRetriesDoNotReplay() throws Exception {
         // Deliberately unavailable driver: admission is exercised without ever connecting to a database.
         bootstrap(); String profileId = importConfig().path("id").asText();

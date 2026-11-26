@@ -9,6 +9,8 @@ import Brand from './components/Brand.vue'
 import Icon from './components/Icon.vue'
 import Status from './components/Status.vue'
 import ConnectionEditor from './components/ConnectionEditor.vue'
+import NewScript from './components/NewScript.vue'
+import ReleaseDirectory from './components/ReleaseDirectory.vue'
 import ProfileDialog from './components/ProfileDialog.vue'
 import PlanPanel from './components/PlanPanel.vue'
 import RunPanel from './components/RunPanel.vue'
@@ -39,7 +41,24 @@ watch(selected, () => { historyPage.value = 0 })
 watch(() => runs.value.length, count => { historyPage.value = Math.min(historyPage.value, Math.max(0, Math.ceil(count / historyPageSize) - 1)) })
 watch(() => allRuns.value.length, count => { allHistoryPage.value = Math.min(allHistoryPage.value, Math.max(0, Math.ceil(count / historyPageSize) - 1)) })
 const running = computed(() => runs.value.find(run => run.status === 'RUNNING'))
-const inspectionRun = computed(() => runs.value.find(run => run.status === 'SUCCEEDED' && (['inspect', 'info'].includes(run.command ?? '') || run.result?.inspection)))
+const releaseDirectory = ref('')
+const inspectionRequest = ref<'submitting' | 'failed' | Run>()
+watch(selected, () => { releaseDirectory.value = ''; inspectionRequest.value = undefined })
+const checking = computed(() => inspectionRequest.value === 'submitting' || (typeof inspectionRequest.value === 'object' && inspectionRequest.value.status === 'RUNNING'))
+const checkFailed = computed(() => inspectionRequest.value === 'failed' || (typeof inspectionRequest.value === 'object'
+  && !['RUNNING', 'SUCCEEDED'].includes(inspectionRequest.value.status)))
+watch(() => data.value?.runs, latest => {
+  const current = inspectionRequest.value
+  if (typeof current !== 'object') return
+  const run = latest?.find(item => item.id === current.id)
+  if (run) inspectionRequest.value = run.status === 'SUCCEEDED' ? undefined : run
+})
+const inspectionRun = computed(() => {
+  const request = inspectionRequest.value
+  if (request) return typeof request === 'object' && request.status === 'SUCCEEDED' ? request : undefined
+  return runs.value.find(run => run.status === 'SUCCEEDED' && (run.releaseDirectory ?? '') === releaseDirectory.value
+    && (['inspect', 'info'].includes(run.command ?? '') || run.result?.inspection))
+})
 const inspection = computed(() => inspectionRun.value?.result?.inspection ?? inspectionRun.value?.result)
 const migrations = computed(() => inspection.value?.migrations ?? [])
 const migrationQuery = ref(''), migrationPage = ref(0), migrationPageSize = 10
@@ -48,11 +67,11 @@ const matchingMigrations = computed(() => {
   return value ? migrations.value.filter(m => `${m.version ?? ''} ${m.script} ${m.description ?? ''}`.toLowerCase().includes(value)) : migrations.value
 })
 const visibleMigrations = computed(() => matchingMigrations.value.slice(migrationPage.value * migrationPageSize, (migrationPage.value + 1) * migrationPageSize))
-watch([selected, migrationQuery], () => { migrationPage.value = 0 })
+watch([selected, releaseDirectory, migrationQuery], () => { migrationPage.value = 0 })
 watch(() => matchingMigrations.value.length, count => { migrationPage.value = Math.min(migrationPage.value, Math.max(0, Math.ceil(count / migrationPageSize) - 1)) })
 const pending = computed(() => migrations.value.filter(m => ['PENDING', 'OUT_OF_ORDER', 'OUTDATED'].includes(m.state ?? '')).length)
 const applied = computed(() => migrations.value.filter(m => ['SUCCESS', 'BASELINE', 'MISSING', 'FUTURE', 'OUTDATED'].includes(m.state ?? '')).length)
-const historyMismatch = computed(() => migrations.value.some(m => ['MISSING', 'FUTURE'].includes(m.state ?? '')))
+const missingScripts = computed(() => migrations.value.filter(m => ['MISSING', 'FUTURE'].includes(m.state ?? '')))
 function detail(id: Ref<string | undefined>) {
   const loaded = shallowRef<Run>(), error = ref(''), retry = ref(0)
   const summary = computed(() => data.value?.runs.find(run => run.id === id.value))
@@ -109,19 +128,36 @@ async function profileSaved(profiles: Profile[]) { profileModal.value = false; a
 
 async function action(command: string, extra: Record<string, unknown> = {}) {
   if (!profile.value || submitting.value || running.value) return
+  const id = profile.value.id
+  if (command === 'inspect') inspectionRequest.value = 'submitting'
   submitting.value = true; actionError.value = ''
   try {
     const run = await api<Run>(`/profiles/${profile.value.id}/actions`, {
       command, revision: config.value?.revision, password: temporaryPasswords.value[selected.value] || undefined,
-      requestId: crypto.randomUUID(), ...extra,
+      requestId: crypto.randomUUID(),
+      ...(['inspect', 'validate', 'plan', 'undo-plan'].includes(command) && releaseDirectory.value ? { releaseDirectory: releaseDirectory.value } : {}),
+      ...extra,
     })
-    if (['plan', 'undo-plan', 'inspect', 'validate'].includes(command)) openWhenDone.value = run.id
+    if (command === 'inspect') {
+      if (id === selected.value) inspectionRequest.value = run
+    } else if (['plan', 'undo-plan', 'validate'].includes(command)) openWhenDone.value = run.id
     else if (['migrate', 'undo', 'baseline', 'repair', 'clean'].includes(command)) activeRun.value = run.id
     updates?.close(); const stream = new EventSource(`/api/runs/${run.id}/events`)
     updates = stream; stream.onmessage = () => { refresh() }; stream.addEventListener('finished', () => { stream.close(); refresh() })
     previewRun.value = undefined; advanced.value = undefined; await refresh()
-  } catch (e) { actionError.value = e instanceof ApiError && te(`errors.${e.code}`) ? t(`errors.${e.code}`) : String(e) }
+  } catch (e) {
+    if (id === selected.value) {
+      if (command === 'inspect') inspectionRequest.value = 'failed'
+      actionError.value = e instanceof ApiError && te(`errors.${e.code}`) ? t(`errors.${e.code}`) : String(e)
+    }
+  }
   finally { submitting.value = false }
+}
+function chooseRelease(path: string) {
+  if (!config.value || submitting.value || running.value || checking.value || dirty.value) return
+  releaseDirectory.value = path
+  migrationQuery.value = ''
+  void action('inspect')
 }
 async function confirmAdvanced() {
   if (advanced.value === 'remove' && profile.value) {
@@ -156,33 +192,46 @@ onUnmounted(() => { clearInterval(polling); updates?.close(); window.removeEvent
       </section>
       <div v-else class="workspace-content">
         <div v-if="serviceError" class="notice warning" role="alert"><Icon name="alert" /><div><p>{{ t('serviceUnavailable') }}</p><small>{{ t('serviceDraftRetained') }}</small></div><button class="button compact" :disabled="loading" @click="start">{{ t('retry') }}</button></div>
-        <header class="profile-heading"><div><div class="profile-eyebrow"><span class="eyebrow">{{ profile.group || 'FLYDB' }}</span><span v-if="profile.environment" class="environment-tag">{{ profile.environment }}</span></div><h1>{{ profile.name }}</h1><p class="profile-target"><Icon name="database" :size="16" /><code :title="config?.effective['flydb.url'] || profile.configPath">{{ config?.effective['flydb.url'] || config?.values['flydb.url'] || profile.configPath }}</code></p></div><div class="profile-options"><AgentHandoff :profile="profile" :config="config" :runs="runs" :version="data?.version ?? ''" :state-directory="data?.stateDirectory ?? ''" :dirty="dirty" :offline="!!serviceError" /><button class="icon-button" :aria-label="t('advanced')" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen"><Icon name="more" :size="22" /></button><div v-if="menuOpen" class="popover-menu"><button @click="showProfile('edit')">{{ t('rename') }}</button><button @click="showProfile('duplicate')">{{ t('duplicate') }}</button><button @click="advanced = 'remove'; menuOpen = false">{{ t('remove') }}</button></div></div></header>
+        <header class="profile-heading"><div><div class="profile-eyebrow"><span class="eyebrow">{{ profile.group || 'FLYDB' }}</span><span v-if="profile.environment" class="environment-tag">{{ profile.environment }}</span></div><h1>{{ profile.name }}</h1><p class="profile-target"><Icon name="database" :size="16" /><code :title="config?.effective['flydb.url'] || profile.configPath">{{ config?.effective['flydb.url'] || config?.values['flydb.url'] || profile.configPath }}</code></p></div><div class="profile-options"><AgentHandoff :release-directory="releaseDirectory" :profile="profile" :config="config" :runs="runs" :version="data?.version ?? ''" :state-directory="data?.stateDirectory ?? ''" :dirty="dirty" :offline="!!serviceError" /><button class="icon-button" :aria-label="t('advanced')" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen"><Icon name="more" :size="22" /></button><div v-if="menuOpen" class="popover-menu"><button @click="showProfile('edit')">{{ t('rename') }}</button><button :disabled="!config" @click="showProfile('duplicate')">{{ t('duplicate') }}</button><button @click="advanced = 'remove'; menuOpen = false">{{ t('remove') }}</button></div></div></header>
         <div v-if="actionError || config?.error" class="notice error" role="alert"><Icon name="alert" /><div><p>{{ actionError || (config?.error && te('errors.' + config.error.code) ? t('errors.' + config.error.code) : config?.error?.detail) }}</p><small v-if="!actionError && config?.error?.detail">{{ config.error.detail }}</small></div><button v-if="actionError" class="icon-button" :aria-label="t('close')" @click="actionError = ''"><Icon name="close" /></button></div>
         <div v-if="running" class="running-strip"><span class="activity-dot" /><span>{{ t('running') }} · {{ running.script || commandName(running.command) }}</span><button class="text-button" @click="activeRun = running.id">{{ t('viewRun') }}<Icon name="arrow" :size="15" /></button></div>
         <nav class="content-tabs" :aria-label="t('workbench')"><button v-for="item in (['migrations', 'connection', 'history'] as const)" :key="item" :aria-current="tab === item ? 'page' : undefined" @click="tab = item"><Icon :name="item === 'migrations' ? 'database' : item === 'connection' ? 'settings' : 'history'" :size="16" />{{ t(item) }}<span v-if="item === 'history' && runs.length" class="tab-count">{{ runs.length }}</span></button></nav>
         <section v-if="tab === 'migrations'" class="migration-view">
-          <div class="migration-toolbar"><div><h2>{{ t('migrations') }}</h2><span class="muted small">{{ inspectionRun ? `${t('lastChecked')} ${date(inspectionRun.endedAt)}` : t('neverChecked') }}</span></div><div class="actions"><button class="button" :disabled="submitting || !!running" @click="action('inspect')"><Icon name="refresh" />{{ t('refresh') }}</button><button class="button primary" :disabled="submitting || !!running || dirty" @click="action('plan')"><Icon name="play" :size="15" />{{ t('plan') }}</button></div></div>
+          <ReleaseDirectory :key="profile.id" :selected="releaseDirectory" :configured="config?.effective['flydb.locations'] || config?.scriptLocations"
+            :working-directory="profile.workingDirectory" :disabled="!config || submitting || !!running || checking || dirty" @choose="chooseRelease" />
+          <div class="migration-toolbar"><div><h2>{{ t('scriptStatus') }}</h2><span v-if="inspectionRun" class="muted small">{{ t('lastChecked') }} {{ date(inspectionRun.endedAt) }}</span></div><div class="actions">
+            <NewScript :key="profile.id" :profile-id="profile.id" :revision="config?.revision" :release-directory="releaseDirectory"
+              :configured="config?.effective['flydb.locations'] || config?.scriptLocations" :missing-script="missingScripts[0]?.script"
+              :disabled="submitting || !!running || checking || dirty || !!serviceError" />
+            <button class="button" :disabled="submitting || !!running || checking" @click="action('inspect')"><Icon name="refresh" />{{ t('refresh') }}</button><button class="button primary" :disabled="submitting || !!running || checking || dirty" @click="action('plan')"><Icon name="play" :size="15" />{{ t('plan') }}</button></div></div>
           <p v-if="inspectionRun && inspectionRun.configRevision !== config?.revision" class="notice warning">{{ t('stale') }}</p>
-          <div v-if="historyMismatch" class="notice warning history-mismatch" role="status"><Icon name="alert" /><div><strong>{{ t('historyMismatchTitle') }}</strong><p>{{ t('historyMismatchBody') }}</p><p>{{ t('historyMismatchTest') }}</p></div><button class="button compact" @click="tab = 'connection'">{{ t('connection') }}</button></div>
-          <div v-if="inspection" class="migration-summary"><div><span>{{ t('currentVersion') }}</span><strong class="mono">{{ inspection.current ?? '—' }}</strong></div><div><span>{{ t('pending') }}</span><strong class="accent">{{ pending.toLocaleString(locale) }}</strong></div><div><span>{{ t('applied') }}</span><strong>{{ applied.toLocaleString(locale) }}</strong></div></div>
-          <input v-if="migrations.length" v-model="migrationQuery" class="migration-search" type="search" :aria-label="t('searchMigrations')" :placeholder="t('searchMigrations')"><Pagination v-if="migrations.length" v-model="migrationPage" :total="matchingMigrations.length" :size="migrationPageSize" /><div v-if="migrations.length" class="table-scroll"><table class="migration-table"><thead><tr><th>{{ t('version') }}</th><th>{{ t('script') }}</th><th>{{ t('state') }}</th></tr></thead><tbody><tr v-for="m in visibleMigrations" :key="`${m.script}-${m.state}`"><td><span class="version-tag">{{ m.version ?? 'R' }}</span></td><td><span class="script-name"><Icon name="file" :size="16" /><code>{{ m.script }}</code></span><small>{{ m.description }}</small></td><td><Status :value="m.state ?? 'UNKNOWN'" /></td></tr></tbody></table></div>
+          <div v-if="missingScripts.length" class="notice warning history-mismatch" role="status">
+            <Icon name="alert" /><div><strong>{{ t('historyMismatchTitle', missingScripts.length) }}</strong>
+              <p>{{ t('historyMismatchBody', { script: missingScripts[0].script }) }}</p></div>
+            <button class="button compact" @click="tab = 'connection'">{{ t('connection') }}</button>
+          </div>
+          <div v-if="inspection" class="migration-summary"><div><span>{{ t('databaseVersion') }}</span><strong class="mono">{{ inspection.current ?? '—' }}</strong></div><div><span>{{ t('pending') }}</span><strong class="accent">{{ pending.toLocaleString(locale) }}</strong></div><div><span>{{ t('applied') }}</span><strong>{{ applied.toLocaleString(locale) }}</strong></div></div>
+          <input v-if="migrations.length" v-model="migrationQuery" class="migration-search" type="search" :aria-label="t('searchMigrations')" :placeholder="t('searchMigrations')"><Pagination v-if="migrations.length" v-model="migrationPage" :total="matchingMigrations.length" :size="migrationPageSize" /><div v-if="migrations.length" class="table-scroll"><table class="migration-table"><thead><tr><th>{{ t('version') }}</th><th>{{ t('script') }}</th><th>{{ t('state') }}</th></tr></thead><tbody><tr v-for="m in visibleMigrations" :key="`${m.script}-${m.state}`"><td><span class="version-tag">{{ m.version ?? 'R' }}</span></td><td><span class="script-name"><Icon name="file" :size="16" /><code>{{ m.script }}</code></span><small>{{ ['MISSING', 'FUTURE'].includes(m.state ?? '') ? t('historyOnlyScript') : m.description }}</small></td><td><Status :value="m.state ?? 'UNKNOWN'" /></td></tr></tbody></table></div>
+          <p v-else-if="checking" role="status" class="migration-empty">{{ t('checkingScripts') }}</p>
+          <div v-else-if="checkFailed" role="alert" class="notice error"><Icon name="alert" /><p>{{ t('inspectionFailed') }}</p><button v-if="typeof inspectionRequest === 'object'" class="text-button" @click="activeRun = inspectionRequest.id">{{ t('viewRun') }}</button></div>
           <div v-else class="migration-empty"><div class="empty-icon"><Icon :name="inspection ? 'folder' : 'database'" :size="32" /></div><h3>{{ t(inspection ? 'noMigrations' : 'neverChecked') }}</h3><p>{{ t(inspection ? 'noMigrationsBody' : 'neverCheckedBody') }}</p><button v-if="!inspection" class="button" :disabled="submitting || !!running" @click="action('inspect')">{{ t('refresh') }}<Icon name="arrow" /></button></div>
           <Pagination v-if="migrations.length" v-model="migrationPage" :total="matchingMigrations.length" :size="migrationPageSize" />
-          <footer class="migration-footer"><code>{{ config?.effective['flydb.locations'] }}</code><button class="text-button" :disabled="submitting || !!running" @click="action('validate')"><Icon name="check" :size="15" />{{ t('validate') }}</button></footer>
+          <footer class="migration-footer"><button class="text-button" :disabled="submitting || !!running" @click="action('validate')"><Icon name="check" :size="15" />{{ t('validate') }}</button></footer>
           <details class="advanced-actions"><summary>{{ t('advanced') }}</summary><p>{{ t('advancedHint') }}</p><div class="actions"><button class="button" :disabled="!!running || dirty" @click="advanced = 'baseline'">{{ t('baseline') }}</button><button class="button" :disabled="!!running || dirty" @click="action('undo-plan')">{{ t('undo') }}</button><button class="button" :disabled="!!running || dirty" @click="advanced = 'repair'">{{ t('repair') }}</button><button class="button danger" :disabled="submitting || !!running || dirty || !config || !!config.error" @click="advanced = 'clean'; actionError = ''">{{ t('clean') }}</button></div></details>
         </section>
-        <ConnectionEditor v-if="config" v-show="tab === 'connection'" :key="profile.id" :profile="profile" :snapshot="config" :known-keys="data?.knownKeys ?? []" :temporary-password="temporaryPasswords[selected] ?? ''" @dirty="dirty = $event" @saved="config = $event" @password="temporaryPasswords[selected] = $event" />
+        <ConnectionEditor v-if="config" v-show="tab === 'connection'" :key="profile.id" :profile="profile" :snapshot="config" :known-keys="data?.knownKeys ?? []" :defaults="data?.configDefaults" :default-drivers="data?.driversDirectory" :temporary-password="temporaryPasswords[selected] ?? ''" @dirty="dirty = $event" @saved="config = $event" @password="temporaryPasswords[selected] = $event" />
         <section v-if="tab === 'history'" class="run-history"><div class="section-heading"><h2>{{ t('history') }}</h2></div><Pagination v-if="runs.length" v-model="historyPage" :total="runs.length" :size="historyPageSize" /><button v-for="run in visibleRuns" :key="run.id" class="run-row" @click="activeRun = run.id"><span class="run-icon"><Icon name="history" /></span><span><strong>{{ commandName(run.command) }}</strong><small>{{ date(run.startedAt) }} · {{ run.source ?? '—' }}</small></span><Status :value="run.status" /><Icon name="chevron" /></button><Pagination v-if="runs.length" v-model="historyPage" :total="runs.length" :size="historyPageSize" /><div v-if="!runs.length" class="migration-empty"><Icon name="history" :size="32" /><h3>{{ t('noHistory') }}</h3><p>{{ t('noHistoryBody') }}</p></div></section>
       </div>
     </main>
   </div>
-  <NModal v-model:show="allHistory">      <section class="dialog-surface run-dialog run-history">
+  <NModal v-model:show="allHistory">
+    <div class="dialog-surface run-dialog run-history" role="dialog" aria-modal="true" :aria-label="t('allRuns')">
         <div class="section-heading"><div><span class="eyebrow">FLYDB</span><h1>{{ t('allRuns') }}</h1><p>{{ t('noHistoryBody') }}</p></div><button class="button" @click="allHistory = false">{{ t('close') }}</button></div>
         <Pagination v-if="allRuns.length" v-model="allHistoryPage" :total="allRuns.length" :size="historyPageSize" /><button v-for="run in visibleAllRuns" :key="run.id" class="run-row" @click="activeRun = run.id"><span class="run-icon"><Icon name="history" /></span><span><strong>{{ run.profileName || run.configPath || 'Flydb' }}</strong><small>{{ commandName(run.command) }} · {{ date(run.startedAt) }} · {{ run.source ?? '—' }}</small></span><Status :value="run.status" /><Icon name="chevron" /></button>
         <Pagination v-if="allRuns.length" v-model="allHistoryPage" :total="allRuns.length" :size="historyPageSize" /><p v-if="!allRuns.length" class="migration-empty">{{ t('noHistory') }}</p>
-      </section>
-</NModal>
-  <NModal :show="profileModal" :mask-closable="false" :close-on-esc="false" @esc="profileDialog?.cancel()"><div class="dialog-surface profile-surface" role="dialog" :aria-label="t('addConfig')" aria-modal="true"><ProfileDialog ref="profileDialog" :initial-directory="data?.initialDirectory ?? '/'" :profile="profileMode === 'add' ? undefined : profile" :mode="profileMode" :default-drivers="data?.driversDirectory ?? ''" :known-keys="data?.knownKeys ?? []" @done="profileSaved" @cancel="profileModal = false" /></div></NModal>
+    </div>
+  </NModal>
+  <NModal :show="profileModal" :mask-closable="false" :close-on-esc="false" @esc="profileDialog?.cancel()"><div class="dialog-surface profile-surface" role="dialog" :aria-label="t('addConfig')" aria-modal="true"><ProfileDialog ref="profileDialog" :initial-directory="data?.initialDirectory ?? '/'" :profile="profileMode === 'add' ? undefined : profile" :mode="profileMode" :snapshot="profileMode === 'duplicate' ? config : undefined" :default-drivers="data?.driversDirectory ?? ''" :known-keys="data?.knownKeys ?? []" :defaults="data?.configDefaults" @done="profileSaved" @cancel="profileModal = false" /></div></NModal>
   <!-- Keep modal roots mounted through leave; Naive UI releases the document scroll lock in after-leave. -->
   <NModal :show="!!viewedRun" @update:show="value => { if (!value) activeRun = undefined }"><div class="dialog-surface run-dialog"><div v-if="runDetail.error.value" class="notice error"><p>{{ runDetail.error.value }}</p><button class="button" @click="runDetail.retry.value++">{{ t('retry') }}</button></div><RunPanel v-if="viewedRun" :key="viewedRun.id" :run="viewedRun" @close="activeRun = undefined" /></div></NModal>
   <NModal :show="!!viewedPlan" :mask-closable="false" @update:show="value => { if (!value) previewRun = undefined }"><div class="dialog-surface plan-dialog"><div v-if="planDetail.error.value" class="notice error"><p>{{ planDetail.error.value }}</p><button class="button" @click="planDetail.retry.value++">{{ t('retry') }}</button></div><PlanPanel v-if="viewedPlan" :key="viewedPlan.id" :run="viewedPlan" :busy="submitting" @close="previewRun = undefined" @execute="action(viewedPlan.command === 'undo-plan' ? 'undo' : 'migrate', { planId: viewedPlan.result?.planId })" /></div></NModal>

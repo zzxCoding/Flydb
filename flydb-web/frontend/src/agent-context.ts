@@ -2,10 +2,10 @@ import type { Profile, ConfigSnapshot, Run } from './types'
 
 // Copy only operational context, never raw configuration, temporary passwords or SQL bodies.
 const keys = ['flydb.url', 'flydb.user', 'flydb.database-type', 'flydb.driver', 'flydb.driver-coordinate', 'flydb.locations', 'flydb.table', 'flydb.target-version', 'flydb.start-version', 'flydb.end-version', 'flydb.version-selection', 'flydb.version-source', 'flydb.version-regex', 'flydb.directory-glob', 'flydb.file-glob', 'flydb.path-glob', 'flydb.directory-regex', 'flydb.file-regex', 'flydb.path-regex', 'flydb.migration-order', 'flydb.directory-version-regex', 'flydb.encoding', 'flydb.placeholder-replacement', 'flydb.offline', 'flydb.out-of-order', 'flydb.validate-on-migrate', 'flydb.clean-disabled']
-export function agentContext(input: { profile: Profile; config?: ConfigSnapshot; runs: Run[]; version: string; stateDirectory: string; locale: string; dirty: boolean; offline: boolean }) {
+export function agentContext(input: { profile: Profile; config?: ConfigSnapshot; runs: Run[]; version: string; stateDirectory: string; releaseDirectory?: string; locale: string; dirty: boolean; offline: boolean }) {
   const { profile, config, runs } = input
   const zh = input.locale === 'zh-CN'
-  const inspect = runs.find(r => r.status === 'SUCCEEDED' && (['inspect', 'info'].includes(r.command ?? '') || r.result?.inspection))
+  const inspect = runs.find(r => r.status === 'SUCCEEDED' && (r.releaseDirectory || '') === (input.releaseDirectory || '') && (['inspect', 'info'].includes(r.command ?? '') || r.result?.inspection))
   const result = inspect?.result?.inspection ?? inspect?.result
   const migrations = result?.migrations ?? []
   const configuration: Record<string, string> = {}
@@ -16,7 +16,7 @@ export function agentContext(input: { profile: Profile; config?: ConfigSnapshot;
   const context = {
     capturedAt: new Date().toISOString(), language: input.locale, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     flydbVersion: input.version, profile, stateDirectory: input.stateDirectory,
-    configuration, configRevision: config?.revision ?? null, configurationLoaded: !!config,
+    configuration, releaseDirectory: input.releaseDirectory || undefined, configRevision: config?.revision ?? null, configurationLoaded: !!config,
     unsavedDraftNotIncluded: input.dirty, serviceUnavailable: input.offline, configurationError: config?.error ?? null,
     inspection: inspect ? { runId: inspect.id, checkedAt: inspect.endedAt ?? inspect.startedAt ?? null,
       stale: !config || inspect.configRevision !== config.revision, current: result?.current ?? null,

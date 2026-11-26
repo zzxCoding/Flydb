@@ -143,6 +143,27 @@
         "区分配置保存和数据库写入授权",
         "完整文件编辑含原文凭据，不输出到对话或报告"
       ]
+    },
+    {
+      "id": 13,
+      "prompt": "在 0.3.9 给订单项目加下一份 SQL，目录里有 V1 和 V2。只创建空文件。",
+      "expected_output": "从项目配置定位正确目录，使用 new 或工作台新建 SQL 脚本，报告新文件路径及版本。",
+      "files": [],
+      "expectations": ["选择已有项目的 new 入口", "生成 V3，不执行数据库操作"]
+    },
+    {
+      "id": 14,
+      "prompt": "测试环境想沿用开发环境的脚本目录，数据库连接单独填。页面上怎么看要改哪几项？",
+      "expected_output": "在连接与配置查看生效值、来源、填写示例，复制为跟随源配置或用 config-import 导入，只保存环境差异。",
+      "files": [],
+      "expectations": ["说明导入路径相对声明文件", "说明如何在表单核对值与来源", "保留凭据引用"]
+    },
+    {
+      "id": 15,
+      "prompt": "Agent 用 MCP 核对一次 QA 发版，只想知道校验结果和有几个脚本。若宿主还是老 CLI 怎么办？",
+      "expected_output": "按 tools/list 优先单次 flydb_preflight 读取摘要。旧版使用 flydb_validate 与 flydb_plan_migrate。",
+      "files": [],
+      "expectations": ["只读检查不启用写工具", "能取摘要时不重复启动预演", "需要明细且 detailsFile 不可读时使用 flydb_plan_migrate"]
     }
   ]
 }

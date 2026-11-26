@@ -18,7 +18,7 @@ import {
 import { resolveCliExecutable } from "./cliLocator.js";
 import { SubprocessCliRunner } from "./cliRunner.js";
 import type { CliRunner } from "./cliRunner.js";
-import { handshake } from "./handshake.js";
+import { compareVersions, handshake } from "./handshake.js";
 import { redact } from "./redact.js";
 import { adapterErrorResult } from "./result.js";
 import { toolResultFromRun } from "./result.js";
@@ -47,6 +47,7 @@ export function resolveTimeoutMs(env: NodeJS.ProcessEnv,
 
 export interface ServerOptions {
   runner: CliRunner;
+  cliVersion?: string;
   env: NodeJS.ProcessEnv;
   timeoutMs: number;
   warn: (message: string) => void;
@@ -62,7 +63,8 @@ export function createServer(options: ServerOptions): Server {
       warn(`FLYDB_MCP_ENABLE_WRITES=${raw.trim()} 不是合法布尔值，按关闭处理（fail closed）`);
     }
   }
-  const registered = writes ? FLYDB_TOOLS : DEFAULT_TOOLS;
+  const registered = (writes ? FLYDB_TOOLS : DEFAULT_TOOLS).filter(tool =>
+      tool.name !== "flydb_preflight" || compareVersions(options.cliVersion ?? "0.3.0", "0.3.9") >= 0);
   const toolsByName = new Map(registered.map((tool) => [tool.name, tool]));
 
   const server = new Server(
@@ -138,6 +140,7 @@ async function main(): Promise<void> {
     }
     const server = createServer({
       runner,
+      cliVersion: outcome.cliVersion,
       env: process.env,
       timeoutMs,
       warn: stderrLine,

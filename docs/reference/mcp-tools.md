@@ -31,6 +31,7 @@ Adapter 只是协议 seam：每次 tool 调用以受控子进程执行 `flydb --
 | `flydb_version` | `--json version` | 不连接数据库 | 始终 |
 | `flydb_info` | `--json info` | 只读 | 始终 |
 | `flydb_validate` | `--json validate` | 只读 | 始终 |
+| `flydb_preflight` | `--json preflight` | 一次内置校验和预演，完整详情由本机 `detailsFile` 指向 | Adapter 0.2.0+ 且 CLI ≥ 0.3.9 |
 | `flydb_plan_migrate` | `--json --dry-run migrate` | 只读预演（Plan Artifact） | 始终 |
 | `flydb_plan_undo` | `--json --dry-run undo` | 只读预演（Plan Artifact） | 始终 |
 | `flydb_migrate` | `--json migrate` | 持迁移锁写库 | 默认不注册 |

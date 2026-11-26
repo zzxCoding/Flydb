@@ -37,7 +37,7 @@ Flydb 是给开发、运维和实施人员使用的数据库版本迁移工具�
 从 [Releases](https://github.com/zzxCoding/Flydb/releases/latest) 下载 ZIP，解压后运行：
 
 ```bash
-cd flydb-cli-0.3.8
+cd flydb-cli-0.3.9
 bin/flydb web
 ```
 
@@ -100,7 +100,7 @@ Flydb 管理迁移流程与数据库方言行为，不会把任意厂商 SQL 自
 
 - [x] **可靠的迁移运行时**：迁移引擎、8 个内置方言、CLI、Spring Boot starter、Agent Skill、`v0.2.0` GitHub Release、`v0.2.1` Maven Central 发布
 - [x] **开发体验与机器契约**：`--json` 机器输出、protocolVersion 契约版本化、CI 接入文档、Agent Plugins 1.0 插件包（`v0.3.0`；包管理器与 Docker 镜像按需启动）
-- [x] **Agent 分发**：MCP 适配（TypeScript Adapter + 九个领域工具，写入默认不注册）与 Plan Artifact v1 计划摘要；CLI ZIP 内附已构建 Adapter
+- [x] **Agent 分发**：MCP 适配（TypeScript Adapter，按 CLI 版本注册领域工具，写入默认不注册）与 Plan Artifact v1 计划摘要；CLI ZIP 内附已构建 Adapter
 - [x] **本机图形工作台**：多配置、分组、迁移预览、执行记录与 Agent 上下文交接
 - [ ] **存量变更智能**：影响分析、应用引用扫描、覆盖率与未知项标注
 - [ ] **Agent 安全变更运行时**：Plan → Validate → Risk → Approval → Apply → Verify 协议
@@ -143,7 +143,7 @@ flydb.migrate();
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-core</artifactId>
-  <version>0.3.8</version>
+  <version>0.3.9</version>
 </dependency>
 ```
 
@@ -154,13 +154,13 @@ Spring Boot 应用选择对应 starter，容器初始化期间执行 `migrate`�
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-3-starter</artifactId>
-  <version>0.3.8</version>
+  <version>0.3.9</version>
 </dependency>
 <!-- Spring Boot 2.7 / Java 8 -->
 <dependency>
   <groupId>io.github.zzxcoding</groupId>
   <artifactId>flydb-spring-boot-2-starter</artifactId>
-  <version>0.3.8</version>
+  <version>0.3.9</version>
 </dependency>
 ```
 
@@ -204,7 +204,7 @@ bin/flydb clean --clean-disabled=false --force   # clean 默认禁用；非交�
 ./mvnw verify
 ```
 
-CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.3.8.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
+CLI 构建产物位于 `flydb-cli/target/flydb-cli-0.3.9.zip`。core 的 JaCoCo 行覆盖率门禁为 80%，并由 Maven Enforcer 保证零非测试运行时依赖。
 
 数据库集成契约默认跳过；显式设置 `-Pmysql`/`-Ppostgresql` 与 `-Dflydb.integration.database=<dialect>` 后，才会启动临时数据库执行对应测试。完整矩阵由 `.github/workflows/ci.yml` 执行。
 

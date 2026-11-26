@@ -174,6 +174,7 @@ public final class RunStore {
                 throw e;
             }
         }
+        public Path detailsFile() { return run.resolve("summary.json"); }
         public String id() { return id; }
         public synchronized ObjectNode snapshot() { return summary.deepCopy(); }
 

@@ -39,6 +39,10 @@ final class CliRunRecorder implements AutoCloseable, ExecutionObserver {
         if (writer == null) return;
         try { result = StateJson.MAPPER.readTree(json); } catch (IOException e) { warn(); }
     }
+    String finishPreview() {
+        success();
+        return writer == null || result == null || warning ? null : writer.detailsFile().toString();
+    }
     void success() { finish("SUCCEEDED", result); }
     void failure(Throwable error) {
         ObjectNode failure = StateJson.object();

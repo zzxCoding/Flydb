@@ -3,6 +3,8 @@ export interface Profile {
   configPath: string; workingDirectory: string; driversDirectory?: string
 }
 export interface ConfigSnapshot {
+  scriptLocations?: string
+  declaredAt?: Record<string, string>
   revision: string; values: Record<string, string>; effective: Record<string, string>
   sources: Record<string, string>; error?: { code: string; detail: string }; secretKeys: string[]
 }
@@ -21,6 +23,7 @@ export interface CommandResult {
 export interface Run {
   detailsOmitted?: boolean
   id: string; profileId?: string; profileName?: string; configPath?: string
+  releaseDirectory?: string
   source?: 'CLI' | 'WEB'; command?: string; status: string; startedAt?: string
   endedAt?: string; lastActivityAt?: string; target?: string; script?: string
   verification?: string; sequence?: number; result?: CommandResult; recovery?: string
@@ -31,6 +34,6 @@ export interface Run {
 export interface Bootstrap {
   groups?: string[]
   profiles: Profile[]; runs: Run[]; version: string; initialDirectory: string
-  stateDirectory: string; driversDirectory: string; knownKeys: string[]
+  stateDirectory: string; driversDirectory: string; knownKeys: string[]; configDefaults?: Record<string, string>
 }
 export interface FileEntry { path: string; name: string; directory: boolean }

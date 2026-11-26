@@ -19,8 +19,16 @@ import com.flydb.core.exception.FlydbException;
 /** 读取默认值、Properties、环境变量与 CLI 参数并按优先级合并。 */
 public final class ConfigLoader {
 
+    private static final String IMPORT = "flydb.config-import";
+    private static final List<String> SCRIPT_KEYS = Arrays.asList("flydb.locations", "flydb.encoding",
+            "flydb.version-source", "flydb.directory-version-regex", "flydb.migration-order",
+            "flydb.directory-glob", "flydb.path-glob", "flydb.file-glob",
+            "flydb.directory-regex", "flydb.path-regex", "flydb.file-regex",
+            "flydb.sql-migration-prefix", "flydb.undo-migration-prefix", "flydb.repeatable-migration-prefix",
+            "flydb.sql-migration-separator", "flydb.sql-migration-suffix");
+
     private static final List<String> KNOWN_KEYS = Collections.unmodifiableList(Arrays.asList(
-            "flydb.url", "flydb.user", "flydb.password", "flydb.password.file",
+            IMPORT, "flydb.url", "flydb.user", "flydb.password", "flydb.password.file",
             "flydb.driver", "flydb.driver-coordinate", "flydb.driver-download",
             "flydb.driver-cache", "flydb.maven-settings", "flydb.maven-local-repository",
             "flydb.offline", "flydb.database-type", "flydb.locations", "flydb.encoding",
@@ -40,22 +48,38 @@ public final class ConfigLoader {
     public CliConfiguration load(Path explicitConfig, Path workingDirectory,
                                  Path installDirectory, Map<String, String> environment,
                                  Map<String, String> cliOverrides) {
+        return load(explicitConfig, workingDirectory, installDirectory, environment, cliOverrides, false);
+    }
+
+    /** 离线创建脚本只解析发现相关字段，不访问凭据或加载驱动。 */
+    public CliConfiguration loadForScripts(Path explicitConfig, Path workingDirectory, Path installDirectory,
+                                           Map<String, String> environment, Map<String, String> cliOverrides) {
+        return load(explicitConfig, workingDirectory, installDirectory, environment, cliOverrides, true);
+    }
+
+    private CliConfiguration load(Path explicitConfig, Path workingDirectory, Path installDirectory,
+                                  Map<String, String> environment, Map<String, String> cliOverrides, boolean scriptsOnly) {
         Map<String, String> values = defaults();
         Map<String, String> sources = new LinkedHashMap<String, String>();
+        Map<String, String> declaredAt = new LinkedHashMap<String, String>();
         markSources(sources, values, "DEFAULT");
         Path configFile = locate(explicitConfig, workingDirectory, installDirectory);
         if (configFile != null) {
-            Map<String, String> fileValues = readProperties(configFile);
-            rejectUnknownKeys(fileValues);
-            values.putAll(fileValues);
-            markSources(sources, fileValues, "FILE");
+            loadFile(configFile, values, sources, declaredAt, new java.util.HashSet<Path>());
         }
         Map<String, String> environmentValues = new LinkedHashMap<String, String>();
-        mergeEnvironment(environmentValues, environment);
+        mergeEnvironment(environmentValues, environment, declaredAt);
         values.putAll(environmentValues);
         markSources(sources, environmentValues, "ENVIRONMENT");
         values.putAll(cliOverrides);
         markSources(sources, cliOverrides, "OVERRIDE");
+        declaredAt.keySet().removeAll(cliOverrides.keySet());
+        if (scriptsOnly) {
+            Map<String, String> discovery = defaults();
+            for (String key : SCRIPT_KEYS) if (values.containsKey(key)) discovery.put(key, values.get(key));
+            values = discovery;
+            declaredAt.keySet().retainAll(discovery.keySet());
+        }
         for (Map.Entry<String, String> entry : values.entrySet()) {
             String value = entry.getValue();
             if (value != null && value.startsWith("${env:") && value.endsWith("}"))
@@ -63,16 +87,67 @@ public final class ConfigLoader {
         }
         resolveEnvironmentReferences(values, environment);
         if ((values.get("flydb.password") == null || values.get("flydb.password").isEmpty())
-                && values.containsKey("flydb.password.file")) sources.put("flydb.password", "PASSWORD_FILE");
+                && values.containsKey("flydb.password.file")) {
+            sources.put("flydb.password", "PASSWORD_FILE");
+            declaredAt.remove("flydb.password");
+        }
         resolvePasswordFile(values, workingDirectory);
-        return new CliConfiguration(values, sources);
+        return new CliConfiguration(values, sources, declaredAt);
+    }
+
+    private static void loadFile(Path file, Map<String, String> values, Map<String, String> sources,
+                                 Map<String, String> declaredAt, java.util.Set<Path> chain) {
+        try {
+            Path actual = file.toRealPath();
+            if (!Files.isRegularFile(actual)) throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG, "配置必须是普通文件: " + file);
+            boolean imported = !chain.isEmpty();
+            if (!chain.add(actual)) throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG, "循环导入配置: " + file);
+            Map<String, String> fields = readProperties(actual);
+            rejectUnknownKeys(fields);
+            String parent = fields.remove(IMPORT);
+            if (parent != null) {
+                if (parent.trim().isEmpty()) throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG, IMPORT + " 不能为空");
+                loadFile(actual.getParent().resolve(parent.trim()), values, sources, declaredAt, chain);
+            }
+            if (parent != null && fields.containsKey("flydb.password.file") && !fields.containsKey("flydb.password")) {
+                values.remove("flydb.password");
+                sources.remove("flydb.password");
+                declaredAt.remove("flydb.password");
+            }
+            if (parent != null && fields.containsKey("flydb.password") && !fields.containsKey("flydb.password.file")) {
+                values.remove("flydb.password.file");
+                sources.remove("flydb.password.file");
+                declaredAt.remove("flydb.password.file");
+            }
+            values.putAll(fields);
+            markSources(sources, fields, imported ? "IMPORTED_FILE" : "FILE");
+            for (String key : fields.keySet()) declaredAt.put(key, actual.toString());
+        } catch (IOException e) {
+            throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG, "读取配置文件失败: " + file, e);
+        }
     }
 
     /** Validate literal file values; environment references are checked when the runtime resolves them. */
     public static void validateDocumentValues(Map<String, String> fields) {
+        validateDocumentValues(fields, null);
+    }
+
+    /** 已知目标文件时按最终位置校验导入链，编辑器中的纯文本草稿延迟至保存再解析。 */
+    public static void validateDocumentValues(Map<String, String> fields, Path destination) {
         rejectUnknownKeys(fields);
+        Map<String, String> literals = new LinkedHashMap<String, String>();
+        if (fields.containsKey(IMPORT)) {
+            String parent = fields.get(IMPORT).trim();
+            if (parent.isEmpty()) throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG, IMPORT + " 不能为空");
+            if (destination == null) return;
+            java.util.Set<Path> chain = new java.util.HashSet<Path>();
+            Path actual = destination.toAbsolutePath().normalize();
+            chain.add(actual);
+            loadFile(actual.getParent().resolve(parent), literals, new LinkedHashMap<String, String>(), new LinkedHashMap<String, String>(), chain);
+        }
+        literals.putAll(fields);
         Map<String, String> values = defaults();
-        for (Map.Entry<String, String> entry : fields.entrySet()) {
+        for (Map.Entry<String, String> entry : literals.entrySet()) {
             String value = entry.getValue();
             if (value != null && !(value.startsWith("${env:") && value.endsWith("}"))) values.put(entry.getKey(), value);
         }
@@ -80,6 +155,9 @@ public final class ConfigLoader {
     }
 
     public static List<String> knownKeys() { return KNOWN_KEYS; }
+
+    /** 供配置表单展示加载器的内置值，不包含本机环境变量或用户文件。 */
+    public static Map<String, String> defaultValues() { return Collections.unmodifiableMap(defaults()); }
 
     private static void markSources(Map<String, String> sources, Map<String, String> values, String source) {
         for (String key : values.keySet()) sources.put(key, source);
@@ -167,12 +245,14 @@ public final class ConfigLoader {
     }
 
     private static void mergeEnvironment(Map<String, String> values,
-                                         Map<String, String> environment) {
+                                         Map<String, String> environment, Map<String, String> declaredAt) {
         for (String key : KNOWN_KEYS) {
+            if (IMPORT.equals(key)) continue;
             String environmentKey = key.toUpperCase(java.util.Locale.ROOT)
                     .replace('.', '_').replace('-', '_');
             if (environment.containsKey(environmentKey)) {
                 values.put(key, environment.get(environmentKey));
+                declaredAt.put(key, environmentKey);
             }
         }
         String prefix = "FLYDB_PLACEHOLDERS_";
@@ -181,6 +261,7 @@ public final class ConfigLoader {
                 String name = entry.getKey().substring(prefix.length())
                         .toLowerCase(java.util.Locale.ROOT);
                 values.put("flydb.placeholders." + name, entry.getValue());
+                declaredAt.put("flydb.placeholders." + name, entry.getKey());
             }
         }
     }

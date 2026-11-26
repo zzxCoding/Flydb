@@ -5,7 +5,7 @@
 ## 配置优先级
 
 ```text
-CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值
+CLI 参数 > FLYDB_* 环境变量 > 当前配置文件 > 导入的共享配置 > 内置默认值
 ```
 
 配置文件按以下顺序查找：`--config` 指定文件、当前目录 `flydb.conf`、CLI 安装目录 `conf/flydb.conf`。未知键会报 `FLYDB-4001`，不会静默忽略。
@@ -16,6 +16,7 @@ CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值
 
 | 配置键 | 环境变量 | CLI 选项 | 默认值 | 说明 |
 |---|---|---|---|---|
+| `flydb.config-import` | — | — | 无 | 0.3.9+ 支持导入一份 UTF-8 Properties 文件。相对路径从声明导入的文件所在目录计算，可逐层导入，循环或文件缺失时报配置错误 |
 | `flydb.url` | `FLYDB_URL` | `-u, --url` | 无 | JDBC URL，CLI 必填 |
 | `flydb.user` | `FLYDB_USER` | `--user` | 无 | 数据库用户 |
 | `flydb.password` | `FLYDB_PASSWORD` | `-p, --password` | 无 | 支持直接配置明文密码；仅本地临时测试建议使用，生产推荐环境变量或密码文件 |

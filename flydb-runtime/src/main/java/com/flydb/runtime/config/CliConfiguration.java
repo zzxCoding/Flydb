@@ -19,20 +19,24 @@ public final class CliConfiguration {
 
     private final Map<String, String> values;
     private final Map<String, String> sources;
+    private final Map<String, String> declaredAt;
 
     CliConfiguration(Map<String, String> values) {
-        this(values, Collections.<String, String>emptyMap());
+        this(values, Collections.<String, String>emptyMap(), Collections.<String, String>emptyMap());
     }
 
-    CliConfiguration(Map<String, String> values, Map<String, String> sources) {
+    CliConfiguration(Map<String, String> values, Map<String, String> sources, Map<String, String> declaredAt) {
         this.values = Collections.unmodifiableMap(
                 new LinkedHashMap<String, String>(values));
         this.sources = Collections.unmodifiableMap(new LinkedHashMap<String, String>(sources));
+        this.declaredAt = Collections.unmodifiableMap(new LinkedHashMap<String, String>(declaredAt));
     }
 
     /** Raw effective values include credentials; redact at every presentation boundary. */
     public Map<String, String> values() { return values; }
     public Map<String, String> sources() { return sources; }
+    /** 最终取值所在的配置文件路径或提供覆盖的环境变量名称。 */
+    public Map<String, String> declaredAt() { return declaredAt; }
     /** Literal sensitive values must also be removed from expanded SQL and diagnostics. */
     public String[] sensitiveValues() {
         List<String> secrets = new ArrayList<String>();
@@ -48,7 +52,7 @@ public final class CliConfiguration {
     public CliConfiguration inDirectory(java.nio.file.Path working) {
         Map<String, String> resolved = new LinkedHashMap<String, String>(values);
         ConfigLoader.resolvePaths(resolved, working);
-        return new CliConfiguration(resolved, sources);
+        return new CliConfiguration(resolved, sources, declaredAt);
     }
 
     public String url() {
@@ -152,9 +156,14 @@ public final class CliConfiguration {
 
     /** Validate values through the same Core builder without loading drivers, callbacks or opening JDBC. */
     public void validateFileValues() {
-        coreBuilder(CliConfiguration.class.getClassLoader(), com.flydb.core.api.ExecutionObserver.NONE)
-                .url("jdbc:flydb:configuration-validation").build();
+        discoveryConfiguration();
         offline();
+    }
+
+    /** 复用运行时发现规则，构建过程不建立连接。 */
+    public FlydbConfiguration discoveryConfiguration() {
+        return coreBuilder(CliConfiguration.class.getClassLoader(), com.flydb.core.api.ExecutionObserver.NONE)
+                .url("jdbc:flydb:configuration-validation").build();
     }
 
     private FlydbConfiguration.Builder coreBuilder(ClassLoader classLoader, com.flydb.core.api.ExecutionObserver observer) {

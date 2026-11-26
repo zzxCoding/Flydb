@@ -67,6 +67,8 @@ final class OperationService implements AutoCloseable {
         if (!configs.document(profile).revision().equals(ProfileStore.required(input, "revision")))
             throw new WebException(409, "PLAN_CHANGED", "Configuration changed; reload before running");
         Map<String, String> overrides = new HashMap<String, String>();
+        String releaseDirectory = releaseDirectory(command, input);
+        if (releaseDirectory != null) overrides.put("flydb.locations", "filesystem:" + releaseDirectory);
         if (input.hasNonNull("password")) overrides.put("flydb.password", input.path("password").asText());
         if ("baseline".equals(command)) overrides.put("flydb.baseline-version", ProfileStore.required(input, "baselineVersion"));
         if (("baseline".equals(command) || "repair".equals(command)) && !input.path("confirmed").asBoolean())
@@ -93,6 +95,7 @@ final class OperationService implements AutoCloseable {
                 .put("configPath", profile.path("configPath").asText()).put("workingDirectory", profile.path("workingDirectory").asText())
                 .put("configRevision", configs.document(profile).revision()).put("requestId", requestId)
                 .put("source", "WEB").put("command", command).put("target", SecretRedactor.redact(configuration.url()));
+        if (releaseDirectory != null) metadata.put("releaseDirectory", releaseDirectory);
         RunStore.Writer writer = runs.start(metadata, configuration.sensitiveValues());
         if ("clean".equals(command)) {
             cleanConfirmations.remove(input.path("cleanToken").asText());
@@ -101,7 +104,7 @@ final class OperationService implements AutoCloseable {
         busy.add(profileId); requests.put(requestKey, writer.id());
         while (requests.size() > 2000) requests.remove(requests.keySet().iterator().next());
         try {
-            executor.execute(() -> execute(profile, configuration, binding, command, plan, writer));
+            executor.execute(() -> execute(profile, overrides, binding, command, plan, releaseDirectory, writer));
         } catch (RejectedExecutionException e) {
             busy.remove(profileId); requests.remove(requestKey);
             writer.finish("FAILED", StateJson.object().put("code", "BUSY"), "NOT_RUN"); writer.close();
@@ -109,6 +112,19 @@ final class OperationService implements AutoCloseable {
         }
         return writer.snapshot();
     }
+    private String releaseDirectory(String command, ObjectNode input) throws IOException {
+        if (input.has("releaseDirectory")) {
+            if (!Arrays.asList("inspect", "validate", "plan", "undo-plan").contains(command))
+                throw new WebException(400, "INVALID_REQUEST", "Choose the SQL directory when previewing");
+            return ProfileStore.releaseDirectory(input);
+        }
+        if ("migrate".equals(command) || "undo".equals(command)) {
+            Plan preview = plans.get(input.path("planId").asText());
+            return preview == null ? null : preview.releaseDirectory;
+        }
+        return null;
+    }
+
     private Plan plan(String command, ObjectNode input, String profileId, String binding) {
         if (!"migrate".equals(command) && !"undo".equals(command)) return null;
         String id = ProfileStore.required(input, "planId");
@@ -120,29 +136,31 @@ final class OperationService implements AutoCloseable {
             throw new WebException(409, "PLAN_CHANGED", "Configuration or target changed after preview");
         return plan;
     }
-    private void execute(ObjectNode profile, CliConfiguration configuration, String binding,
-                         String command, Plan plan, RunStore.Writer writer) {
+    private void execute(ObjectNode profile, Map<String, String> overrides, String binding,
+                         String command, Plan plan, String releaseDirectory, RunStore.Writer writer) {
         try (RunStore.Writer recording = writer) {
-          try (RuntimeSession session = new RuntimeSession(configuration, configs.drivers(profile),
-                     Paths.get(profile.path("workingDirectory").asText()), recording)) {
-            // Queued operations use their captured settings, but do not silently use an edited file.
+          try {
+            CliConfiguration configuration = configs.load(profile, overrides);
             if (!binding.equals(configs.binding(profile, configuration))) throw new WebException(409, "PLAN_CHANGED", "Configuration changed while queued");
-            recording.event(StateJson.object().put("type", "DRIVER_RESOLVED")
-                    .put("className", session.driverClass()).put("source", session.driverSource()));
-            Flydb flydb = session.flydb();
-            ObjectNode result = perform(flydb, configuration, profile, binding, command, plan);
-            String verification = "NOT_RUN";
-            if (Arrays.asList("migrate", "undo", "baseline", "repair", "clean").contains(command)) {
-                recording.event(StateJson.object().put("type", "VERIFYING"));
-                try {
-                    result.set("inspection", info(flydb, configuration));
-                    flydb.validate(); verification = "PASSED";
-                } catch (RuntimeException e) {
-                    verification = "FAILED";
-                    result.set("verificationError", error(command, e));
+            try (RuntimeSession session = new RuntimeSession(configuration, configs.drivers(profile),
+                     Paths.get(profile.path("workingDirectory").asText()), recording)) {
+                recording.event(StateJson.object().put("type", "DRIVER_RESOLVED")
+                        .put("className", session.driverClass()).put("source", session.driverSource()));
+                Flydb flydb = session.flydb();
+                ObjectNode result = perform(flydb, configuration, profile, binding, command, plan, releaseDirectory);
+                String verification = "NOT_RUN";
+                if (Arrays.asList("migrate", "undo", "baseline", "repair", "clean").contains(command)) {
+                    recording.event(StateJson.object().put("type", "VERIFYING"));
+                    try {
+                        result.set("inspection", info(flydb, configuration));
+                        flydb.validate(); verification = "PASSED";
+                    } catch (RuntimeException e) {
+                        verification = "FAILED";
+                        result.set("verificationError", error(command, e));
+                    }
                 }
+                recording.finish("SUCCEEDED", result, verification);
             }
-            recording.finish("SUCCEEDED", result, verification);
           } catch (Throwable e) {
               recording.finish(e instanceof Error ? "UNKNOWN" : "FAILED", error(command, e), "NOT_RUN");
           }
@@ -153,7 +171,7 @@ final class OperationService implements AutoCloseable {
         }
     }
     private ObjectNode perform(Flydb flydb, CliConfiguration configuration, ObjectNode profile,
-                               String binding, String command, Plan plan) throws IOException {
+                               String binding, String command, Plan plan, String releaseDirectory) throws IOException {
         switch (command) {
             case "inspect": return info(flydb, configuration);
             case "validate": flydb.validate(); return parse(JsonRenderers.validate());
@@ -164,7 +182,7 @@ final class OperationService implements AutoCloseable {
                 synchronized (this) {
                     plans.values().removeIf(old -> System.currentTimeMillis() - old.createdAt > 30 * 60 * 1000L);
                     if (plans.size() >= 200) plans.remove(plans.keySet().iterator().next());
-                    plans.put(id, new Plan(profile.path("id").asText(), binding, prepared));
+                    plans.put(id, new Plan(profile.path("id").asText(), binding, prepared, releaseDirectory));
                 }
                 ObjectNode result = parse(JsonRenderers.dryRun(prepared.preview().direction(), prepared.preview(), configuration.password()));
                 result.put("planId", id); return result;
@@ -200,9 +218,11 @@ final class OperationService implements AutoCloseable {
     }
     private static final class Plan {
         final String profileId, binding;
+        final String releaseDirectory;
         final PreparedMigrationPlan prepared;
         final long createdAt = System.currentTimeMillis();
-        Plan(String profileId, String binding, PreparedMigrationPlan prepared) {
+        Plan(String profileId, String binding, PreparedMigrationPlan prepared, String releaseDirectory) {
+            this.releaseDirectory = releaseDirectory;
             this.profileId = profileId; this.binding = binding; this.prepared = prepared;
         }
     }

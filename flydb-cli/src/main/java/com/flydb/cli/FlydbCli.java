@@ -101,7 +101,7 @@ public final class FlydbCli {
             description = "面向各类 JDBC 数据库的 Schema 版本化迁移工具",
             subcommands = {MigrateCommand.class, InfoCommand.class, ValidateCommand.class,
                     BaselineCommand.class, RepairCommand.class, CleanCommand.class,
-                    UndoCommand.class, InitCommand.class, VersionCommand.class, WebCommand.class})
+                    UndoCommand.class, InitCommand.class, NewCommand.class, PreflightCommand.class, VersionCommand.class, WebCommand.class})
     final class RootCommand implements Runnable {
         @Option(names = {"-c", "--config"}, description = "显式配置文件",
                 scope = CommandLine.ScopeType.INHERIT)
@@ -307,8 +307,14 @@ public final class FlydbCli {
 
         void record(String json) { if (recorder != null) recorder.result(json); }
 
+        com.flydb.core.api.FlydbConfiguration discoveryConfiguration() {
+            return new ConfigLoader().loadForScripts(config, workingDirectory, installDirectory, environment, overrides())
+                    .inDirectory(workingDirectory).discoveryConfiguration();
+        }
+
         ConfiguredFlydb open(String command) {
             Map<String, String> overrides = overrides();
+            if ("preflight".equals(command)) overrides.put("flydb.validate-on-migrate", "true");
             CliConfiguration configuration = new ConfigLoader().load(config, workingDirectory,
                     installDirectory, environment, overrides);
             if (configuration.url() == null || configuration.url().trim().isEmpty()) {
@@ -427,10 +433,10 @@ public final class FlydbCli {
         @Override void run(ConfiguredFlydb configured) {
             if (root.dryRun) {
                 DryRunResult result = configured.flydb.dryRunMigrate();
-                root.record(JsonRenderers.dryRun("migrate", result, configured.configuration.password()));
+                String full = JsonRenderers.dryRun("migrate", result, configured.configuration.password());
+                root.record(full);
                 if (root.json) {
-                    root.out().println(JsonRenderers.dryRun("migrate", result,
-                            configured.configuration.password()));
+                    root.out().println(full);
                 } else {
                     printDryRun(root, result, configured.configuration.password());
                 }
@@ -444,6 +450,23 @@ public final class FlydbCli {
             }
             if (!root.quiet) rootLine(root, "迁移完成，执行 " + result.executed().size() + " 个脚本");
             for (String warning : result.warnings()) rootLine(root, "警告: " + warning);
+        }
+    }
+
+    @Command(name = "preflight", mixinStandardHelpOptions = true, description = "校验并返回只读迁移预演摘要")
+    static final class PreflightCommand extends DatabaseCommand {
+        @Override void run(ConfiguredFlydb configured) {
+            DryRunResult result = configured.flydb.dryRunMigrate();
+            root.record(JsonRenderers.dryRun("migrate", result, configured.configuration.password()));
+            String details = configured.recorder.finishPreview();
+            String target = SecretRedactor.redactSecret(configured.configuration.url(), configured.configuration.password());
+            if (root.json) root.out().println(JsonRenderers.preflight(result, target, details));
+            else {
+                com.flydb.core.api.PlanArtifact plan = com.flydb.core.api.PlanArtifact.of(result);
+                root.out().println("校验通过  " + target + "  " + plan.migrationCount() + " 个脚本 / "
+                        + plan.statementCount() + " 条语句  " + plan.id());
+                if (details != null) root.out().println(details);
+            }
         }
     }
 
@@ -750,7 +773,7 @@ public final class FlydbCli {
     private static String version() {
         Package pkg = FlydbCli.class.getPackage();
         String implementation = pkg == null ? null : pkg.getImplementationVersion();
-        return implementation != null ? implementation : "0.3.8";
+        return implementation != null ? implementation : "0.3.9";
     }
 
     private static Path detectInstallDirectory() {

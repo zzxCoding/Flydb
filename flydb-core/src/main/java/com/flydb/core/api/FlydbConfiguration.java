@@ -12,6 +12,7 @@ import javax.sql.DataSource;
 
 import com.flydb.core.exception.ErrorCode;
 import com.flydb.core.exception.FlydbException;
+import com.flydb.core.resolver.ResolverContext;
 import com.flydb.core.migration.MigrationVersion;
 import com.flydb.core.migration.MigrationOrder;
 import com.flydb.core.migration.VersionSelection;
@@ -29,8 +30,7 @@ import com.flydb.core.Flydb;
  * <p>持有连接参数（url/user/password）或既有 {@link DataSource}。URL 模式的动态驱动加载由 CLI
  * 基础设施提供；core 命令运行时直接使用 {@link DataSource}。回调列表按注册顺序保持不可变。
  */
-public final class FlydbConfiguration {
-
+public final class FlydbConfiguration implements ResolverContext {
     private final DataSource dataSource;
     private final String url;
     private final String user;
@@ -151,6 +151,7 @@ public final class FlydbConfiguration {
     public ClassLoader classLoader() { return classLoader; }
     public List<Callback> callbacks() { return callbacks; }
     public ExecutionObserver executionObserver() { return executionObserver; }
+    @Override public VersionSource versionSource() { return versionSelection.source(); }
     public String sqlMigrationPrefix() { return sqlMigrationPrefix; }
     public String repeatableMigrationPrefix() { return repeatableMigrationPrefix; }
     public String undoMigrationPrefix() { return undoMigrationPrefix; }

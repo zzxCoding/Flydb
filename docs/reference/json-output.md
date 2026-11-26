@@ -46,6 +46,8 @@ $ bin/flydb --json migrate
 | `migrate` | `executed`、`targetVersionReached`、`totalExecutionTimeMillis`、`warnings` |
 | `--dry-run migrate` / `--dry-run undo` | `dryRun:true`、`plan.{algorithm,direction,id,targetVersion,migrationCount,statementCount}`（Plan Artifact v1，见[Plan Artifact 设计](../design/11-plan-artifact.md)）、`migrations[].{script,type,version,description,checksum,statementCount,statements[].{lineNumber,sql}}` |
 | `info` | `databaseName`、`url`（脱敏）、`historyTable`、`current`、`migrations[]` |
+| `preflight` | `dryRun: true`、`validation: "PASSED"`、脱敏 `target`、与 migrate 预演相同的 `plan` 摘要、可空的本机绝对路径 `detailsFile`。失败走公共错误信封 |
+| `new` | `createdFile`（绝对路径）、`version`（脚本版本字符串） |
 | `validate` | 无载荷 |
 | `baseline` | `baselineVersion` |
 | `repair` | `removedFailedRecords`、`alignedChecksums` |

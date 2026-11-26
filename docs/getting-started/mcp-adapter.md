@@ -5,7 +5,7 @@
 ## 前置条件
 
 1. Node.js ≥ 20（仅 MCP 宿主侧需要；普通 CLI/starter 用户不需要）；
-2. Flydb CLI ≥ 0.3.0 发行包（含 Java 8+ 运行时）；
+2. 安装 Flydb CLI ≥ 0.3.0，并准备 Java 8+ 运行时；
 3. 目标数据库的 JDBC 驱动已放入发行包 `drivers/`（MCP 调用期间不联网下载驱动）。
 
 ## 安装方式
@@ -49,10 +49,10 @@ npx flydb-mcp        # 一次性启动（发布后可用；registry 名称以发
   "mcpServers": {
     "flydb": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["flydb-mcp"],
+      "command": "node",
+      "args": ["/opt/flydb-cli-0.3.9/flydb-skills/mcp/dist/server.mjs"],
       "env": {
-        "FLYDB_CLI": "/opt/flydb-cli-0.3.8/bin/flydb",
+        "FLYDB_CLI": "/opt/flydb-cli-0.3.9/bin/flydb",
         "FLYDB_PASSWORD": "由宿主 secret 注入"
       }
     }
@@ -65,8 +65,8 @@ npx flydb-mcp        # 一次性启动（发布后可用；registry 名称以发
 ## 验证安装
 
 1. 宿主连接后执行 `flydb_version`：应返回 `structuredContent.version ≥ 0.3.0`；
-2. 执行 `flydb_info` / `flydb_validate`（传入项目绝对 `workingDirectory` 与 `configPath`）确认只读链路；
-3. `tools/list` 默认只有 5 个只读工具；看不到 `flydb_migrate` 等写入工具是**预期行为**。
+2. 查看 `tools/list`。0.3.9 发行包内置 Adapter 0.2.0，默认列出 6 个只读工具。更换发行包后重新连接 MCP 宿主以刷新清单。
+3. 传入项目绝对路径 `workingDirectory` 和环境文件绝对路径 `configPath`，调用 `flydb_preflight`。成功信封的 `validation` 为 `PASSED`，`plan` 给出脚本数、语句数和计划 ID。需要逐条 SQL 时读取 Adapter 所在机器的 `detailsFile`。该字段为空或客户端无法访问此路径时，调用 `flydb_plan_migrate` 获取明细。旧版组合只有原先 5 个只读工具，可依次使用 `flydb_validate` 和 `flydb_plan_migrate`。
 
 ## 开启写入工具（安装时知情决策）
 

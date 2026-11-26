@@ -32,13 +32,17 @@ identify configurations; labels do not grant permissions. Duplication creates a 
 overwrites an existing destination. Removing an entry preserves its configuration and SQL files.
 Discovery is bounded; select uncovered subdirectories separately when the result reports limits.
 
-**Connection & settings** provides common connection fields, editable JDBC URLs, migration locations,
-password references and all advanced configuration keys. Special vendor URLs remain directly editable.
+Open **Connection & settings** for an existing environment. **Configured** shows settings supplied by its file, shared files and environment variables. Each row shows the effective value, its source and the value to write to the file. Imported settings identify the supplying file and environment overrides identify the variable. When duplicating a configuration, the middle column shows the source environment.
+
+**Review first** collects environment overrides, a missing connection URL and enabled clean, out-of-order or automatic baseline behavior, as well as disabled pre-migration validation. It uses the saved configuration. Search all settings by purpose or key, including optional settings absent from the file. Edit multiple rows and save once. Browsing leaves defaults implicit.
+
+Every built-in setting has inline guidance. Paths, versions and patterns include example values. Switches and release modes have labeled choices and accept environment references through the manual entry option. To include descendants of the end version, search for `family-range`, choose it under **Version selection mode**, then set a start or end version. In the file editor, select a setting’s line to see the same guidance.
+
+New configurations open the **Connection form** with connection fields, editable JDBC URLs, migration locations and password references.
 Both creation and connection settings offer **Oracle**, with port 1521 and a Service name/SID selector.
 Existing simple Oracle service/SID URLs populate the form; TNS descriptors and multi-address URLs stay
 in direct-edit mode. Formats follow the [Oracle JDBC documentation](https://docs.oracle.com/en/database/oracle/oracle-database/19/jjdbc/data-sources-and-URLs.html).
 Configuration precedence and options are exactly those of the [CLI reference](../reference/configuration.md).
-Expand effective configuration to see the actual values and their sources.
 
 Place an independently obtained, licensed JDBC JAR in the distribution's `drivers/`, or select an
 existing driver directory in **Edit name & group**. Maven coordinates, enterprise settings, local
@@ -56,6 +60,12 @@ notice. Review differences, choose conflicting values, merge, then save. A secon
 still prevents overwriting the newer file. Switching language preserves drafts.
 
 ## Inspect, preview, execute
+
+The SQL directory selector shows the scripts used for comparison with the current database. Expand the directory name to see its full path. Choosing a directory runs a read-only status check. If the database has applied V1 and V2 and the selected directory only contains V1, the table still shows V2 from database history. Select a directory containing the original V2 to check it again.
+
+On the Migrations tab, select **New SQL script**, check the directory, enter a change name and select **Create empty script**. If the selected directory contains V1 and V2, entering `add_order_note` creates `V3__add_order_note.sql`. Open the displayed path in your editor, save the SQL and return to preview the migration.
+
+The workbench shares the offline naming rules of `flydb new`. Choose the project directory with the full script history when authoring the next version. Expand **Specify a version or directory** for date-based versions or multiple migration directories.
 
 ### Form and complete-file editing
 

@@ -256,6 +256,20 @@ export const FLYDB_TOOLS: readonly FlydbTool[] = [
     outputSchema: envelopeOutputSchema({}),
   }),
   dbTool({
+    name: "flydb_preflight",
+    description: "发布前只读检查首选此工具。一次调用完成内置校验和迁移预演，返回目标、plan.id、脚本数和语句数。"
+        + "完整清单在宿主机的 detailsFile。该路径为空或无法读取时，调用 flydb_plan_migrate 获取逐条 SQL。"
+        + "需要运行项目的校验回调时，另用 flydb_validate。",
+    writes: false,
+    cliAction: ["preflight"],
+    annotations: {title: "Flydb 发布前检查", readOnlyHint: true, destructiveHint: false,
+      idempotentHint: true, openToWorldHint: false},
+    outputSchema: envelopeOutputSchema({
+      dryRun: {type: "boolean", const: true}, validation: {type: "string", const: "PASSED"},
+      target: {type: "string"}, detailsFile: {type: ["string", "null"]}, plan: PLAN_PAYLOAD_SCHEMA.plan,
+    }),
+  }),
+  dbTool({
     name: "flydb_plan_migrate",
     description: "预演将要执行的迁移（只读，不写库）：返回 Plan Artifact（plan.id 摘要与逐语句 SQL）。"
         + "执行写入前必须先用本工具核对计划并获得用户明确授权。",

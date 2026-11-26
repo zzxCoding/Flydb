@@ -74,7 +74,11 @@ public final class WebServer implements AutoCloseable {
         catch (ConfigurationDocument.Conflict e) { fail(exchange, 409, "CONFIG_CONFLICT", "Configuration changed outside the workbench"); }
         catch (FileAlreadyExistsException e) { fail(exchange, 409, "FILE_EXISTS", "Destination already exists"); }
         catch (NoSuchFileException | InvalidPathException e) { fail(exchange, 400, "INVALID_PATH", "Path does not exist or is invalid"); }
-        catch (FlydbException e) { fail(exchange, e.errorCode() == com.flydb.core.exception.ErrorCode.INIT_TARGET_EXISTS ? 409 : 400, e.errorCode().code(), SecretRedactor.redact(e.detail())); }
+        catch (FlydbException e) {
+            boolean conflict = e.errorCode() == com.flydb.core.exception.ErrorCode.INIT_TARGET_EXISTS
+                    || e.errorCode() == com.flydb.core.exception.ErrorCode.DUPLICATE_VERSION;
+            fail(exchange, conflict ? 409 : 400, e.errorCode().code(), SecretRedactor.redact(e.detail()));
+        }
         catch (com.fasterxml.jackson.core.JsonProcessingException e) { fail(exchange, 400, "INVALID_REQUEST", "Invalid JSON request"); }
         catch (Exception e) { fail(exchange, 500, "REQUEST_FAILED", "The local operation could not be completed; check the selected files and configuration"); }
         finally { exchange.close(); }
@@ -99,6 +103,8 @@ public final class WebServer implements AutoCloseable {
             }
             if (parts.length == 4 && "document".equals(parts[3]) && "GET".equals(method))
                 return ConfigDocuments.response(configurations.document(profiles.get(id)));
+            if (parts.length == 4 && "scripts".equals(parts[3]) && "POST".equals(method))
+                return configurations.createScript(profiles.get(id), body(exchange));
             if (parts.length == 4 && "actions".equals(parts[3]) && "POST".equals(method)) return operations.submit(id, body(exchange));
             if (parts.length == 4 && "clean-confirmation".equals(parts[3]) && "POST".equals(method)) return operations.prepareClean(id, body(exchange));
         }
@@ -110,6 +116,7 @@ public final class WebServer implements AutoCloseable {
                 .put("stateDirectory", state.toString()).put("driversDirectory", installation.resolve("drivers").toString());
         result.set("profiles", profiles.list()); result.set("groups", profiles.groups()); result.set("runs", StateJson.MAPPER.valueToTree(compact ? runs.listSummaries(200) : runs.list(200)));
         result.set("knownKeys", StateJson.MAPPER.valueToTree(ConfigLoader.knownKeys()));
+        result.set("configDefaults", StateJson.MAPPER.valueToTree(ConfigLoader.defaultValues()));
         return result;
     }
     private void validateOrigin(HttpExchange exchange) {

@@ -9,8 +9,9 @@ Flydb 的 MCP（Model Context Protocol）Adapter。以受控子进程调用 `fly
   `FLYDB_MCP_ENABLE_WRITES=true` 才会出现在 `tools/list`（fail closed）；
 - **独立 SemVer**：以 `package.json` 的 `flydb` 字段声明支持的 CLI 版本范围与 protocolVersion。
 
-安装与配置见仓库文档：[MCP 工具参考](../../../docs/reference/mcp-tools.md)、
-[MCP 接入指南](../../../docs/getting-started/mcp-adapter.md)。
+在 0.3.9 发行包中，Adapter 0.2.0 默认列出 6 个只读工具。发布前用 `flydb_preflight` 一次取得目标、校验结果和计划摘要。配合旧版 CLI 时，按 `tools/list` 选择 `flydb_validate` 和 `flydb_plan_migrate`。
+
+安装与配置见 [MCP 工具参考](../../docs/reference/mcp-tools.md)和[MCP 接入指南](../../docs/getting-started/mcp-adapter.md)。
 
 ## 开发
 

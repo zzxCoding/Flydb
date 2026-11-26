@@ -32,6 +32,44 @@ class FlydbCliTest {
     Path temporaryDirectory;
 
     @Test
+    void followsCustomNamingAndNestedDirectoryConvention() throws Exception {
+        Path dir = Files.createDirectories(temporaryDirectory.resolve("db/migration/module"));
+        Files.createFile(dir.resolve("M001--one.ddl"));
+        Files.write(temporaryDirectory.resolve("flydb.conf"), Arrays.asList("flydb.sql-migration-prefix=M",
+                "flydb.sql-migration-separator=--", "flydb.sql-migration-suffix=.ddl"));
+        FlydbCli cli = new FlydbCli(new PrintWriter(new StringWriter()), new PrintWriter(new StringWriter()),
+                Collections.<String, String>emptyMap(), temporaryDirectory, temporaryDirectory);
+        assertThat(cli.execute("new", "next")).isZero();
+        assertThat(dir.resolve("M002--next.ddl")).exists();
+        assertThat(cli.execute("new", "--script-version", "2.0", "other")).isNotZero();
+        Path second = Files.createDirectories(dir.resolveSibling("other"));
+        Files.createFile(second.resolve("M003--three.ddl"));
+        assertThat(cli.execute("new", "four")).isNotZero();
+        assertThat(cli.execute("new", "--directory", second.toString(), "four")).isZero();
+        assertThat(second.resolve("M004--four.ddl")).exists();
+    }
+
+    @Test
+    void createsNextVersionOfflineAndRejectsConflictsAndFilteredPaths() throws Exception {
+        Path dir = Files.createDirectories(temporaryDirectory.resolve("db/migration"));
+        Files.write(dir.resolve("V1__first.sql"), Arrays.asList("select 1"));
+        Files.createFile(dir.resolve("V2__second.sql"));
+        Files.write(temporaryDirectory.resolve("flydb.conf"), Arrays.asList("flydb.password=\u0024{env:ABSENT}"));
+        StringWriter output = new StringWriter();
+        FlydbCli cli = new FlydbCli(new PrintWriter(output, true), new PrintWriter(new StringWriter()),
+                Collections.<String, String>emptyMap(), temporaryDirectory, temporaryDirectory);
+        assertThat(cli.execute("--json", "new", "add_order_index")).isZero();
+        assertThat(output.toString()).contains("V3__add_order_index.sql");
+        assertThat(dir.resolve("V3__add_order_index.sql")).exists();
+        assertThat(cli.execute("new", "--script-version", "1.0", "collision")).isNotZero();
+        assertThat(cli.execute("new", "../escape")).isNotZero();
+        assertThat(cli.execute("--file-glob", "*_prod.sql", "new", "ignored")).isNotZero();
+        assertThat(dir.resolve("V1__first.sql")).hasContent("select 1");
+        assertThat(dir.resolve("V1.0__collision.sql")).doesNotExist();
+        assertThat(dir.resolve("V1__ignored.sql")).doesNotExist();
+    }
+
+    @Test
     @DisplayName("version 命令输出自身版本并返回成功退出码")
     void versionCommandReturnsSuccess() {
         StringWriter standardOutput = new StringWriter();
@@ -44,7 +82,7 @@ class FlydbCliTest {
         int exitCode = cli.execute("version");
 
         assertThat(exitCode).isZero();
-        assertThat(standardOutput.toString()).contains("flydb 0.3.8");
+        assertThat(standardOutput.toString()).contains("flydb 0.3.9");
         assertThat(errorOutput.toString()).isEmpty();
     }
 
@@ -63,7 +101,7 @@ class FlydbCliTest {
         assertThat(exitCode).isZero();
         assertThat(standardOutput.toString())
                 .isEqualTo("{\"protocolVersion\":1,\"command\":\"version\","
-                        + "\"status\":\"success\",\"exitCode\":0,\"version\":\"0.3.8\"}\n");
+                        + "\"status\":\"success\",\"exitCode\":0,\"version\":\"0.3.9\"}\n");
         assertThat(errorOutput.toString()).isEmpty();
     }
 

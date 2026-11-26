@@ -1,6 +1,28 @@
 # 多数据库多环境自动化
 
-面向需要用 Flydb CLI 同时管理多个数据库家族、多套测试与生产环境的开发和运维人员。Flydb 0.2 没有内置的环境 profile 机制，本文给出一套完全基于现有 CLI 契约的组织模式：**一个数据库×环境一份 `flydb.conf`，密码全部外部注入，所有环境执行同一套命令序列**。配置键、命令参数和错误码以[配置项参考](../reference/configuration.md)、[CLI 命令参考](../reference/commands.md)和[错误码参考](../reference/errors.md)为准，本文不重复维护。
+面向需要用 Flydb CLI 同时管理多个数据库家族、多套测试与生产环境的开发和运维人员。Flydb 0.3.9 起可以用共享配置承载项目约定，每个环境只保存差异。旧版 CLI 可继续使用独立配置文件。配置键、命令参数和错误码以[配置项参考](../reference/configuration.md)、[CLI 命令参考](../reference/commands.md)和[错误码参考](../reference/errors.md)为准，本文不重复维护。
+
+## 共享项目配置与环境差异（0.3.9+）
+
+在 `deploy/project.conf` 维护共用的脚本目录、数据库家族、驱动和命名规则。例如：
+
+```properties
+flydb.database-type=mysql
+flydb.locations=filesystem:db/migration
+flydb.user=flydb_ddl
+```
+
+在同目录创建 `qa.conf`，只写测试环境需要覆盖的字段：
+
+```properties
+flydb.config-import=project.conf
+flydb.url=jdbc:mysql://qa.example.com/app
+flydb.password=${env:QA_DB_PASSWORD}
+```
+
+从项目根目录执行 `bin/flydb -c deploy/qa.conf --json preflight`。更换发布包时可临时传 `--locations filesystem:releases/v2/sql`，Web 中可直接选择解压后的 SQL 目录。相对脚本路径沿用项目工作目录。保留已执行的脚本，供历史校验核对。
+
+在 Web 的「复制配置」中修改有差异的字段。勾选「跟随源配置的后续更改」会写入导入路径和覆盖值；其余字段随源配置更新，包括连接和凭据。保留独立副本可继续沿用原有文件布局。环境标签只用于显示。
 
 ## 1. 总体模式
 
@@ -12,7 +34,7 @@
 | `FLYDB_*` 环境变量 | 优先级高于 `flydb.conf`，用于注入密码等环境差异 |
 | 稳定退出码 | CI 按校验失败、锁冲突、配置错误等类别分流处理 |
 
-配置优先级统一为 `CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值`。
+单文件配置的优先级为 `CLI 参数 > FLYDB_* 环境变量 > flydb.conf > 内置默认值`。
 
 ## 2. 配置组织：一个数据库×环境一份 flydb.conf
 

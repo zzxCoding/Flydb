@@ -16,21 +16,23 @@ POST 操作提交成功返回 HTTP 200 和 Run 快照，不代表数据库执行
 | `POST /api/config/init` | `{workingDirectory, url, user?, driver?, databaseType?}`：返回 init 共享模板的 content/values/revision；纯内存，不创建目录或连接数据库 |
 | `POST /api/config/document` | `{content, values?, validate?}`：纯内存 Properties 解析/补丁，返回 content/values/revision，不写文件或连接数据库 |
 | `GET /api/profiles/:id/document` | 用户主动打开文件编辑时读取原文及修订，返回 content/values/revision；可能含原文件中的明文凭据 |
-| `GET /api/bootstrap` | 版本、初始目录、状态目录、默认驱动目录、配置登记、最近 200 条记录、已知配置键 |
+| `GET /api/bootstrap` | 版本、初始目录、状态目录、默认驱动目录、配置登记、最近 200 条记录、已知配置键，以及运行时内置的字面默认值 `configDefaults` |
 | `GET /api/files?path=…` | 有界本机目录浏览，返回 path/parent/entries |
 | `GET /api/discover?path=…` | 有界发现配置文件，返回 files 和扫描限制信息 |
 | `POST /api/profiles` | mode 为 import/create/discover/duplicate；返回登记数组 |
 | `PUT /api/profiles/:id` | name/group/environment/workingDirectory，可选 driversDirectory |
 | `DELETE /api/profiles/:id` | 只移除登记 |
 | `POST /api/groups` | 分组组织操作：create/rename/delete/move/moveProfile，见下文；只修改本机登记 |
-| `GET /api/profiles/:id/config` | revision/values/effective/sources/secretKeys，可含配置 error |
+| `GET /api/profiles/:id/config` | revision/values/effective/sources/secretKeys，可含配置 error。解析成功时 `declaredAt` 记录提供生效字段的文件路径或覆盖用的环境变量名 |
 | `PUT /api/profiles/:id/config` | `{revision, values:{key:string或null}}` 或 `{revision, content}`；整文件保存强制校验，返回脱敏快照 |
+| `POST /api/profiles/:id/scripts` | 根据当前配置离线创建一个空版本化脚本，返回 `{path, version}` |
 | `POST /api/profiles/:id/actions` | 提交预定义操作，返回 Run |
 | `GET /api/runs/:id` | 完整持久化快照，含结果和恢复状态 |
 | `GET /api/runs/:id/events` | SSE，支持 Last-Event-ID 补发 |
 
 配置登记必需 `workingDirectory`。import 使用 `configPath`；create 使用完整 `content`，兼容旧 `url/user`；
-discover 使用 `paths` 数组；duplicate 使用 `sourceId/configPath`。显示元数据是可选的，
+discover 使用 `paths` 数组；duplicate 使用 `sourceId/configPath`。0.3.9 起可携带源文件的 `revision` 和 `values` 差异补丁。
+`inherit: true` 时生成引用源文件的环境配置，仅保存覆盖值；删除继承键需要使用独立副本。显示元数据是可选的，
 同一真实文件路径去重。配置内容保存到原文件，登记只保存路径和显示信息。
 
 bootstrap 的 `groups` 为有序分组名称数组，包括空分组；旧登记的 profile.group 自动纳入列表。
@@ -50,6 +52,8 @@ HTTP 409 / FLYDB-4004，已有驱动说明保留。默认迁移路径为绝对�
 文件编辑专用接口是普通脱敏快照的显式例外：返回用户主动打开的原文件，不能用于报告或记录；
 不解析环境变量/密码文件，不加载驱动或连接数据库。语法错误返回 CONFIG_SYNTAX，Unicode 转义
 错误包含所在逻辑行的起始行号。整文件保存仍校验 revision、使用文件锁及原子替换。
+
+创建脚本的请求包含 `revision` 和 `description`。可选 `releaseDirectory` 与页面当前选择的绝对 SQL 目录一致，省略时使用配置中的位置。可选 `scriptVersion`、`directory` 分别对应 `flydb new` 的显式版本和写入目录。创建结果含文件绝对路径及版本字符串，已有等价版本返回 HTTP 409 / FLYDB-2002。创建脚本只写本机文件，不生成数据库执行记录。如果连接配置解析失败，配置快照还可返回独立解析的 `scriptLocations` 供建脚本使用。
 
 操作正文公共字段为 `command`、`revision`、`requestId`（调用方生成的 UUID），可选临时 `password`。
 command 只允许 inspect、validate、plan、migrate、undo-plan、undo、baseline、repair、clean。
@@ -75,6 +79,8 @@ planId 是本服务内存中的一次确认引用，30 分钟后或重启后失�
 确认引用过期为 `PLAN_EXPIRED`；Core 锁内核对到目标/迁移清单变化为 `FLYDB-2011`。
 其他常见 code 为 BUSY、INVALID_REQUEST、INVALID_PATH、FILE_EXISTS、PROFILE_NOT_FOUND、
 SESSION_REQUIRED、REQUEST_FAILED。Web 没有任意 SQL、shell 或通用文件读取 API。
+
+0.3.9 起，inspect、validate、plan 和 undo-plan 的 actions 请求可传绝对路径 `releaseDirectory`，选择本次使用的解压 SQL 目录。计划与执行记录记住该目录；确认 migrate/undo 时传此前得到的 planId，由服务重新校验绑定。覆盖仅对本次请求及相应计划生效。
 
 ## Core 确认契约
 

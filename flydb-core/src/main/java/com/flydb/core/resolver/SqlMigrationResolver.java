@@ -45,15 +45,19 @@ public final class SqlMigrationResolver implements MigrationResolver {
     private static final String CLASSPATH_PREFIX = "classpath:";
     private static final String FILESYSTEM_PREFIX = "filesystem:";
 
-    // 文件名模式：V<version>__<description>.sql 或 U<version>__<description>.sql 或 R__<description>.sql
-    private static final Pattern VERSIONED_PATTERN = Pattern.compile(
-            "^([VU])(\\d[A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*)__([^/]+)\\.sql$");
-    // 可重复：R__<description>.sql
-    private static final Pattern REPEATABLE_PATTERN = Pattern.compile(
-            "^R__([^/]+)\\.sql$");
-    // 旧式阻断：R\d+__<description>.sql
-    private static final Pattern LEGACY_R_PATTERN = Pattern.compile(
-            "^R\\d+__([^/]+)\\.sql$");
+    /** 命名约定以字面值处理，配置中的点号等字符没有正则含义。 */
+    private static final class Naming {
+        final Pattern versioned, repeatable, legacy;
+        Naming(ResolverContext context) {
+            String separator = Pattern.quote(context.sqlMigrationSeparator());
+            String ending = separator + "([^/]+)" + Pattern.quote(context.sqlMigrationSuffix()) + "$";
+            String repeat = Pattern.quote(context.repeatableMigrationPrefix());
+            versioned = Pattern.compile("^(" + Pattern.quote(context.sqlMigrationPrefix()) + "|"
+                    + Pattern.quote(context.undoMigrationPrefix()) + ")(\\d[A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*)" + ending);
+            repeatable = Pattern.compile("^" + repeat + ending);
+            legacy = Pattern.compile("^" + repeat + "\\d+" + ending);
+        }
+    }
 
     @Override
     public List<ResolvedMigration> resolveMigrations(ResolverContext context) {
@@ -62,34 +66,13 @@ public final class SqlMigrationResolver implements MigrationResolver {
                 new HashMap<MigrationVersion, String>();
         Map<MigrationVersion, String> seenUndoVersions =
                 new HashMap<MigrationVersion, String>();
-        MigrationPathFilter pathFilter = MigrationPathFilter.from(context);
-        boolean needsDirectoryVersion = context.versionSource()
-                == com.flydb.core.migration.VersionSource.DIRECTORY
-                || context.migrationOrder() == MigrationOrder.DIRECTORY_VERSION;
-        DirectoryVersionExtractor directoryVersions = needsDirectoryVersion
-                ? DirectoryVersionExtractor.compile(context.directoryVersionRegex()) : null;
+        ScriptRules rules = new ScriptRules(context);
 
         for (String location : context.locations()) {
             List<ScriptFile> scripts = scanLocation(location, context);
             for (ScriptFile script : scripts) {
-                if (!pathFilter.matches(script.script)) {
-                    continue;
-                }
-                ResolvedMigration resolved = parseFile(script, context);
-                if (resolved == null) {
-                    continue;
-                }
-                if (resolved.version() != null && directoryVersions != null) {
-                    MigrationVersion directoryVersion = directoryVersions.extract(resolved.script());
-                    if (!resolved.version().isSameOrDescendantOf(directoryVersion)) {
-                        throw new FlydbException(ErrorCode.INVALID_VERSION,
-                                "文件版本 " + resolved.version() + " 不属于目录版本 "
-                                        + directoryVersion + ": " + resolved.script());
-                    }
-                    resolved = ResolvedMigration.of(resolved.version(), directoryVersion,
-                            resolved.description(), resolved.script(), resolved.checksum(),
-                            resolved.type());
-                }
+                ResolvedMigration resolved = rules.resolve(script);
+                if (resolved == null) continue;
                 // 重复版本检测
                 MigrationVersion version = resolved.version();
                 if (version != null) {
@@ -137,6 +120,40 @@ public final class SqlMigrationResolver implements MigrationResolver {
         return Collections.unmodifiableList(all);
     }
 
+    /** 在创建文件之前，以与实际扫描完全一致的规则核对相对路径。 */
+    public ResolvedMigration describeCandidate(ResolverContext context, String relativePath) {
+        return new ScriptRules(context).resolve(new ScriptFile(fileName(relativePath), relativePath, new byte[0]));
+    }
+
+    private static final class ScriptRules {
+        final ResolverContext context;
+        final Naming naming;
+        final MigrationPathFilter pathFilter;
+        final DirectoryVersionExtractor directoryVersions;
+
+        ScriptRules(ResolverContext context) {
+            this.context = context;
+            naming = new Naming(context);
+            pathFilter = MigrationPathFilter.from(context);
+            boolean needsDirectoryVersion = context.versionSource() == com.flydb.core.migration.VersionSource.DIRECTORY
+                    || context.migrationOrder() == MigrationOrder.DIRECTORY_VERSION;
+            directoryVersions = needsDirectoryVersion ? DirectoryVersionExtractor.compile(context.directoryVersionRegex()) : null;
+        }
+
+        ResolvedMigration resolve(ScriptFile script) {
+            if (!pathFilter.matches(script.script)) return null;
+            ResolvedMigration resolved = parseFile(script, context, naming);
+            if (resolved == null || resolved.version() == null || directoryVersions == null) return resolved;
+            MigrationVersion directoryVersion = directoryVersions.extract(resolved.script());
+            if (!resolved.version().isSameOrDescendantOf(directoryVersion)) {
+                throw new FlydbException(ErrorCode.INVALID_VERSION, "文件版本 " + resolved.version()
+                        + " 不属于目录版本 " + directoryVersion + ": " + resolved.script());
+            }
+            return ResolvedMigration.of(resolved.version(), directoryVersion, resolved.description(),
+                    resolved.script(), resolved.checksum(), resolved.type());
+        }
+    }
+
     private static String description(ResolvedMigration m) {
         String d = m.description();
         return d == null ? "" : d;
@@ -166,10 +183,10 @@ public final class SqlMigrationResolver implements MigrationResolver {
                 if ("file".equals(url.getProtocol())) {
                     File dir = new File(url.toURI());
                     if (dir.isDirectory()) {
-                        scanDirectory(dir, entries);
+                        scanDirectory(dir, entries, context.sqlMigrationSuffix());
                     }
                 } else {
-                    scanJar(url, normalizedPath, entries);
+                    scanJar(url, normalizedPath, entries, context.sqlMigrationSuffix());
                 }
             }
             if (!found) {
@@ -187,7 +204,7 @@ public final class SqlMigrationResolver implements MigrationResolver {
     }
 
     private static void scanJar(URL resource, String normalizedPath,
-                                List<ScriptFile> entries) throws IOException {
+                                List<ScriptFile> entries, String suffix) throws IOException {
         java.net.URLConnection connection = resource.openConnection();
         if (!(connection instanceof JarURLConnection)) {
             throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
@@ -204,31 +221,31 @@ public final class SqlMigrationResolver implements MigrationResolver {
         entryPrefix = withoutTrailingSlash(entryPrefix) + "/";
 
         int before = entries.size();
-        scanJarEntries(jarFile, entryPrefix, entries);
+        scanJarEntries(jarFile, entryPrefix, entries, suffix);
         if (entries.size() == before && !entryPrefix.equals(normalizedPath + "/")) {
-            scanJarEntries(jarFile, withoutTrailingSlash(normalizedPath) + "/", entries);
+            scanJarEntries(jarFile, withoutTrailingSlash(normalizedPath) + "/", entries, suffix);
         }
         if (entries.size() == before) {
             scanJarEntriesBySuffix(jarFile,
-                    "/" + withoutTrailingSlash(normalizedPath) + "/", entries);
+                    "/" + withoutTrailingSlash(normalizedPath) + "/", entries, suffix);
         }
     }
 
     private static void scanJarEntries(JarFile jarFile, String prefix,
-                                       List<ScriptFile> entries) throws IOException {
+                                       List<ScriptFile> entries, String suffix) throws IOException {
         Enumeration<JarEntry> jarEntries = jarFile.entries();
         while (jarEntries.hasMoreElements()) {
             JarEntry entry = jarEntries.nextElement();
             if (entry.isDirectory() || !entry.getName().startsWith(prefix)) continue;
             String relative = entry.getName().substring(prefix.length());
-            if (!relative.endsWith(".sql")) continue;
+            if (!relative.endsWith(suffix)) continue;
             entries.add(new ScriptFile(fileName(relative), relative,
                     readJarEntry(jarFile, entry)));
         }
     }
 
     private static void scanJarEntriesBySuffix(JarFile jarFile, String suffixPrefix,
-                                               List<ScriptFile> entries) throws IOException {
+                                               List<ScriptFile> entries, String suffix) throws IOException {
         Enumeration<JarEntry> jarEntries = jarFile.entries();
         while (jarEntries.hasMoreElements()) {
             JarEntry entry = jarEntries.nextElement();
@@ -236,7 +253,7 @@ public final class SqlMigrationResolver implements MigrationResolver {
             int location = entry.getName().lastIndexOf(suffixPrefix);
             if (location < 0) continue;
             String relative = entry.getName().substring(location + suffixPrefix.length());
-            if (!relative.endsWith(".sql")) continue;
+            if (!relative.endsWith(suffix)) continue;
             entries.add(new ScriptFile(fileName(relative), relative,
                     readJarEntry(jarFile, entry)));
         }
@@ -271,7 +288,7 @@ public final class SqlMigrationResolver implements MigrationResolver {
                             + "（相对路径按进程当前工作目录解析）");
         }
         try {
-            scanDirectory(dir, entries);
+            scanDirectory(dir, entries, context.sqlMigrationSuffix());
         } catch (IOException e) {
             throw new FlydbException(ErrorCode.MISSING_REQUIRED_CONFIG,
                     "扫描文件系统迁移目录失败: " + path, e);
@@ -279,14 +296,14 @@ public final class SqlMigrationResolver implements MigrationResolver {
         return entries;
     }
 
-    private static void scanDirectory(File dir, final List<ScriptFile> entries)
+    private static void scanDirectory(File dir, final List<ScriptFile> entries, final String suffix)
             throws IOException {
         final Path root = dir.toPath();
         Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
                 String name = file.getFileName().toString();
-                if (name.endsWith(".sql")) {
+                if (name.endsWith(suffix)) {
                     String relative = root.relativize(file).toString()
                             .replace(File.separatorChar, '/');
                     entries.add(new ScriptFile(name, relative, file));
@@ -302,20 +319,21 @@ public final class SqlMigrationResolver implements MigrationResolver {
     }
 
     /** 解析单个文件为 ResolvedMigration。 */
-    private static ResolvedMigration parseFile(ScriptFile entry, ResolverContext context) {
+    private static ResolvedMigration parseFile(ScriptFile entry, ResolverContext context, Naming naming) {
         String name = entry.filename;
 
         // 旧式 R\d+__ 阻断——必须在可重复解析之前
-        Matcher legacyMatcher = LEGACY_R_PATTERN.matcher(name);
+        Matcher legacyMatcher = naming.legacy.matcher(name);
         if (legacyMatcher.matches()) {
             throw new FlydbException(ErrorCode.LEGACY_R_PREFIX_NAMING,
                     "文件 " + name + " 使用了旧式 R<数字>__ 命名。"
                             + "R 前缀表示可重复迁移，不带版本号。"
-                            + "请更名为 R__" + legacyMatcher.group(1) + ".sql。");
+                            + "请更名为 " + context.repeatableMigrationPrefix() + context.sqlMigrationSeparator()
+                            + legacyMatcher.group(1) + context.sqlMigrationSuffix());
         }
 
         // 可重复迁移 R__description.sql
-        Matcher repeatableMatcher = REPEATABLE_PATTERN.matcher(name);
+        Matcher repeatableMatcher = naming.repeatable.matcher(name);
         if (repeatableMatcher.matches()) {
             String description = repeatableMatcher.group(1);
             byte[] content = readContent(entry);
@@ -324,7 +342,7 @@ public final class SqlMigrationResolver implements MigrationResolver {
         }
 
         // 版本化迁移 V/U<version>__description.sql
-        Matcher versionedMatcher = VERSIONED_PATTERN.matcher(name);
+        Matcher versionedMatcher = naming.versioned.matcher(name);
         if (versionedMatcher.matches()) {
             String prefix = versionedMatcher.group(1);
             String versionStr = versionedMatcher.group(2);
@@ -334,14 +352,14 @@ public final class SqlMigrationResolver implements MigrationResolver {
             }
             MigrationVersion version = MigrationVersion.parse(versionStr);
             String description = versionedMatcher.group(3);
-            boolean isUndo = "U".equals(prefix);
+            boolean isUndo = context.undoMigrationPrefix().equals(prefix);
             byte[] content = readContent(entry);
             int checksum = ChecksumCalculator.checksum(content);
             return ResolvedMigration.of(version, description, entry.script, checksum,
                     isUndo ? MigrationType.UNDO_SQL : MigrationType.SQL);
         }
 
-        if ((name.startsWith("V") || name.startsWith("U")) && name.endsWith(".sql")) {
+        if ((name.startsWith(context.sqlMigrationPrefix()) || name.startsWith(context.undoMigrationPrefix())) && name.endsWith(context.sqlMigrationSuffix())) {
             throw new FlydbException(ErrorCode.INVALID_VERSION,
                     "迁移文件名无法解析，拒绝静默跳过: " + entry.script);
         }

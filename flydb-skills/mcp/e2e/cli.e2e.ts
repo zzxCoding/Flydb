@@ -40,27 +40,27 @@ describeE2e("跨运行时：真实 CLI + MCP stdio", () => {
     expect(envelope.version).toMatch(/^0\.(3|[4-9])\./);
   });
 
-  it("initialize + tools/list 默认 5 个只读工具，写入工具不注册", async () => {
+  it("initialize + tools/list 默认 6 个只读工具，写入工具不注册", async () => {
     const client = await connectClient({FLYDB_CLI: e2eCli});
     try {
       const listed = await client.listTools();
       expect(listed.tools.map((tool) => tool.name)).toEqual([
         "flydb_version", "flydb_info", "flydb_validate",
-        "flydb_plan_migrate", "flydb_plan_undo",
+        "flydb_preflight", "flydb_plan_migrate", "flydb_plan_undo",
       ]);
     } finally {
       await client.close();
     }
   });
 
-  it("FLYDB_MCP_ENABLE_WRITES=true 时 tools/list 包含九个工具", async () => {
+  it("FLYDB_MCP_ENABLE_WRITES=true 时 tools/list 包含十个工具", async () => {
     const client = await connectClient({
       FLYDB_CLI: e2eCli,
       FLYDB_MCP_ENABLE_WRITES: "true",
     });
     try {
       const listed = await client.listTools();
-      expect(listed.tools).toHaveLength(9);
+      expect(listed.tools).toHaveLength(10);
     } finally {
       await client.close();
     }
@@ -94,7 +94,7 @@ describeE2e("跨运行时：真实 CLI + MCP stdio", () => {
         await client.connect(transport);
         try {
           const listed = await client.listTools();
-          expect(listed.tools).toHaveLength(5);
+          expect(listed.tools).toHaveLength(6);
         } finally {
           await client.close();
         }

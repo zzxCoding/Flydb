@@ -4,15 +4,15 @@ import { DEFAULT_TOOLS, FLYDB_TOOLS, WRITE_TOOLS, writesEnabled } from "../src/t
 const names = (tools: {name: string}[]): string[] => tools.map((tool) => tool.name);
 
 describe("v1 工具集", () => {
-  it("九个工具、名称与决策 §4 一一对应", () => {
+  it("兼容工具和发布前检查均为固定映射", () => {
     expect(names([...FLYDB_TOOLS])).toEqual([
       "flydb_version", "flydb_info", "flydb_validate",
-      "flydb_plan_migrate", "flydb_plan_undo",
+      "flydb_preflight", "flydb_plan_migrate", "flydb_plan_undo",
       "flydb_migrate", "flydb_baseline", "flydb_repair", "flydb_undo",
     ]);
     expect(names([...DEFAULT_TOOLS])).toEqual([
       "flydb_version", "flydb_info", "flydb_validate",
-      "flydb_plan_migrate", "flydb_plan_undo",
+      "flydb_preflight", "flydb_plan_migrate", "flydb_plan_undo",
     ]);
     expect(names([...WRITE_TOOLS])).toEqual([
       "flydb_migrate", "flydb_baseline", "flydb_repair", "flydb_undo",
@@ -29,6 +29,7 @@ describe("v1 工具集", () => {
   it("数据库工具固定动作与 --driver-download never", () => {
     const cases: Array<[string, string[]]> = [
       ["flydb_info", ["info"]],
+      ["flydb_preflight", ["preflight"]],
       ["flydb_validate", ["validate"]],
       ["flydb_plan_migrate", ["--dry-run", "migrate"]],
       ["flydb_plan_undo", ["--dry-run", "undo"]],

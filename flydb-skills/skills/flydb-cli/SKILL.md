@@ -1,7 +1,7 @@
 ---
 name: flydb-cli
 description: >-
-  使用和排查 Flydb CLI 完成数据库迁移、初始化、校验、状态查看、本机图形工作台、baseline、repair、clean、undo 和驱动接入。当用户提到 Flydb、flydb web、GUI 管理配置、bin/flydb、flydb.conf、drivers/、JDBC 驱动、--driver、--database-type，或需要把信创/新型 JDBC 数据库接入 Flydb CLI 时使用。先读取 Flydb 仓库内对应 CLI 文档，再执行最小、可验证的操作；涉及真实数据库写入时保留明确的授权和安全边界。
+  使用和排查 Flydb CLI 与本机工作台。适用于 flydb new 创建迁移脚本、复制环境与解释 flydb.conf 配置、通过 CLI 或 MCP 做发布前检查，以及迁移执行、失败恢复和 JDBC 驱动接入。
 compatibility: Flydb CLI 0.3.x；本机 Web 工作台需要 0.3.5 或更高版本。Java 8 或更高版本；需要 Flydb CLI 发行包或源码仓库，以及目标数据库的 JDBC 驱动。
 ---
 
@@ -51,9 +51,11 @@ bin/flydb version
 | 用户目标 | 命令 | 默认动作 |
 |---|---|---|
 | 创建配置和迁移目录 | `init` | 只生成本地文件，不连接数据库 |
+| 在已有项目新增版本化 SQL | `new <描述>`（0.3.9+） | 核对脚本目录后离线创建空文件。版本和目录选择见[离线创建脚本](../../../docs/reference/commands.md#离线创建脚本) |
 | 图形化管理配置、查看预览和执行进度 | `web` | 启动本机界面；启动本身不执行迁移 |
 | 查看迁移状态 | `info` | 读取数据库和本地脚本，不持有迁移锁 |
 | 校验 checksum、失败记录和迁移集合 | `validate` | 只读校验 |
+| 一次核对发布目标、校验结果和计划摘要 | `preflight`（0.3.9+） | 只读预检，MCP 使用宿主实际列出的 `flydb_preflight` |
 | 预演迁移 | `--dry-run migrate` | 探测、解析并打印 SQL，不执行 SQL |
 | 执行待迁移脚本 | `migrate` | 写入数据库并持有迁移锁 |
 | 为存量库写入基线 | `baseline` | 写入历史记录并持有迁移锁 |
@@ -72,6 +74,8 @@ bin/flydb version
 3. Agent 可继续使用 CLI 和原文件，人通过 GUI 查看状态与进度；遇到外部修改冲突先核对文件和草稿，使用最新修订后再保存。主动文件编辑会显示原文，按原文件保管凭据，不将其复制到报告或对话。
 4. 启动 GUI、修改配置或用户打开浏览器，不扩大数据库写入授权。具体数据库操作沿用下方迁移流程。向用户报告普通本机地址和进程状态；启动密钥、Cookie 和密码保持私密。
 
+0.3.9+ 中，遇到“配置怎么填”或“从哪继承”，在「连接与配置」搜索用途或键名，结合字段示例、当前生效值和来源解释。复制环境时可用 `flydb.config-import` 引用共享文件，只填写差异。需要新脚本时走「迁移 → 新建 SQL 脚本」或 CLI `new`。更换本次 SQL 目录只会重新核对状态。
+
 ### 只读任务
 
 对 `info`、`validate` 或 `version`，执行命令后报告退出码和关键结果。不要把只读命令扩展为 `migrate`、`repair` 或 `baseline`。
@@ -79,7 +83,7 @@ bin/flydb version
 ### 迁移任务
 
 1. 使用版本选择或路径过滤时，先读配置参考中的“版本选择、路径过滤与排序”，根据有效 locations、过滤条件和选择模式列出预期迁移集合；不要把 locations 下全部 `.sql` 文件数直接当成范围迁移数量。
-2. 先运行 `validate`，尽早发现 checksum、失败记录、非法命名或未定义占位符。
+2. 做只读发布检查时，CLI 0.3.9+ 用 `preflight`。MCP 先看 `tools/list`，列有 `flydb_preflight` 就一次调用它。返回值含校验结果、目标和 `plan` 摘要。逐项核对脚本时读取宿主机上的 `detailsFile`，路径为空或当前 Agent 无法读取时用 `flydb_plan_migrate` 获取明细。只需摘要即可向用户汇报。工具缺失时用 `flydb_validate` 和 `flydb_plan_migrate`，使用项目校验回调时也要单独校验。见[发布前检查](../../../docs/reference/commands.md#发布前检查)和[MCP 工具参考](../../../docs/reference/mcp-tools.md)。
 3. 再运行 `--dry-run migrate`，确认目标方言、待执行脚本、SQL 数量和脚本顺序，并把预期集合与 dry-run 清单逐项核对。任何未解释的缺失或多出脚本都应阻断实际写入。
 4. 本地/测试库可以在用户明确要求后执行 `migrate`；预发/生产库先展示 dry-run 结果、集合核对结果和目标摘要，得到明确的实际写入授权后再执行。
 5. 执行后用 `info --color=never` 和 `validate` 核对状态，并报告是否产生失败记录。

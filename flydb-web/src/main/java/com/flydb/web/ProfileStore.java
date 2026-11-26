@@ -51,6 +51,7 @@ final class ProfileStore {
                     String url = required(input, "url");
                     new InitScaffolder().create(working, url, input.path("user").asText(), null, null);
                 } else {
+                    com.flydb.runtime.config.ConfigLoader.validateDocumentValues(creation.values(), working.resolve("flydb.conf"));
                     new InitScaffolder().create(working, creation.content());
                     StateJson.restrict(working.resolve("flydb.conf"), false);
                 }
@@ -60,8 +61,7 @@ final class ProfileStore {
                 Path source = Paths.get(original.path("configPath").asText());
                 Path target = Paths.get(required(input, "configPath")).toAbsolutePath().normalize();
                 if (!Files.isDirectory(target.getParent())) throw new WebException(400, "INVALID_PATH", "Destination directory is missing");
-                Files.copy(source, target); // CREATE_NEW semantics: never overwrite a user's file.
-                StateJson.restrict(target, false);
+                duplicate(source, target, input);
             } else if (!"import".equals(mode) && !"discover".equals(mode)) {
                 throw new WebException(400, "INVALID_REQUEST", "Unknown profile operation");
             }
@@ -75,6 +75,48 @@ final class ProfileStore {
             save(all); return added;
         }
     }
+    private void duplicate(Path source, Path target, ObjectNode input) throws IOException {
+        ConfigurationDocument original = ConfigurationDocument.read(source);
+        Map<String, String> edits = new LinkedHashMap<String, String>();
+        boolean inherit = input.path("inherit").asBoolean(false);
+        if (inherit && !input.has("values")) throw new WebException(400, "INVALID_REQUEST", "Missing environment overrides");
+        if (input.has("values")) {
+            if (!original.revision().equals(required(input, "revision"))) throw new ConfigurationDocument.Conflict();
+            edits.putAll(ConfigDocuments.edits(input.path("values")));
+        }
+        String base = original.values().get("flydb.config-import");
+        if (inherit) {
+            if (edits.containsKey("flydb.config-import") || edits.containsValue(null))
+                throw new WebException(400, "INVALID_REQUEST", "Inherited fields can be overridden. Use an independent copy to remove fields.");
+            Path parent = target.getParent().toRealPath();
+            String reference = parent.getRoot().equals(source.getRoot())
+                    ? parent.relativize(source).toString() : source.toString();
+            edits.put("flydb.config-import", reference);
+        } else if (base != null && !edits.containsKey("flydb.config-import") && !Paths.get(base).isAbsolute()
+                && !source.getParent().equals(target.getParent())) {
+            edits.put("flydb.config-import", source.getParent().resolve(base).normalize().toString());
+        }
+        // 独立副本切换凭据来源时，需要移除源文件中的另一种凭据。
+        if (!inherit && edits.get("flydb.password.file") != null && !edits.get("flydb.password.file").isEmpty()
+                && !edits.containsKey("flydb.password")) {
+            edits.put("flydb.password", null);
+        } else if (!inherit && edits.get("flydb.password") != null && !edits.get("flydb.password").isEmpty()
+                && !edits.containsKey("flydb.password.file")) {
+            edits.put("flydb.password.file", null);
+        }
+        ConfigurationDocument template = inherit ? ConfigurationDocument.parse("") : original;
+        ConfigurationDocument copy = edits.isEmpty() ? template : template.withEdits(edits);
+        if (!edits.isEmpty()) com.flydb.runtime.config.ConfigLoader.validateDocumentValues(copy.values(), target);
+        Files.createFile(target);
+        try {
+            StateJson.restrict(target, false);
+            Files.write(target, copy.content().getBytes(java.nio.charset.StandardCharsets.UTF_8), StandardOpenOption.WRITE);
+        } catch (IOException e) {
+            Files.deleteIfExists(target);
+            throw e;
+        }
+    }
+
     private ObjectNode register(ArrayNode all, Path file, ObjectNode input, Path working, boolean multiple) throws IOException {
         Path actual = file.toRealPath(); ConfigurationDocument.read(actual);
         for (JsonNode existing : all) if (actual.toString().equals(existing.path("configPath").asText())) return (ObjectNode) existing;
@@ -169,6 +211,14 @@ final class ProfileStore {
             return groups;
         }
     }
+    static String releaseDirectory(ObjectNode input) throws IOException {
+        Path path = Paths.get(required(input, "releaseDirectory"));
+        if (!path.isAbsolute()) throw new WebException(400, "INVALID_PATH", "Expected an absolute SQL directory");
+        String actual = directory(path.toString()).toString();
+        if (actual.contains(",")) throw new WebException(400, "INVALID_PATH", "SQL directory cannot contain a comma");
+        return actual;
+    }
+
     static Path directory(String path) throws IOException {
         if (path.trim().isEmpty()) throw new WebException(400, "INVALID_PATH", "Choose a working directory");
         Path actual = Paths.get(path).toRealPath();

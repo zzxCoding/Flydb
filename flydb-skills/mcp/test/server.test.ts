@@ -34,9 +34,9 @@ class FakeCliRunner implements CliRunner {
 
 async function withClient(env: NodeJS.ProcessEnv, respond: (args: string[]) => {
   stdout: string; exitCode: number;
-}, action: (client: Client, runner: FakeCliRunner) => Promise<void>): Promise<void> {
+}, action: (client: Client, runner: FakeCliRunner) => Promise<void>, cliVersion = "0.3.8"): Promise<void> {
   const runner = new FakeCliRunner(respond);
-  const server = createServer({runner, env, timeoutMs: 5_000, warn: () => undefined});
+  const server = createServer({runner, cliVersion, env, timeoutMs: 5_000, warn: () => undefined});
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({name: "test-client", version: "0.0.0"});
   await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
@@ -71,6 +71,20 @@ describe("server（官方 Client 驱动 initialize/list/call）", () => {
     expect(resolveTimeoutMs({FLYDB_MCP_TIMEOUT_MS: "1.5"}, warn)).toBe(DEFAULT_TIMEOUT_MS);
     expect(resolveTimeoutMs({FLYDB_MCP_TIMEOUT_MS: "600000ms"}, warn)).toBe(DEFAULT_TIMEOUT_MS);
     expect(warnings).toHaveLength(2);
+  });
+
+  it("CLI 0.3.9 的发布前检查只启动一个固定的只读子命令", async () => {
+    await withClient({}, () => ({stdout: JSON.stringify({
+      protocolVersion: 1, command: "preflight", status: "success", exitCode: 0,
+      dryRun: true, validation: "PASSED", target: "jdbc:test", plan: {}, detailsFile: null,
+    }), exitCode: 0}), async (client, runner) => {
+      const result = await client.callTool({name: "flydb_preflight",
+        arguments: {workingDirectory: "/project", configPath: "/project/qa.conf"}});
+      expect(result.isError).not.toBe(true);
+      expect(runner.calls.map(call => call.args)).toEqual([
+        ["--json", "-c", "/project/qa.conf", "--driver-download", "never", "preflight"],
+      ]);
+    }, "0.3.9");
   });
 
   it("默认只注册 5 个只读工具，写入工具不在 tools/list", async () => {

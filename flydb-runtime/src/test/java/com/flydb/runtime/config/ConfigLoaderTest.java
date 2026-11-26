@@ -24,6 +24,27 @@ class ConfigLoaderTest {
     Path temporaryDirectory;
 
     @Test
+    void importsProjectDefaultsBeforeApplyingEnvironmentDifferences() throws Exception {
+        Path project = temporaryDirectory.resolve("project.conf");
+        Path qa = temporaryDirectory.resolve("qa.conf");
+        Files.write(project, java.util.Arrays.asList("flydb.user=shared", "flydb.table=app_history",
+                "flydb.password=${env:UNSET}"));
+        Files.write(qa, java.util.Arrays.asList("flydb.config-import=project.conf", "flydb.user=test",
+                "flydb.password="));
+        ConfigLoader loader = new ConfigLoader();
+        Map<String, String> empty = Collections.emptyMap();
+        CliConfiguration config = loader.load(qa, temporaryDirectory, temporaryDirectory, empty, empty);
+        assertThat(config.user()).isEqualTo("test");
+        assertThat(config.table()).isEqualTo("app_history");
+        assertThat(config.sources().get("flydb.table")).isEqualTo("IMPORTED_FILE");
+        assertThat(config.inDirectory(temporaryDirectory).declaredAt()).containsEntry("flydb.table", project.toRealPath().toString())
+                .containsEntry("flydb.user", qa.toRealPath().toString()).doesNotContainKey("flydb.locations");
+        Files.write(project, Collections.singletonList("flydb.config-import=qa.conf"));
+        assertThatThrownBy(() -> loader.load(qa, temporaryDirectory, temporaryDirectory, empty, empty))
+                .isInstanceOf(FlydbException.class).hasMessageContaining("循环");
+    }
+
+    @Test
     @DisplayName("CLI 参数覆盖环境变量，环境变量覆盖 UTF-8 配置文件，未配置项使用 CLI 默认值")
     void mergesFourLayersInDocumentedOrder() throws Exception {
         Files.write(temporaryDirectory.resolve("flydb.conf"), (
@@ -43,6 +64,8 @@ class ConfigLoaderTest {
 
         assertThat(configuration.url()).isEqualTo("jdbc:mysql://cli/db");
         assertThat(configuration.table()).isEqualTo("env_history");
+        assertThat(configuration.declaredAt()).containsEntry("flydb.table", "FLYDB_TABLE")
+                .containsEntry("flydb.placeholders.tenant", "FLYDB_PLACEHOLDERS_TENANT").doesNotContainKey("flydb.url");
         assertThat(configuration.locations()).containsExactly("filesystem:db/migration");
         assertThat(configuration.encoding().name()).isEqualTo("UTF-8");
         assertThat(configuration.placeholders()).containsEntry("tenant", "env-tenant");

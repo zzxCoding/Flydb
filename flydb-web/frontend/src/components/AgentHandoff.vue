@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import type { Profile, ConfigSnapshot, Run } from '../types'
 import { agentContext } from '../agent-context'
 import Icon from './Icon.vue'
-const props = defineProps<{ profile: Profile; config?: ConfigSnapshot; runs: Run[]; version: string; stateDirectory: string; dirty: boolean; offline: boolean }>()
+const props = defineProps<{ profile: Profile; config?: ConfigSnapshot; runs: Run[]; version: string; stateDirectory: string; releaseDirectory?: string; dirty: boolean; offline: boolean }>()
 const { t, locale } = useI18n()
 const copied = ref(false), copying = ref(false), fallback = ref(false), text = ref('')
 watch(() => props.profile.id, () => { copied.value = false; fallback.value = false })

@@ -10,6 +10,33 @@ import static org.assertj.core.api.Assertions.*;
 
 class ProfileStoreTest {
     @TempDir Path temporary;
+    @Test void duplicateCanInheritProjectDefaultsAndOnlyStoreDifferences() throws Exception {
+        ProfileStore store = new ProfileStore(temporary.resolve("state"));
+        Path source = temporary.resolve("flydb.conf"), qa = temporary.resolve("qa.conf");
+        Files.write(source, java.util.Arrays.asList("flydb.user=dev", "flydb.table=history1", "flydb.password=local-only"));
+        ObjectNode registration = StateJson.object().put("configPath", source.toString()).put("workingDirectory", temporary.toString());
+        String id = store.create(registration).get(0).path("id").asText();
+        ObjectNode copy = registration.deepCopy().put("mode", "duplicate").put("sourceId", id)
+                .put("configPath", qa.toString()).put("inherit", true).put("revision", "stale");
+        copy.set("values", StateJson.object().put("flydb.user", "qa"));
+        assertThatThrownBy(() -> store.create(copy)).isInstanceOf(com.flydb.runtime.config.ConfigurationDocument.Conflict.class);
+        assertThat(qa).doesNotExist();
+        copy.put("revision", com.flydb.runtime.config.ConfigurationDocument.read(source).revision());
+        ObjectNode child = (ObjectNode) store.create(copy).get(0);
+        assertThat(com.flydb.runtime.config.ConfigurationDocument.read(qa).values())
+                .containsOnly(entry("flydb.config-import", "flydb.conf"), entry("flydb.user", "qa"));
+        Path flat = temporary.resolve("flat.conf");
+        ObjectNode detached = copy.deepCopy().put("inherit", false).put("configPath", flat.toString());
+        detached.set("values", StateJson.object().put("flydb.password.file", "qa-password"));
+        store.create(detached);
+        assertThat(com.flydb.runtime.config.ConfigurationDocument.read(flat).values())
+                .containsEntry("flydb.password.file", "qa-password").doesNotContainKey("flydb.password");
+        Files.write(source, java.util.Arrays.asList("flydb.user=dev", "flydb.table=history2"));
+        ConfigurationService configs = new ConfigurationService(temporary, java.util.Collections.<String,String>emptyMap());
+        assertThat(configs.read(child).path("effective").path("flydb.table").asText()).isEqualTo("history2");
+        assertThat(configs.read(child).path("effective").path("flydb.user").asText()).isEqualTo("qa");
+    }
+
     @Test void groupsPersistAndRenameDeleteAndMoveOnlyChangeDisplayMetadata() throws Exception {
         Path state = temporary.resolve("state"), config = temporary.resolve("flydb.conf");
         byte[] content = "flydb.url=jdbc:missing:test\n".getBytes(StandardCharsets.UTF_8); Files.write(config, content);
