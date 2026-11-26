@@ -24,11 +24,11 @@
     "codemirror": "6.0.2",
     "naive-ui": "2.45.3",
     "vue": "3.5.42",
-    "vue-i18n": "11.4.10"
+    "vue-i18n": "11.4.14"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "6.0.8",
-    "happy-dom": "20.14.0",
+    "happy-dom": "21.0.4",
     "typescript": "5.9.3",
     "vite": "8.3.5",
     "vitest": "5.0.5",
